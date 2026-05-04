@@ -1224,7 +1224,9 @@ select {
 
 @media (prefers-reduced-motion: reduce) {
   .login-card,
-  .login-btn-nfc.escaneando {
+  .login-btn-nfc.escaneando,
+  .login-hero,
+  .blob-1, .blob-2, .blob-3 {
     animation: none !important;
   }
 }

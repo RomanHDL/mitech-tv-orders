@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { LOGO_MITECH } from '@/lib/logo-mitech'
 
 const LINKS_POR_ROL = {
   capturista: [
@@ -54,7 +55,7 @@ export default function Nav({ rol, email, nombre }) {
       <div className="nav-inner">
         <Link href={links[0]?.href || '/login'} className="nav-logo" aria-label="MiTechnologies">
           <span className="nav-logo-icon">
-            <img src="/mitech-logo.png" alt="MiTechnologies" width="120" height="38" />
+            <img src={LOGO_MITECH} alt="MiTechnologies" width="120" height="38" />
           </span>
         </Link>
         <div className="nav-links">

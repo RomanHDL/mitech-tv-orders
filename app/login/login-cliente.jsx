@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { IconAlert } from '../components/icons'
+import { LOGO_MITECH } from '@/lib/logo-mitech'
 
 export default function LoginCliente() {
   const router = useRouter()
@@ -111,9 +112,14 @@ export default function LoginCliente() {
   return (
     <main className="login-page">
       <aside className="login-hero">
+        <div className="login-hero-blobs" aria-hidden="true">
+          <span className="blob blob-1" />
+          <span className="blob blob-2" />
+          <span className="blob blob-3" />
+        </div>
         <div className="login-hero-content">
           <div className="login-hero-logo">
-            <img src="/mitech-logo.png" alt="MiTechnologies" width="240" height="76" />
+            <img src={LOGO_MITECH} alt="MiTechnologies" width="240" height="76" />
           </div>
           <h1 className="login-hero-titulo">MiTech Pedidos</h1>
           <p className="login-hero-tagline">
