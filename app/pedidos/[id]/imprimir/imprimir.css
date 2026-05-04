@@ -1,15 +1,26 @@
+/* Layout de impresión que escala todo proporcionalmente
+   con la variable CSS --fs-mult.
+   - Server estima un valor inicial según líneas
+   - JS (fit-to-page.jsx) lo ajusta fino al cargar y antes de imprimir
+   - Todos los font-size, padding y margin usan calc(... * var(--fs-mult)) */
+
 .imprimir {
-  max-width: 820px;
-  margin: 0 auto;
-  padding: 3rem 2rem 2rem;
-  font-family: Arial, Helvetica, sans-serif;
-  color: #000;
   background: #fff;
   min-height: 100vh;
 }
 
 body { background: #fff; }
 
+.contenido-imprimir {
+  --fs-mult: 1;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 2rem 2rem 1.5rem;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+}
+
+/* Acciones (Volver / Imprimir) — no se imprimen */
 .acciones-imprimir {
   position: fixed;
   top: 1.5rem; right: 1.5rem;
@@ -32,55 +43,58 @@ body { background: #fff; }
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
   transition: all 0.15s;
 }
-
 .btn-imprimir { background: #2563eb; color: #fff; }
 .btn-imprimir:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,0.3); }
-
 .btn-volver { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
 .btn-volver:hover { background: #f1f5f9; }
 
-/* Encabezado: siempre full-width sobre las columnas */
+/* Encabezado */
 .encabezado {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: calc(1.5rem * var(--fs-mult));
 }
 .encabezado .brand {
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--fs-mult));
   letter-spacing: 0.4em;
   color: #666;
-  margin-bottom: 0.75rem;
+  margin-bottom: calc(0.6rem * var(--fs-mult));
   font-weight: bold;
 }
 .encabezado h1 {
-  font-size: 2.25rem;
+  font-size: calc(2.25rem * var(--fs-mult));
   margin: 0;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   font-weight: 900;
 }
 .encabezado h2 {
-  font-size: 1.4rem;
-  margin: 0.5rem 0 0;
+  font-size: calc(1.4rem * var(--fs-mult));
+  margin: calc(0.5rem * var(--fs-mult)) 0 0;
   font-weight: bold;
 }
 .encabezado .meta {
-  font-size: 0.95rem;
+  font-size: calc(0.95rem * var(--fs-mult));
   color: #444;
-  margin-top: 0.5rem;
+  margin-top: calc(0.5rem * var(--fs-mult));
   text-transform: capitalize;
 }
 .encabezado hr {
   border: 0;
   border-top: 4px solid #000;
-  margin: 1rem 0 0;
+  margin: calc(1rem * var(--fs-mult)) 0 0;
 }
 
-/* Contenedor de marcas: 2 columnas para pedidos grandes */
+/* Contenedor de marcas: 1, 2 o 3 columnas según pedido */
 .contenido-pedido {
-  margin: 1.5rem 0;
+  margin: calc(1.5rem * var(--fs-mult)) 0;
 }
-.contenido-pedido.dos-columnas {
+.cols-2 .contenido-pedido {
   column-count: 2;
   column-gap: 2rem;
+  column-rule: 1px solid #ddd;
+}
+.cols-3 .contenido-pedido {
+  column-count: 3;
+  column-gap: 1.25rem;
   column-rule: 1px solid #ddd;
 }
 
@@ -88,7 +102,7 @@ body { background: #fff; }
   break-inside: avoid;
   page-break-inside: avoid;
   -webkit-column-break-inside: avoid;
-  margin: 0 0 1.25rem;
+  margin: 0 0 calc(1.25rem * var(--fs-mult));
 }
 
 .marca-header {
@@ -96,14 +110,15 @@ body { background: #fff; }
   align-items: baseline;
   justify-content: space-between;
   border-bottom: 3px solid #000;
-  margin-bottom: 0.4rem;
-  padding-bottom: 0.2rem;
+  margin-bottom: calc(0.4rem * var(--fs-mult));
+  padding-bottom: calc(0.2rem * var(--fs-mult));
   gap: 0.5rem;
 }
 
 .marca-titulo {
   margin: 0;
   font-weight: 900;
+  font-size: calc(1.75rem * var(--fs-mult));
 }
 
 .marca-subtotal {
@@ -111,6 +126,7 @@ body { background: #fff; }
   color: #444;
   letter-spacing: 0.05em;
   white-space: nowrap;
+  font-size: calc(0.95rem * var(--fs-mult));
 }
 
 .marca-bloque ul {
@@ -121,102 +137,45 @@ body { background: #fff; }
 
 .marca-bloque li {
   font-weight: bold;
+  padding: calc(0.25rem * var(--fs-mult)) 0;
   display: flex;
-  gap: 0.75rem;
+  gap: calc(0.6rem * var(--fs-mult));
   align-items: baseline;
   border-bottom: 1px dashed #ddd;
+  font-size: calc(1.5rem * var(--fs-mult));
 }
 .marca-bloque li:last-child { border-bottom: none; }
 
 .tv-pulgadas {
   font-weight: 900;
   white-space: nowrap;
+  min-width: calc(3.5rem * var(--fs-mult));
 }
 .tv-cantidad { flex: 1; }
 .tv-modelo {
   font-weight: normal;
   color: #555;
   font-style: italic;
+  font-size: calc(1.05rem * var(--fs-mult));
 }
 
 .total-final {
-  margin-top: 2rem;
+  margin-top: calc(2rem * var(--fs-mult));
   text-align: center;
   font-weight: 900;
   letter-spacing: 0.05em;
+  font-size: calc(1.3rem * var(--fs-mult));
 }
 .total-final hr {
   border: 0;
   border-top: 4px double #000;
-  margin: 0.75rem 0;
+  margin: calc(0.75rem * var(--fs-mult)) 0;
 }
-
-/* Tamaños dinámicos según cantidad total de líneas */
-.imprimir.size-sm .marca-titulo { font-size: 2rem; }
-.imprimir.size-sm .marca-subtotal { font-size: 1.05rem; }
-.imprimir.size-sm .marca-bloque li { font-size: 1.85rem; padding: 0.4rem 0; }
-.imprimir.size-sm .tv-modelo { font-size: 1.3rem; }
-.imprimir.size-sm .tv-pulgadas { min-width: 4.5rem; }
-.imprimir.size-sm .total-final { font-size: 1.4rem; }
-
-.imprimir.size-md .marca-titulo { font-size: 1.55rem; }
-.imprimir.size-md .marca-subtotal { font-size: 0.9rem; }
-.imprimir.size-md .marca-bloque li { font-size: 1.4rem; padding: 0.25rem 0; }
-.imprimir.size-md .tv-modelo { font-size: 1.05rem; }
-.imprimir.size-md .tv-pulgadas { min-width: 3.5rem; }
-.imprimir.size-md .total-final { font-size: 1.25rem; }
-
-.imprimir.size-lg .marca-titulo { font-size: 1.25rem; }
-.imprimir.size-lg .marca-subtotal { font-size: 0.8rem; }
-.imprimir.size-lg .marca-bloque li { font-size: 1.1rem; padding: 0.18rem 0; }
-.imprimir.size-lg .tv-modelo { font-size: 0.85rem; }
-.imprimir.size-lg .tv-pulgadas { min-width: 2.8rem; }
-.imprimir.size-lg .total-final { font-size: 1.1rem; }
-
-.imprimir.size-xl .marca-titulo { font-size: 1.05rem; }
-.imprimir.size-xl .marca-subtotal { font-size: 0.7rem; }
-.imprimir.size-xl .marca-bloque li { font-size: 0.9rem; padding: 0.1rem 0; }
-.imprimir.size-xl .tv-modelo { font-size: 0.75rem; }
-.imprimir.size-xl .tv-pulgadas { min-width: 2.4rem; }
-.imprimir.size-xl .total-final { font-size: 1rem; }
 
 @media print {
   @page { size: letter portrait; margin: 1cm; }
   html, body { background: #fff !important; }
   .acciones-imprimir { display: none !important; }
-  .imprimir { margin: 0; padding: 0; max-width: 100%; min-height: 0; }
-
-  .contenido-pedido.dos-columnas { column-gap: 1.5rem; }
-
-  /* Encabezado en print: tamaño compacto */
-  .encabezado { margin-bottom: 0.75rem; }
-  .encabezado h1 { font-size: 24pt; }
-  .encabezado h2 { font-size: 14pt; }
-  .encabezado .brand { font-size: 8pt; }
-  .encabezado .meta { font-size: 10pt; }
-  .encabezado hr { margin: 0.5rem 0 0; border-top-width: 3px; }
-
-  /* Tamaños en pt para impresión */
-  .imprimir.size-sm .marca-titulo { font-size: 22pt; }
-  .imprimir.size-sm .marca-subtotal { font-size: 12pt; }
-  .imprimir.size-sm .marca-bloque li { font-size: 20pt; }
-  .imprimir.size-sm .tv-modelo { font-size: 14pt; }
-
-  .imprimir.size-md .marca-titulo { font-size: 16pt; }
-  .imprimir.size-md .marca-subtotal { font-size: 9pt; }
-  .imprimir.size-md .marca-bloque li { font-size: 14pt; }
-  .imprimir.size-md .tv-modelo { font-size: 10pt; }
-
-  .imprimir.size-lg .marca-titulo { font-size: 12pt; }
-  .imprimir.size-lg .marca-subtotal { font-size: 7pt; }
-  .imprimir.size-lg .marca-bloque li { font-size: 11pt; }
-  .imprimir.size-lg .tv-modelo { font-size: 8pt; }
-
-  .imprimir.size-xl .marca-titulo { font-size: 10pt; }
-  .imprimir.size-xl .marca-subtotal { font-size: 6pt; }
-  .imprimir.size-xl .marca-bloque li { font-size: 9pt; }
-  .imprimir.size-xl .tv-modelo { font-size: 7pt; }
-
-  .total-final { margin-top: 1rem; font-size: 11pt; }
-  .total-final hr { margin: 0.4rem 0; }
+  .imprimir { min-height: 0; }
+  .contenido-imprimir { padding: 0; max-width: 100%; }
 }
