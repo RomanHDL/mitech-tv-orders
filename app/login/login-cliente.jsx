@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { IconAlert } from '../components/icons'
 
 export default function LoginCliente() {
@@ -110,31 +111,16 @@ export default function LoginCliente() {
 
   return (
     <main className="login-page">
-      <div className="login-decoraciones" aria-hidden="true">
-        <span className="deco deco-burst-yellow">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <polygon
-              points="50,0 56,35 90,15 65,45 100,50 65,55 90,85 56,65 50,100 44,65 10,85 35,55 0,50 35,45 10,15 44,35"
-              fill="#fbbf24"
-              stroke="#0a0a0a"
-              strokeWidth="3"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
-        <span className="deco deco-circle-blue">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="45" fill="#dbeafe" stroke="#0a0a0a" strokeWidth="3" />
-            <circle cx="50" cy="50" r="22" fill="#2563eb" stroke="#0a0a0a" strokeWidth="3" />
-          </svg>
-        </span>
-      </div>
-
       <div className="login-card">
         <div className="login-logo-wrap">
-          <span className="login-logo-icon">
-            <img src="/logo-mitech.png" alt="MiTechnologies" />
-          </span>
+          <Image
+            src="/logo-mitech.png"
+            alt="MiTechnologies"
+            width={800}
+            height={252}
+            priority
+            className="login-logo-img"
+          />
         </div>
         <h1 className="login-titulo">MiTech Pedidos</h1>
         <p className="login-subtitulo">Inicia sesión para continuar</p>
