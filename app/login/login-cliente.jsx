@@ -122,32 +122,10 @@ export default function LoginCliente() {
             />
           </svg>
         </span>
-        <span className="deco deco-star-red">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <polygon
-              points="50,5 61,40 95,40 67,58 78,92 50,72 22,92 33,58 5,40 39,40"
-              fill="#ef4444"
-              stroke="#0a0a0a"
-              strokeWidth="3"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
         <span className="deco deco-circle-blue">
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             <circle cx="50" cy="50" r="45" fill="#dbeafe" stroke="#0a0a0a" strokeWidth="3" />
             <circle cx="50" cy="50" r="22" fill="#2563eb" stroke="#0a0a0a" strokeWidth="3" />
-          </svg>
-        </span>
-        <span className="deco deco-zap">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <polygon
-              points="55,5 25,55 50,55 35,95 75,40 50,40 65,5"
-              fill="#10b981"
-              stroke="#0a0a0a"
-              strokeWidth="3"
-              strokeLinejoin="round"
-            />
           </svg>
         </span>
       </div>

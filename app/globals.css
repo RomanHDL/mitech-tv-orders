@@ -143,23 +143,22 @@ h2 {
 .nav-logo-icon {
   height: 38px;
   background: #fff;
-  border: 2.5px solid var(--black);
+  border: 2px solid var(--black);
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
   box-shadow: var(--shadow-xs);
-  transform: rotate(-2deg);
-  transition: transform var(--tx);
+  transition: all var(--tx);
 }
 .nav-logo-icon img {
-  height: 100%;
+  height: 28px;
   width: auto;
   display: block;
 }
 .nav-logo:hover .nav-logo-icon {
-  transform: rotate(0deg);
   box-shadow: var(--shadow-sm);
+  transform: translate(-1px, -1px);
 }
 
 .nav-links { display: flex; gap: 0.3rem; align-items: center; }
@@ -982,29 +981,7 @@ select {
   overflow: hidden;
 }
 
-/* Diagonales animadas en el fondo */
-.login-page::before {
-  content: '';
-  position: absolute;
-  inset: -50%;
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent 0 90px,
-    rgba(37, 99, 235, 0.05) 90px 92px,
-    transparent 92px 180px,
-    rgba(252, 211, 77, 0.08) 180px 182px
-  );
-  animation: drift 35s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@keyframes drift {
-  from { transform: translate(0, 0); }
-  to { transform: translate(90px, 90px); }
-}
-
-/* Decoraciones cómic en las esquinas */
+/* Decoraciones cómic en las esquinas (sutiles) */
 .login-decoraciones {
   position: absolute;
   inset: 0;
@@ -1015,63 +992,34 @@ select {
 .deco {
   position: absolute;
   display: block;
+  opacity: 0.85;
 }
 .deco svg { width: 100%; height: 100%; display: block; }
 
 .deco-burst-yellow {
-  top: 7%;
-  right: 6%;
-  width: 110px;
-  height: 110px;
-  animation: spin 16s linear infinite;
-  filter: drop-shadow(3px 3px 0 rgba(0,0,0,0.15));
-}
-.deco-star-red {
-  bottom: 9%;
-  left: 5%;
-  width: 95px;
-  height: 95px;
-  animation: spinReverse 20s linear infinite;
-  filter: drop-shadow(3px 3px 0 rgba(0,0,0,0.15));
+  top: 8%;
+  right: 7%;
+  width: 80px;
+  height: 80px;
+  animation: spin 28s linear infinite;
+  filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.2));
 }
 .deco-circle-blue {
-  top: 12%;
-  left: 7%;
-  width: 75px;
-  height: 75px;
-  animation: float 4.5s ease-in-out infinite;
-  filter: drop-shadow(3px 3px 0 rgba(0,0,0,0.15));
-}
-.deco-zap {
-  bottom: 14%;
-  right: 8%;
-  width: 70px;
-  height: 70px;
-  animation: floatReverse 3.8s ease-in-out infinite;
-  filter: drop-shadow(3px 3px 0 rgba(0,0,0,0.15));
+  bottom: 10%;
+  left: 6%;
+  width: 65px;
+  height: 65px;
+  animation: floatGentle 6s ease-in-out infinite;
+  filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.2));
 }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-@keyframes spinReverse {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(-3deg); }
-  50% { transform: translateY(-18px) rotate(3deg); }
-}
-@keyframes floatReverse {
-  0%, 100% { transform: translateY(0) rotate(8deg); }
-  50% { transform: translateY(-14px) rotate(-8deg); }
-}
-
-@keyframes cardEnter {
-  0% { opacity: 0; transform: scale(0.8) rotate(-5deg); }
-  60% { opacity: 1; transform: scale(1.03) rotate(1deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+@keyframes floatGentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 .login-card {
@@ -1085,7 +1033,7 @@ select {
   text-align: center;
   position: relative;
   z-index: 1;
-  animation: cardEnter 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: fadeInUp 0.4s ease-out;
 }
 
 .login-logo-wrap {
@@ -1094,25 +1042,20 @@ select {
   margin-bottom: 1.15rem;
 }
 .login-logo-icon {
-  height: 64px;
+  height: 60px;
   background: #fff;
-  border: 3px solid var(--black);
-  border-radius: 14px;
+  border: 2.5px solid var(--black);
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
-  padding: 10px 16px;
-  box-shadow: 4px 4px 0 var(--black);
-  animation: logoWobble 3.5s ease-in-out infinite;
+  padding: 8px 16px;
+  box-shadow: 3px 3px 0 var(--black);
+  transform: rotate(-2deg);
 }
 .login-logo-icon img {
-  height: 100%;
+  height: 40px;
   width: auto;
   display: block;
-}
-
-@keyframes logoWobble {
-  0%, 100% { transform: rotate(-3deg); }
-  50% { transform: rotate(2deg); }
 }
 .login-titulo {
   font-family: 'Bangers', cursive;
@@ -1122,22 +1065,17 @@ select {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1;
-  animation: fadeInUp 0.5s 0.15s both;
 }
 .login-subtitulo {
   color: var(--text-muted);
   font-size: 0.93rem;
   margin: 0 0 1.75rem;
   font-weight: 500;
-  animation: fadeInUp 0.5s 0.25s both;
 }
 
-.login-btn-nfc {
-  margin-bottom: 0.5rem;
-  animation: fadeInUp 0.5s 0.35s both;
-}
+.login-btn-nfc { margin-bottom: 0.5rem; }
 .login-btn-nfc.escaneando {
-  animation: fadeInUp 0.5s 0.35s both, pulseRing 1.4s ease-in-out infinite 0.85s;
+  animation: pulseRing 1.4s ease-in-out infinite;
 }
 
 @keyframes pulseRing {
@@ -1154,10 +1092,6 @@ select {
       0 0 0 1px rgba(37, 99, 235, 0.5);
   }
 }
-
-.login-divider { animation: fadeInUp 0.5s 0.4s both; }
-.login-form { animation: fadeInUp 0.5s 0.5s both; }
-.login-hint { animation: fadeInUp 0.5s 0.6s both; }
 
 .login-divider {
   position: relative;
@@ -1238,7 +1172,8 @@ select {
   .nav-inner { padding: 0 0.85rem; height: 56px; gap: 0.5rem; }
   .nav-user-name { display: none; }
   .nav-rol-badge { display: none; }
-  .nav-logo-icon { height: 30px; padding: 3px 7px; }
+  .nav-logo-icon { height: 32px; padding: 3px 7px; }
+  .nav-logo-icon img { height: 22px; }
   .nav-links { gap: 0.2rem; }
   .nav-links a { padding: 0.45rem 0.7rem; font-size: 0.82rem; }
   .nav-logout { padding: 0.4rem 0.7rem; font-size: 0.75rem; margin-left: 0.25rem; }
@@ -1305,30 +1240,19 @@ select {
 
   .login-card { padding: 2rem 1.4rem 1.6rem; }
   .login-titulo { font-size: 1.7rem; }
-  .login-logo-icon { height: 52px; padding: 8px 12px; }
+  .login-logo-icon { height: 52px; padding: 7px 14px; }
+  .login-logo-icon img { height: 36px; }
 
   /* Decoraciones mas chicas en mobile */
-  .deco-burst-yellow { width: 75px; height: 75px; top: 4%; right: 3%; }
-  .deco-star-red { width: 65px; height: 65px; bottom: 5%; left: 3%; }
-  .deco-circle-blue { width: 55px; height: 55px; top: 6%; left: 4%; }
-  .deco-zap { width: 50px; height: 50px; bottom: 8%; right: 4%; }
+  .deco-burst-yellow { width: 60px; height: 60px; top: 4%; right: 3%; }
+  .deco-circle-blue { width: 50px; height: 50px; bottom: 6%; left: 4%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .login-page::before,
   .deco-burst-yellow,
-  .deco-star-red,
   .deco-circle-blue,
-  .deco-zap,
-  .login-logo-icon,
   .login-card,
-  .login-titulo,
-  .login-subtitulo,
-  .login-btn-nfc,
-  .login-btn-nfc.escaneando,
-  .login-divider,
-  .login-form,
-  .login-hint {
+  .login-btn-nfc.escaneando {
     animation: none !important;
   }
 }
