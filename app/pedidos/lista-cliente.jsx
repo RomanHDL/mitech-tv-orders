@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { colorDeCondicion } from '@/lib/catalogos'
 import { IconAlert, IconPlus, IconPrinter, IconSearch, IconTrash } from '../components/icons'
 
 function formatoFecha(iso) {
@@ -14,7 +15,7 @@ function formatoFecha(iso) {
 }
 
 function tagClass(c) {
-  return `tag tag-${c.toLowerCase()}`
+  return `tag tag-${colorDeCondicion(c)}`
 }
 
 export default function ListaCliente({ pedidos }) {
@@ -103,9 +104,11 @@ export default function ListaCliente({ pedidos }) {
                   <div className="pedido-fecha">{formatoFecha(p.fecha)}</div>
                 </td>
                 <td data-label="Condiciones">
-                  {p.condiciones.length > 0
-                    ? p.condiciones.map((c) => <span key={c} className={tagClass(c)}>{c}</span>)
-                    : <span className="tag-empty">—</span>}
+                  <div className="tags-celda">
+                    {p.condiciones.length > 0
+                      ? p.condiciones.map((c) => <span key={c} className={tagClass(c)}>{c}</span>)
+                      : <span className="tag-empty">—</span>}
+                  </div>
                 </td>
                 <td data-label="Modelos">{p.cantidadModelos}</td>
                 <td data-label="Total TVs"><span className="numero-grande">{p.totalTvs}</span></td>

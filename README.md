@@ -100,15 +100,31 @@ Colección `pedidos` en MongoDB:
 
 ## Catálogos
 
-Editar `lib/catalogos.js` para agregar marcas o pulgadas:
+Editar `lib/catalogos.js`:
+
+- **`MARCAS`** — array plano de marcas permitidas
+- **`PULGADAS`** — array de números (pulgadas)
+- **`CONDICIONES_GRUPOS`** — condiciones agrupadas por categoría con un color asociado
 
 ```js
-export const MARCAS = ['Samsung', 'LG', /* ... */]
-export const PULGADAS = [32, 40, /* ... */]
-export const CONDICIONES = ['GRA', 'GRB', 'GRC']
+export const CONDICIONES_GRUPOS = [
+  { titulo: 'Estado',    color: 'success', items: ['GRA', 'GRB', 'GRC', 'NUEVO', ...] },
+  { titulo: 'Daños',     color: 'danger',  items: ['DAÑO ESTÉTICO', 'NO ENCIENDE', ...] },
+  { titulo: 'Faltantes', color: 'warning', items: ['SIN CAJA', 'SIN CONTROL', ...] },
+  { titulo: 'Otros',     color: 'neutral', items: ['EXHIBICIÓN', 'DEVOLUCIÓN', ...] },
+]
 ```
 
+Para agregar una condición nueva basta con meterla al array `items` de la categoría correspondiente. El form, los tags coloreados de la lista y la validación del API se actualizan automáticamente.
+
+Colores disponibles: `success` (verde), `danger` (rojo), `warning` (ámbar), `neutral` (gris).
+
 La validación se hace tanto en cliente (al enviar el form) como en servidor (en `/api/pedidos`).
+
+## Marca vs Modelo
+
+- **Marca** = fabricante (Samsung, LG, Sony…). Obligatoria. Dropdown con buscador, validada contra `MARCAS`.
+- **Modelo** = código específico del producto dentro de la marca (ej. `UN70AU8000`, `OLED55C2`). Opcional, texto libre. Solo lo usas cuando necesitas distinguir entre varios modelos de la misma marca y pulgadas.
 
 ## Endpoints API
 
