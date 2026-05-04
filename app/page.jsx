@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MARCAS, PULGADAS, CONDICIONES } from '@/lib/catalogos'
 import { IconAlert, IconArrowRight, IconClose, IconPlus } from './components/icons'
@@ -14,6 +14,20 @@ export default function FormularioPage() {
   const [tvs, setTvs] = useState([tvVacia()])
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
+
+  const inputRefs = useRef([])
+  const previousLength = useRef(tvs.length)
+
+  useEffect(() => {
+    if (tvs.length > previousLength.current) {
+      const lastInput = inputRefs.current[tvs.length - 1]
+      if (lastInput) {
+        lastInput.focus()
+        lastInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+    previousLength.current = tvs.length
+  }, [tvs.length])
 
   const totalUnidades = useMemo(
     () => tvs.reduce((s, tv) => s + (Number(tv.cantidad) || 0), 0),
@@ -116,7 +130,7 @@ export default function FormularioPage() {
             </div>
           </div>
 
-          <div className="section">
+          <div className="section section-tvs">
             <div className="section-header">
               <h2>Televisiones</h2>
               <span className="count">
@@ -146,6 +160,7 @@ export default function FormularioPage() {
                 </div>
                 <div className="tv-card-grid">
                   <input
+                    ref={(el) => { if (el) inputRefs.current[i] = el }}
                     list="marcas-list"
                     value={tv.marca}
                     onChange={(e) => updateTv(i, 'marca', e.target.value)}
@@ -173,6 +188,12 @@ export default function FormularioPage() {
                     min="1"
                     value={tv.cantidad}
                     onChange={(e) => updateTv(i, 'cantidad', e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && i === tvs.length - 1) {
+                        e.preventDefault()
+                        agregarTv()
+                      }
+                    }}
                     placeholder="Cant."
                     required
                   />
@@ -183,6 +204,7 @@ export default function FormularioPage() {
             <button type="button" onClick={agregarTv} className="btn-agregar-tv">
               <IconPlus />
               Agregar televisión
+              <span className="atajo">o presiona Enter</span>
             </button>
           </div>
 

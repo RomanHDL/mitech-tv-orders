@@ -39,9 +39,10 @@ body { background: #fff; }
 .btn-volver { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
 .btn-volver:hover { background: #f1f5f9; }
 
+/* Encabezado: siempre full-width sobre las columnas */
 .encabezado {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 .encabezado .brand {
   font-size: 0.75rem;
@@ -51,30 +52,43 @@ body { background: #fff; }
   font-weight: bold;
 }
 .encabezado h1 {
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   margin: 0;
   letter-spacing: 2px;
   font-weight: 900;
 }
 .encabezado h2 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   margin: 0.5rem 0 0;
   font-weight: bold;
 }
 .encabezado .meta {
   font-size: 0.95rem;
   color: #444;
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
   text-transform: capitalize;
 }
 .encabezado hr {
   border: 0;
   border-top: 4px solid #000;
-  margin: 1.5rem 0 0;
+  margin: 1rem 0 0;
+}
+
+/* Contenedor de marcas: 2 columnas para pedidos grandes */
+.contenido-pedido {
+  margin: 1.5rem 0;
+}
+.contenido-pedido.dos-columnas {
+  column-count: 2;
+  column-gap: 2rem;
+  column-rule: 1px solid #ddd;
 }
 
 .marca-bloque {
-  margin: 2rem 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  margin: 0 0 1.25rem;
 }
 
 .marca-header {
@@ -82,21 +96,21 @@ body { background: #fff; }
   align-items: baseline;
   justify-content: space-between;
   border-bottom: 3px solid #000;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.25rem;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.2rem;
+  gap: 0.5rem;
 }
 
 .marca-titulo {
-  font-size: 2rem;
   margin: 0;
   font-weight: 900;
 }
 
 .marca-subtotal {
-  font-size: 1.05rem;
   font-weight: 700;
   color: #444;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .marca-bloque ul {
@@ -106,54 +120,103 @@ body { background: #fff; }
 }
 
 .marca-bloque li {
-  font-size: 1.85rem;
   font-weight: bold;
-  padding: 0.4rem 0;
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: baseline;
   border-bottom: 1px dashed #ddd;
 }
 .marca-bloque li:last-child { border-bottom: none; }
 
 .tv-pulgadas {
-  min-width: 4.5rem;
   font-weight: 900;
+  white-space: nowrap;
 }
 .tv-cantidad { flex: 1; }
 .tv-modelo {
-  font-size: 1.3rem;
   font-weight: normal;
   color: #555;
   font-style: italic;
 }
 
 .total-final {
-  margin-top: 3rem;
+  margin-top: 2rem;
   text-align: center;
-  font-size: 1.4rem;
   font-weight: 900;
   letter-spacing: 0.05em;
 }
 .total-final hr {
   border: 0;
   border-top: 4px double #000;
-  margin: 1rem 0;
+  margin: 0.75rem 0;
 }
 
+/* Tamaños dinámicos según cantidad total de líneas */
+.imprimir.size-sm .marca-titulo { font-size: 2rem; }
+.imprimir.size-sm .marca-subtotal { font-size: 1.05rem; }
+.imprimir.size-sm .marca-bloque li { font-size: 1.85rem; padding: 0.4rem 0; }
+.imprimir.size-sm .tv-modelo { font-size: 1.3rem; }
+.imprimir.size-sm .tv-pulgadas { min-width: 4.5rem; }
+.imprimir.size-sm .total-final { font-size: 1.4rem; }
+
+.imprimir.size-md .marca-titulo { font-size: 1.55rem; }
+.imprimir.size-md .marca-subtotal { font-size: 0.9rem; }
+.imprimir.size-md .marca-bloque li { font-size: 1.4rem; padding: 0.25rem 0; }
+.imprimir.size-md .tv-modelo { font-size: 1.05rem; }
+.imprimir.size-md .tv-pulgadas { min-width: 3.5rem; }
+.imprimir.size-md .total-final { font-size: 1.25rem; }
+
+.imprimir.size-lg .marca-titulo { font-size: 1.25rem; }
+.imprimir.size-lg .marca-subtotal { font-size: 0.8rem; }
+.imprimir.size-lg .marca-bloque li { font-size: 1.1rem; padding: 0.18rem 0; }
+.imprimir.size-lg .tv-modelo { font-size: 0.85rem; }
+.imprimir.size-lg .tv-pulgadas { min-width: 2.8rem; }
+.imprimir.size-lg .total-final { font-size: 1.1rem; }
+
+.imprimir.size-xl .marca-titulo { font-size: 1.05rem; }
+.imprimir.size-xl .marca-subtotal { font-size: 0.7rem; }
+.imprimir.size-xl .marca-bloque li { font-size: 0.9rem; padding: 0.1rem 0; }
+.imprimir.size-xl .tv-modelo { font-size: 0.75rem; }
+.imprimir.size-xl .tv-pulgadas { min-width: 2.4rem; }
+.imprimir.size-xl .total-final { font-size: 1rem; }
+
 @media print {
-  @page { margin: 1cm; }
+  @page { size: letter portrait; margin: 1cm; }
   html, body { background: #fff !important; }
   .acciones-imprimir { display: none !important; }
   .imprimir { margin: 0; padding: 0; max-width: 100%; min-height: 0; }
-  .marca-bloque { page-break-inside: avoid; }
-  .encabezado h1 { font-size: 32pt; }
-  .encabezado h2 { font-size: 20pt; }
-  .encabezado .brand { font-size: 9pt; }
-  .encabezado .meta { font-size: 11pt; }
-  .marca-titulo { font-size: 26pt; }
-  .marca-subtotal { font-size: 13pt; }
-  .marca-bloque li { font-size: 22pt; }
-  .tv-modelo { font-size: 16pt; }
-  .total-final { font-size: 18pt; }
+
+  .contenido-pedido.dos-columnas { column-gap: 1.5rem; }
+
+  /* Encabezado en print: tamaño compacto */
+  .encabezado { margin-bottom: 0.75rem; }
+  .encabezado h1 { font-size: 24pt; }
+  .encabezado h2 { font-size: 14pt; }
+  .encabezado .brand { font-size: 8pt; }
+  .encabezado .meta { font-size: 10pt; }
+  .encabezado hr { margin: 0.5rem 0 0; border-top-width: 3px; }
+
+  /* Tamaños en pt para impresión */
+  .imprimir.size-sm .marca-titulo { font-size: 22pt; }
+  .imprimir.size-sm .marca-subtotal { font-size: 12pt; }
+  .imprimir.size-sm .marca-bloque li { font-size: 20pt; }
+  .imprimir.size-sm .tv-modelo { font-size: 14pt; }
+
+  .imprimir.size-md .marca-titulo { font-size: 16pt; }
+  .imprimir.size-md .marca-subtotal { font-size: 9pt; }
+  .imprimir.size-md .marca-bloque li { font-size: 14pt; }
+  .imprimir.size-md .tv-modelo { font-size: 10pt; }
+
+  .imprimir.size-lg .marca-titulo { font-size: 12pt; }
+  .imprimir.size-lg .marca-subtotal { font-size: 7pt; }
+  .imprimir.size-lg .marca-bloque li { font-size: 11pt; }
+  .imprimir.size-lg .tv-modelo { font-size: 8pt; }
+
+  .imprimir.size-xl .marca-titulo { font-size: 10pt; }
+  .imprimir.size-xl .marca-subtotal { font-size: 6pt; }
+  .imprimir.size-xl .marca-bloque li { font-size: 9pt; }
+  .imprimir.size-xl .tv-modelo { font-size: 7pt; }
+
+  .total-final { margin-top: 1rem; font-size: 11pt; }
+  .total-final hr { margin: 0.4rem 0; }
 }

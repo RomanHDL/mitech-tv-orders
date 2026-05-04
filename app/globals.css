@@ -364,10 +364,12 @@ select {
   gap: 0.5rem;
 }
 
-/* Add TV button */
+/* Add TV button — sticky at viewport bottom while filling TVs */
 .btn-agregar-tv {
   width: 100%;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1.5px dashed var(--border-strong);
   border-radius: var(--radius);
   padding: 0.875rem;
@@ -381,12 +383,23 @@ select {
   justify-content: center;
   gap: 0.5rem;
   font-family: inherit;
+  position: sticky;
+  bottom: 1rem;
+  z-index: 5;
+  box-shadow: 0 -10px 16px -10px rgba(15, 23, 42, 0.12);
 }
 .btn-agregar-tv:hover {
   border-color: var(--primary);
   color: var(--primary);
   background: var(--primary-soft);
 }
+.btn-agregar-tv .atajo {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  font-weight: 400;
+  margin-left: 0.25rem;
+}
+.btn-agregar-tv:hover .atajo { color: var(--primary); opacity: 0.8; }
 
 /* Summary */
 .resumen-pedido {
