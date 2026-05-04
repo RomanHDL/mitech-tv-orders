@@ -129,7 +129,7 @@ export default function ListaCliente({ pedidos }) {
                   <td data-label="Total"><span className="numero-grande">{p.totalTvs}</span></td>
                   <td>
                     <div className="acciones">
-                      <Link href={`/pedidos/${p.id}/surtir`} className="btn btn-secondary btn-sm">
+                      <Link href={`/surtir/${p.id}`} className="btn btn-secondary btn-sm">
                         <IconClipboard />
                         Surtir
                       </Link>

@@ -21,6 +21,9 @@ export default function Nav() {
           <Link href="/pedidos" className={pathname === '/pedidos' ? 'activo' : ''}>
             Pedidos
           </Link>
+          <Link href="/surtir" className={pathname.startsWith('/surtir') ? 'activo' : ''}>
+            Surtir
+          </Link>
         </div>
       </div>
     </nav>

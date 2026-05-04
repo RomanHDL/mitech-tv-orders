@@ -615,6 +615,132 @@ select {
   justify-content: flex-end;
 }
 
+/* Surtir lista (módulo de surtidores) */
+.surtir-lista-page {
+  max-width: 900px;
+  margin: 1.5rem auto;
+  padding: 0 1.5rem 2rem;
+}
+
+.surtir-lista-toolbar {
+  margin-bottom: 1rem;
+}
+
+.surtir-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.surtir-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow);
+  transition: all 0.15s;
+  border-left: 5px solid var(--text-muted);
+}
+.surtir-card:hover {
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.surtir-card.estado-pendiente { border-left-color: var(--text-muted); }
+.surtir-card.estado-parcial { border-left-color: #d97706; }
+.surtir-card.estado-completo {
+  border-left-color: #16a34a;
+  background: linear-gradient(180deg, rgba(220, 252, 231, 0.5) 0%, var(--card) 30%);
+}
+
+.surtir-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.875rem;
+}
+.surtir-card-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  text-transform: none;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.surtir-card-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.surtir-card-progreso { margin-bottom: 0.625rem; }
+.surtir-card-progreso .progreso-track {
+  height: 10px;
+  background: var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+.surtir-card-progreso .progreso-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, var(--primary));
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+.surtir-card.estado-completo .progreso-fill {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+.surtir-card-numero {
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text-muted);
+}
+.surtir-card-numero strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.surtir-card-numero .check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #166534;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.surtir-card-numero .pct {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.surtir-card-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.surtir-card-pallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #92400e;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .surtir-card-header { flex-direction: column; gap: 0.4rem; }
+  .surtir-card-numero { flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+}
+
 /* Empty state */
 .empty {
   text-align: center;

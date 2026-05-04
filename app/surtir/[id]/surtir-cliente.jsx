@@ -11,7 +11,7 @@ import {
   IconPlus,
   IconPrinter,
   IconRefresh,
-} from '../../../components/icons'
+} from '../../components/icons'
 
 function agruparPorMarca(televisiones) {
   const grupos = {}
@@ -73,7 +73,7 @@ export default function SurtirCliente({ pedido }) {
     <main className="surtir">
       <header className="surtir-header">
         <div className="surtir-nav">
-          <Link href="/pedidos" className="btn btn-secondary btn-sm">
+          <Link href="/surtir" className="btn btn-secondary btn-sm">
             <IconArrowLeft />
             Volver
           </Link>
