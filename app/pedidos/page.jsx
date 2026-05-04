@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getDb } from '@/lib/mongodb'
 import ListaCliente from './lista-cliente'
+import { IconDocument, IconPlus } from '../components/icons'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,16 +27,28 @@ export default async function ListaPage() {
   const pedidos = await obtenerPedidos()
 
   return (
-    <main className="lista-container">
-      <div className="lista-header">
+    <main className="page-wide">
+      <div className="page-header">
         <h1>Pedidos</h1>
-        <Link href="/" className="btn-nuevo">+ Nuevo pedido</Link>
+        <p className="subtitle">
+          {pedidos.length === 0
+            ? 'Aún no hay pedidos guardados.'
+            : `${pedidos.length} ${pedidos.length === 1 ? 'pedido' : 'pedidos'} en total`}
+        </p>
       </div>
 
       {pedidos.length === 0 ? (
-        <p className="empty">
-          No hay pedidos aún. <Link href="/">Crea el primero</Link>.
-        </p>
+        <div className="card">
+          <div className="empty">
+            <IconDocument />
+            <h3>No hay pedidos aún</h3>
+            <p>Crea tu primer pedido para comenzar.</p>
+            <Link href="/" className="btn btn-primary">
+              <IconPlus />
+              Nuevo pedido
+            </Link>
+          </div>
+        </div>
       ) : (
         <ListaCliente pedidos={pedidos} />
       )}

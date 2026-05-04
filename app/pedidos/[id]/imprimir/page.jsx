@@ -19,6 +19,7 @@ function agruparPorMarca(televisiones) {
   return Object.keys(grupos).sort().map((marca) => ({
     marca,
     items: grupos[marca].sort((a, b) => a.pulgadas - b.pulgadas),
+    subtotal: grupos[marca].reduce((s, tv) => s + tv.cantidad, 0),
   }))
 }
 
@@ -28,32 +29,51 @@ export default async function ImprimirPage({ params }) {
   if (!pedido) notFound()
 
   const grupos = agruparPorMarca(pedido.televisiones)
+  const totalTvs = pedido.televisiones.reduce((s, tv) => s + tv.cantidad, 0)
+  const fechaFmt = new Date(pedido.fecha).toLocaleDateString('es-MX', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  })
 
   return (
     <main className="imprimir">
       <PrintButton />
 
       <header className="encabezado">
+        <div className="brand">MITECHNOLOGIES</div>
         <h1>PEDIDO: {pedido.pedidoNombre.toUpperCase()}</h1>
         {pedido.condiciones.length > 0 && (
           <h2>CONDICIONES: {pedido.condiciones.join(' / ')}</h2>
         )}
+        <div className="meta">{fechaFmt}</div>
         <hr />
       </header>
 
-      {grupos.map(({ marca, items }) => (
+      {grupos.map(({ marca, items, subtotal }) => (
         <section key={marca} className="marca-bloque">
-          <h2 className="marca-titulo">{marca.toUpperCase()}</h2>
+          <div className="marca-header">
+            <h2 className="marca-titulo">{marca.toUpperCase()}</h2>
+            <span className="marca-subtotal">{subtotal} {subtotal === 1 ? 'TV' : 'TVs'}</span>
+          </div>
           <ul>
             {items.map((tv, i) => (
               <li key={i}>
-                {tv.pulgadas}" – {tv.cantidad} {tv.cantidad === 1 ? 'PIEZA' : 'PIEZAS'}
-                {tv.modelo ? ` (${tv.modelo})` : ''}
+                <span className="tv-pulgadas">{tv.pulgadas}"</span>
+                <span className="tv-cantidad">
+                  {tv.cantidad} {tv.cantidad === 1 ? 'PIEZA' : 'PIEZAS'}
+                </span>
+                {tv.modelo ? <span className="tv-modelo">({tv.modelo})</span> : null}
               </li>
             ))}
           </ul>
         </section>
       ))}
+
+      <footer className="total-final">
+        <hr />
+        <div>
+          TOTAL: {totalTvs} TVs · {grupos.length} {grupos.length === 1 ? 'MARCA' : 'MARCAS'}
+        </div>
+      </footer>
     </main>
   )
 }

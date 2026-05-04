@@ -10,10 +10,17 @@ export default function Nav() {
   return (
     <nav className="nav">
       <div className="nav-inner">
-        <Link href="/" className="nav-logo">MiTech Pedidos</Link>
+        <Link href="/" className="nav-logo">
+          <span className="nav-logo-icon">MT</span>
+          <span>MiTech Pedidos</span>
+        </Link>
         <div className="nav-links">
-          <Link href="/" className={pathname === '/' ? 'activo' : ''}>Nuevo pedido</Link>
-          <Link href="/pedidos" className={pathname === '/pedidos' ? 'activo' : ''}>Ver pedidos</Link>
+          <Link href="/" className={pathname === '/' ? 'activo' : ''}>
+            Nuevo pedido
+          </Link>
+          <Link href="/pedidos" className={pathname === '/pedidos' ? 'activo' : ''}>
+            Pedidos
+          </Link>
         </div>
       </div>
     </nav>

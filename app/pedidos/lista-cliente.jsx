@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { IconAlert, IconPlus, IconPrinter, IconSearch, IconTrash } from '../components/icons'
 
 function formatoFecha(iso) {
   const d = new Date(iso)
@@ -12,11 +13,25 @@ function formatoFecha(iso) {
   })
 }
 
+function tagClass(c) {
+  return `tag tag-${c.toLowerCase()}`
+}
+
 export default function ListaCliente({ pedidos }) {
   const router = useRouter()
   const [eliminandoId, setEliminandoId] = useState(null)
   const [error, setError] = useState('')
+  const [busqueda, setBusqueda] = useState('')
   const [, startTransition] = useTransition()
+
+  const pedidosFiltrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    if (!q) return pedidos
+    return pedidos.filter((p) =>
+      p.pedidoNombre.toLowerCase().includes(q) ||
+      p.condiciones.some((c) => c.toLowerCase().includes(q))
+    )
+  }, [pedidos, busqueda])
 
   const eliminar = async (id, nombre) => {
     if (!confirm(`¿Eliminar el pedido "${nombre}"? Esta acción no se puede deshacer.`)) return
@@ -38,43 +53,83 @@ export default function ListaCliente({ pedidos }) {
   }
 
   return (
-    <>
-      {error && <p className="error">{error}</p>}
-      <table className="tabla-pedidos">
-        <thead>
-          <tr>
-            <th>Pedido</th>
-            <th>Fecha</th>
-            <th>Condiciones</th>
-            <th>Modelos</th>
-            <th>Total TVs</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {pedidos.map((p) => (
-            <tr key={p.id}>
-              <td><strong>{p.pedidoNombre}</strong></td>
-              <td>{formatoFecha(p.fecha)}</td>
-              <td>{p.condiciones.length > 0 ? p.condiciones.join(' / ') : '—'}</td>
-              <td>{p.cantidadModelos}</td>
-              <td>{p.totalTvs}</td>
-              <td className="acciones">
-                <Link href={`/pedidos/${p.id}/imprimir`} className="btn-imprimir-link">
-                  Imprimir
-                </Link>
-                <button
-                  onClick={() => eliminar(p.id, p.pedidoNombre)}
-                  disabled={eliminandoId === p.id}
-                  className="btn-eliminar"
-                >
-                  {eliminandoId === p.id ? 'Eliminando…' : 'Eliminar'}
-                </button>
-              </td>
+    <div className="card">
+      <div className="lista-toolbar">
+        <div className="search-box">
+          <IconSearch className="icon-search" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre o condición…"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+        <Link href="/" className="btn btn-primary">
+          <IconPlus />
+          Nuevo pedido
+        </Link>
+      </div>
+
+      {error && (
+        <div className="alerta alerta-error">
+          <IconAlert />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {pedidosFiltrados.length === 0 ? (
+        <div className="empty">
+          <p>No se encontraron pedidos con "{busqueda}".</p>
+        </div>
+      ) : (
+        <table className="tabla-pedidos">
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Fecha</th>
+              <th>Condiciones</th>
+              <th>Modelos</th>
+              <th>Total TVs</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
+          </thead>
+          <tbody>
+            {pedidosFiltrados.map((p) => (
+              <tr key={p.id}>
+                <td data-label="Pedido">
+                  <div className="pedido-nombre">{p.pedidoNombre}</div>
+                </td>
+                <td data-label="Fecha">
+                  <div className="pedido-fecha">{formatoFecha(p.fecha)}</div>
+                </td>
+                <td data-label="Condiciones">
+                  {p.condiciones.length > 0
+                    ? p.condiciones.map((c) => <span key={c} className={tagClass(c)}>{c}</span>)
+                    : <span className="tag-empty">—</span>}
+                </td>
+                <td data-label="Modelos">{p.cantidadModelos}</td>
+                <td data-label="Total TVs"><span className="numero-grande">{p.totalTvs}</span></td>
+                <td>
+                  <div className="acciones">
+                    <Link href={`/pedidos/${p.id}/imprimir`} className="btn btn-primary btn-sm">
+                      <IconPrinter />
+                      Imprimir
+                    </Link>
+                    <button
+                      onClick={() => eliminar(p.id, p.pedidoNombre)}
+                      disabled={eliminandoId === p.id}
+                      className="btn btn-danger btn-sm"
+                    >
+                      <IconTrash />
+                      {eliminandoId === p.id ? 'Eliminando…' : 'Eliminar'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   )
 }

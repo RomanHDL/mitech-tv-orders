@@ -1,75 +1,159 @@
 .imprimir {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 1rem;
-  font-family: Arial, sans-serif;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 3rem 2rem 2rem;
+  font-family: Arial, Helvetica, sans-serif;
   color: #000;
   background: #fff;
+  min-height: 100vh;
 }
+
+body { background: #fff; }
 
 .acciones-imprimir {
   position: fixed;
-  top: 1rem; right: 1rem;
+  top: 1.5rem; right: 1.5rem;
   display: flex;
   gap: 0.5rem;
-  z-index: 10;
+  z-index: 100;
 }
 
 .btn-imprimir, .btn-volver {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
   border: none;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 8px;
   font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  transition: all 0.15s;
 }
 
-.btn-imprimir { background: #000; color: #fff; }
-.btn-imprimir:hover { background: #333; }
+.btn-imprimir { background: #2563eb; color: #fff; }
+.btn-imprimir:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,0.3); }
 
-.btn-volver {
-  background: #fff;
-  color: #000;
-  border: 1px solid #ccc;
+.btn-volver { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
+.btn-volver:hover { background: #f1f5f9; }
+
+.encabezado {
+  text-align: center;
+  margin-bottom: 2rem;
 }
-.btn-volver:hover { background: #f5f5f5; }
-
+.encabezado .brand {
+  font-size: 0.75rem;
+  letter-spacing: 0.4em;
+  color: #666;
+  margin-bottom: 0.75rem;
+  font-weight: bold;
+}
 .encabezado h1 {
-  font-size: 2.5rem; margin: 0;
-  text-align: center; letter-spacing: 2px;
+  font-size: 2.5rem;
+  margin: 0;
+  letter-spacing: 2px;
+  font-weight: 900;
 }
 .encabezado h2 {
-  font-size: 1.5rem; margin: 0.5rem 0;
-  text-align: center;
+  font-size: 1.5rem;
+  margin: 0.5rem 0 0;
+  font-weight: bold;
+}
+.encabezado .meta {
+  font-size: 0.95rem;
+  color: #444;
+  margin-top: 0.75rem;
+  text-transform: capitalize;
 }
 .encabezado hr {
-  border: 0; border-top: 4px solid #000;
-  margin: 1rem 0;
+  border: 0;
+  border-top: 4px solid #000;
+  margin: 1.5rem 0 0;
 }
 
-.marca-bloque { margin: 2rem 0; }
+.marca-bloque {
+  margin: 2rem 0;
+}
 
-.marca-titulo {
-  font-size: 2rem; margin: 0 0 0.5rem 0;
-  border-bottom: 2px solid #000;
+.marca-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 3px solid #000;
+  margin-bottom: 0.5rem;
   padding-bottom: 0.25rem;
 }
 
-.marca-bloque ul { list-style: none; padding: 0; margin: 0; }
+.marca-titulo {
+  font-size: 2rem;
+  margin: 0;
+  font-weight: 900;
+}
+
+.marca-subtotal {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #444;
+  letter-spacing: 0.05em;
+}
+
+.marca-bloque ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
 
 .marca-bloque li {
-  font-size: 2rem; font-weight: bold;
-  padding: 0.25rem 0;
+  font-size: 1.85rem;
+  font-weight: bold;
+  padding: 0.4rem 0;
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  border-bottom: 1px dashed #ddd;
+}
+.marca-bloque li:last-child { border-bottom: none; }
+
+.tv-pulgadas {
+  min-width: 4.5rem;
+  font-weight: 900;
+}
+.tv-cantidad { flex: 1; }
+.tv-modelo {
+  font-size: 1.3rem;
+  font-weight: normal;
+  color: #555;
+  font-style: italic;
+}
+
+.total-final {
+  margin-top: 3rem;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+.total-final hr {
+  border: 0;
+  border-top: 4px double #000;
+  margin: 1rem 0;
 }
 
 @media print {
   @page { margin: 1cm; }
-  body { background: #fff !important; }
+  html, body { background: #fff !important; }
   .acciones-imprimir { display: none !important; }
-  .imprimir { margin: 0; padding: 0; max-width: 100%; }
+  .imprimir { margin: 0; padding: 0; max-width: 100%; min-height: 0; }
   .marca-bloque { page-break-inside: avoid; }
   .encabezado h1 { font-size: 32pt; }
   .encabezado h2 { font-size: 20pt; }
-  .marca-titulo { font-size: 24pt; }
+  .encabezado .brand { font-size: 9pt; }
+  .encabezado .meta { font-size: 11pt; }
+  .marca-titulo { font-size: 26pt; }
+  .marca-subtotal { font-size: 13pt; }
   .marca-bloque li { font-size: 22pt; }
+  .tv-modelo { font-size: 16pt; }
+  .total-final { font-size: 18pt; }
 }
