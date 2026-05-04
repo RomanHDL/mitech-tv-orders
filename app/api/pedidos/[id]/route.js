@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
+import { MARCAS, PULGADAS, CONDICIONES, UNIDADES } from '@/lib/catalogos'
 
 export async function GET(_req, { params }) {
   const { id } = await params
@@ -31,7 +32,7 @@ export async function DELETE(_req, { params }) {
   return NextResponse.json({ ok: true })
 }
 
-// Actualiza la cantidad surtida de un TV específico del pedido.
+// Actualiza cantidadSurtida de un TV específico (usado por el módulo de surtido).
 // Body: { tvIndex: number, cantidadSurtida: number }
 export async function PATCH(req, { params }) {
   const { id } = await params
@@ -75,6 +76,88 @@ export async function PATCH(req, { params }) {
   await db.collection('pedidos').updateOne(
     { _id: new ObjectId(id) },
     { $set: { [`televisiones.${tvIndex}.cantidadSurtida`]: cantidadSurtida } }
+  )
+
+  return NextResponse.json({ ok: true })
+}
+
+// Edición completa del pedido (admin). Preserva cantidadSurtida si el TV
+// (marca, pulgadas, modelo, unidad) sigue existiendo en la nueva versión.
+export async function PUT(req, { params }) {
+  const { id } = await params
+  if (!ObjectId.isValid(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+  }
+
+  let body
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+  }
+
+  const { pedidoNombre, condiciones, televisiones } = body
+
+  if (typeof pedidoNombre !== 'string' || !pedidoNombre.trim()) {
+    return NextResponse.json({ error: 'Nombre de pedido requerido' }, { status: 400 })
+  }
+  if (!Array.isArray(condiciones) || condiciones.some((c) => !CONDICIONES.includes(c))) {
+    return NextResponse.json({ error: 'Condiciones inválidas' }, { status: 400 })
+  }
+  if (!Array.isArray(televisiones) || televisiones.length === 0) {
+    return NextResponse.json({ error: 'Agrega al menos una televisión' }, { status: 400 })
+  }
+
+  const db = await getDb()
+  const existing = await db.collection('pedidos').findOne(
+    { _id: new ObjectId(id) },
+    { projection: { televisiones: 1 } }
+  )
+  if (!existing) {
+    return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
+  }
+  const tvsExistentes = existing.televisiones || []
+
+  const tvsLimpias = []
+  for (const [i, tv] of televisiones.entries()) {
+    if (!MARCAS.includes(tv.marca)) {
+      return NextResponse.json({ error: `TV #${i + 1}: marca inválida` }, { status: 400 })
+    }
+    const pulgadas = Number(tv.pulgadas)
+    if (!PULGADAS.includes(pulgadas)) {
+      return NextResponse.json({ error: `TV #${i + 1}: pulgadas inválidas` }, { status: 400 })
+    }
+    const cantidad = Number(tv.cantidad)
+    if (!Number.isInteger(cantidad) || cantidad < 1) {
+      return NextResponse.json({ error: `TV #${i + 1}: cantidad inválida` }, { status: 400 })
+    }
+    const unidad = UNIDADES.includes(tv.unidad) ? tv.unidad : 'pieza'
+    const modelo = typeof tv.modelo === 'string' ? tv.modelo.trim() : ''
+
+    // Preservar cantidadSurtida si hay match exacto
+    const matching = tvsExistentes.find(
+      (v) =>
+        v.marca === tv.marca &&
+        v.pulgadas === pulgadas &&
+        (v.modelo || '') === modelo &&
+        (v.unidad || 'pieza') === unidad
+    )
+    const cantidadSurtida = matching
+      ? Math.min(cantidad, matching.cantidadSurtida || 0)
+      : 0
+
+    tvsLimpias.push({ marca: tv.marca, pulgadas, modelo, cantidad, unidad, cantidadSurtida })
+  }
+
+  await db.collection('pedidos').updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        pedidoNombre: pedidoNombre.trim(),
+        condiciones,
+        televisiones: tvsLimpias,
+      },
+    }
   )
 
   return NextResponse.json({ ok: true })

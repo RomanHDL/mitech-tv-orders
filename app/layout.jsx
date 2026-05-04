@@ -1,5 +1,6 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
+import { cookies } from 'next/headers'
 import Nav from './components/nav'
 
 const inter = Inter({
@@ -13,11 +14,14 @@ export const metadata = {
   description: 'Captura e impresión de pedidos de televisiones',
 }
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const cookieStore = await cookies()
+  const rol = cookieStore.get('rol')?.value || null
+
   return (
     <html lang="es" className={inter.variable}>
       <body>
-        <Nav />
+        <Nav rol={rol} />
         {children}
       </body>
     </html>

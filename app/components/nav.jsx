@@ -1,29 +1,69 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
-export default function Nav() {
+const LINKS_POR_ROL = {
+  capturista: [
+    { href: '/', label: 'Nuevo pedido' },
+    { href: '/pedidos', label: 'Pedidos' },
+  ],
+  surtidor: [
+    { href: '/surtir', label: 'Surtir' },
+  ],
+  admin: [
+    { href: '/', label: 'Nuevo pedido' },
+    { href: '/pedidos', label: 'Pedidos' },
+    { href: '/surtir', label: 'Surtir' },
+  ],
+}
+
+const ROL_LABEL = {
+  admin: 'Admin',
+  capturista: 'Capturista',
+  surtidor: 'Surtidor',
+}
+
+export default function Nav({ rol }) {
   const pathname = usePathname()
+  const router = useRouter()
+
   if (pathname.includes('/imprimir')) return null
+  if (pathname === '/login') return null
+  if (!rol) return null
+
+  const links = LINKS_POR_ROL[rol] || []
+
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {}
+    router.push('/login')
+    router.refresh()
+  }
+
+  const esActiva = (href) => {
+    if (href === '/') return pathname === '/'
+    return pathname === href || pathname.startsWith(href + '/')
+  }
 
   return (
     <nav className="nav">
       <div className="nav-inner">
-        <Link href="/" className="nav-logo">
+        <Link href={links[0]?.href || '/login'} className="nav-logo">
           <span className="nav-logo-icon">MT</span>
           <span>MiTech Pedidos</span>
         </Link>
         <div className="nav-links">
-          <Link href="/" className={pathname === '/' ? 'activo' : ''}>
-            Nuevo pedido
-          </Link>
-          <Link href="/pedidos" className={pathname === '/pedidos' ? 'activo' : ''}>
-            Pedidos
-          </Link>
-          <Link href="/surtir" className={pathname.startsWith('/surtir') ? 'activo' : ''}>
-            Surtir
-          </Link>
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
+              {l.label}
+            </Link>
+          ))}
+          <span className={`nav-rol-badge rol-${rol}`}>{ROL_LABEL[rol]}</span>
+          <button onClick={logout} className="nav-logout" type="button">
+            Salir
+          </button>
         </div>
       </div>
     </nav>

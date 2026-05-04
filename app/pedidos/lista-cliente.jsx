@@ -3,7 +3,14 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { IconAlert, IconBox, IconClipboard, IconPlus, IconPrinter, IconSearch, IconTrash } from '../components/icons'
+import {
+  IconAlert,
+  IconBox,
+  IconPlus,
+  IconPrinter,
+  IconSearch,
+  IconTrash,
+} from '../components/icons'
 
 function formatoFecha(iso) {
   const d = new Date(iso)
@@ -23,12 +30,14 @@ function badgeProgreso(pct) {
   return { label: 'Pendiente', clase: 'pendiente' }
 }
 
-export default function ListaCliente({ pedidos }) {
+export default function ListaCliente({ pedidos, rol }) {
   const router = useRouter()
   const [eliminandoId, setEliminandoId] = useState(null)
   const [error, setError] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [, startTransition] = useTransition()
+
+  const esAdmin = rol === 'admin'
 
   const pedidosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -129,22 +138,25 @@ export default function ListaCliente({ pedidos }) {
                   <td data-label="Total"><span className="numero-grande">{p.totalTvs}</span></td>
                   <td>
                     <div className="acciones">
-                      <Link href={`/surtir/${p.id}`} className="btn btn-secondary btn-sm">
-                        <IconClipboard />
-                        Surtir
-                      </Link>
                       <Link href={`/pedidos/${p.id}/imprimir`} className="btn btn-primary btn-sm">
                         <IconPrinter />
                         Imprimir
                       </Link>
-                      <button
-                        onClick={() => eliminar(p.id, p.pedidoNombre)}
-                        disabled={eliminandoId === p.id}
-                        className="btn btn-danger btn-sm"
-                      >
-                        <IconTrash />
-                        {eliminandoId === p.id ? '…' : 'Eliminar'}
-                      </button>
+                      {esAdmin && (
+                        <>
+                          <Link href={`/pedidos/${p.id}/editar`} className="btn btn-secondary btn-sm">
+                            Editar
+                          </Link>
+                          <button
+                            onClick={() => eliminar(p.id, p.pedidoNombre)}
+                            disabled={eliminandoId === p.id}
+                            className="btn btn-danger btn-sm"
+                          >
+                            <IconTrash />
+                            {eliminandoId === p.id ? '…' : 'Eliminar'}
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getDb } from '@/lib/mongodb'
+import { getRol } from '@/lib/auth'
 import ListaCliente from './lista-cliente'
 import { IconDocument, IconPlus } from '../components/icons'
 
@@ -37,7 +38,7 @@ async function obtenerPedidos() {
 }
 
 export default async function ListaPage() {
-  const pedidos = await obtenerPedidos()
+  const [pedidos, rol] = await Promise.all([obtenerPedidos(), getRol()])
 
   return (
     <main className="page-wide">
@@ -63,7 +64,7 @@ export default async function ListaPage() {
           </div>
         </div>
       ) : (
-        <ListaCliente pedidos={pedidos} />
+        <ListaCliente pedidos={pedidos} rol={rol} />
       )}
     </main>
   )
