@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { unidadLabel } from '@/lib/catalogos'
 import {
@@ -8,6 +8,7 @@ import {
   IconArrowLeft,
   IconBox,
   IconCheck,
+  IconMinus,
   IconPlus,
   IconPrinter,
   IconRefresh,
@@ -28,6 +29,16 @@ function agruparPorMarca(televisiones) {
 export default function SurtirCliente({ pedido }) {
   const [tvs, setTvs] = useState(pedido.televisiones)
   const [error, setError] = useState('')
+  // Estado del autoguardado: 'idle' | 'guardando' | 'guardado' | 'error'
+  const [estadoGuardado, setEstadoGuardado] = useState('idle')
+  const guardadoTimeout = useRef(null)
+  const enVuelo = useRef(0)
+
+  useEffect(() => {
+    return () => {
+      if (guardadoTimeout.current) clearTimeout(guardadoTimeout.current)
+    }
+  }, [])
 
   const grupos = useMemo(() => agruparPorMarca(tvs), [tvs])
 
@@ -45,6 +56,10 @@ export default function SurtirCliente({ pedido }) {
 
     setTvs((prev) => prev.map((t, i) => (i === idx ? { ...t, cantidadSurtida: valor } : t)))
 
+    enVuelo.current += 1
+    setEstadoGuardado('guardando')
+    if (guardadoTimeout.current) clearTimeout(guardadoTimeout.current)
+
     try {
       const res = await fetch(`/api/pedidos/${pedido.id}`, {
         method: 'PATCH',
@@ -56,7 +71,13 @@ export default function SurtirCliente({ pedido }) {
         throw new Error(data.error || 'No se pudo guardar')
       }
       setError('')
+      enVuelo.current -= 1
+      if (enVuelo.current === 0) {
+        setEstadoGuardado('guardado')
+        guardadoTimeout.current = setTimeout(() => setEstadoGuardado('idle'), 2200)
+      }
     } catch (err) {
+      enVuelo.current -= 1
       // Rollback al valor original guardado en el servidor
       setTvs((prev) =>
         prev.map((t, i) =>
@@ -66,6 +87,7 @@ export default function SurtirCliente({ pedido }) {
         )
       )
       setError(err.message)
+      setEstadoGuardado('error')
     }
   }
 
@@ -81,6 +103,28 @@ export default function SurtirCliente({ pedido }) {
             <IconPrinter />
             Imprimir
           </Link>
+          {estadoGuardado !== 'idle' && (
+            <span className={`save-status save-status-${estadoGuardado}`}>
+              {estadoGuardado === 'guardando' && (
+                <>
+                  <span className="save-dot" />
+                  Guardando…
+                </>
+              )}
+              {estadoGuardado === 'guardado' && (
+                <>
+                  <IconCheck width={14} height={14} />
+                  Guardado
+                </>
+              )}
+              {estadoGuardado === 'error' && (
+                <>
+                  <IconAlert width={14} height={14} />
+                  Error al guardar
+                </>
+              )}
+            </span>
+          )}
         </div>
 
         <h1 className="surtir-titulo">{pedido.pedidoNombre}</h1>
@@ -162,6 +206,16 @@ export default function SurtirCliente({ pedido }) {
                     </div>
 
                     <div className="surtir-acciones">
+                      <button
+                        type="button"
+                        onClick={() => actualizar(idx, surtida - 1)}
+                        disabled={surtida === 0}
+                        className="btn-mini-action"
+                        aria-label="Restar uno"
+                        title="Restar uno"
+                      >
+                        <IconMinus />
+                      </button>
                       <button
                         type="button"
                         onClick={() => actualizar(idx, surtida + 1)}

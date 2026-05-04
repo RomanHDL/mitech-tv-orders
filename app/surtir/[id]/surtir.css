@@ -21,6 +21,48 @@
   gap: 0.5rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Indicador de autoguardado */
+.save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  padding: 0.4rem 0.75rem;
+  border: 1.5px solid var(--black);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-xs);
+  animation: fadeInUp 0.2s ease-out;
+}
+.save-status-guardando {
+  background: var(--yellow-light);
+  color: var(--warning-dark);
+}
+.save-status-guardado {
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+.save-status-error {
+  background: var(--red-light);
+  color: var(--red-dark);
+}
+
+.save-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--warning);
+  border-radius: 50%;
+  animation: savePulse 0.9s ease-in-out infinite;
+}
+@keyframes savePulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.6; }
+  50% { transform: scale(1.1); opacity: 1; }
 }
 
 .surtir-titulo {
