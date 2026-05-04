@@ -293,3 +293,24 @@
     justify-content: space-between;
   }
 }
+
+@media (max-width: 540px) {
+  .surtir { padding: 0 1rem 2rem; margin: 1rem auto; }
+  .surtir-header { padding: 1.1rem; }
+  .surtir-marca { padding: 1.1rem; }
+
+  .surtir-titulo { font-size: 1.55rem; }
+  .progreso-pct { font-size: 1.55rem; }
+
+  .surtir-item { padding: 0.85rem; }
+
+  /* Touch targets grandes (44px Apple HIG) */
+  .btn-mini-action { width: 44px; height: 44px; }
+  .surtir-counter input {
+    width: 78px;
+    height: 44px;
+    font-size: 1.25rem;
+  }
+
+  .surtir-counter-total { font-size: 0.9rem; }
+}

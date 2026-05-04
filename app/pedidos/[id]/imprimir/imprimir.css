@@ -172,6 +172,16 @@ body { background: #fff; }
   margin: calc(0.75rem * var(--fs-mult)) 0;
 }
 
+@media (max-width: 540px) {
+  .acciones-imprimir { top: 1rem; right: 1rem; gap: 0.4rem; }
+  .btn-imprimir, .btn-volver {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.82rem;
+    border-radius: 6px;
+  }
+  .contenido-imprimir { padding: 1rem 1rem 1rem; }
+}
+
 @media print {
   @page { size: letter portrait; margin: 1cm; }
   html, body { background: #fff !important; }
