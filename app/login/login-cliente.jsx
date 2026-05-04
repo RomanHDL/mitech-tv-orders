@@ -114,7 +114,9 @@ export default function LoginCliente() {
     <main className="login-page">
       <div className="login-card">
         <div className="login-logo-wrap">
-          <span className="login-logo-icon">MT</span>
+          <span className="login-logo-icon">
+            <img src="/logo-mitech.png" alt="MiTechnologies" />
+          </span>
         </div>
         <h1 className="login-titulo">MiTech Pedidos</h1>
         <p className="login-subtitulo">Inicia sesión para continuar</p>

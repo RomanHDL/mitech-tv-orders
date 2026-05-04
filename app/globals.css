@@ -134,33 +134,33 @@ h2 {
   justify-content: space-between;
 }
 .nav-logo {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
-  font-family: 'Bangers', cursive;
-  font-size: 1.15rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-decoration: none;
   color: var(--black);
 }
-.nav-logo:hover { text-decoration: none; opacity: 0.85; }
+.nav-logo:hover { text-decoration: none; opacity: 0.9; }
 .nav-logo-icon {
-  width: 34px; height: 34px;
-  background: var(--primary);
-  color: #fff;
-  border: 2px solid var(--black);
+  height: 38px;
+  background: #fff;
+  border: 2.5px solid var(--black);
   border-radius: 8px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-family: 'Bangers', cursive;
-  font-size: 0.85rem;
-  letter-spacing: 0.06em;
+  padding: 4px 10px;
   box-shadow: var(--shadow-xs);
-  transform: rotate(-3deg);
+  transform: rotate(-2deg);
   transition: transform var(--tx);
 }
-.nav-logo:hover .nav-logo-icon { transform: rotate(0deg); }
+.nav-logo-icon img {
+  height: 100%;
+  width: auto;
+  display: block;
+}
+.nav-logo:hover .nav-logo-icon {
+  transform: rotate(0deg);
+  box-shadow: var(--shadow-sm);
+}
 
 .nav-links { display: flex; gap: 0.3rem; align-items: center; }
 .nav-links a {
@@ -1001,20 +1001,20 @@ select {
   margin-bottom: 1.15rem;
 }
 .login-logo-icon {
-  width: 64px;
   height: 64px;
-  background: var(--primary);
-  color: #fff;
-  border: 2.5px solid var(--black);
+  background: #fff;
+  border: 3px solid var(--black);
   border-radius: 14px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-family: 'Bangers', cursive;
-  font-size: 1.35rem;
-  letter-spacing: 0.06em;
-  box-shadow: 3px 3px 0 var(--black);
-  transform: rotate(-4deg);
+  padding: 10px 16px;
+  box-shadow: 4px 4px 0 var(--black);
+  transform: rotate(-3deg);
+}
+.login-logo-icon img {
+  height: 100%;
+  width: auto;
+  display: block;
 }
 .login-titulo {
   font-family: 'Bangers', cursive;
@@ -1113,8 +1113,7 @@ select {
   .nav-inner { padding: 0 0.85rem; height: 56px; gap: 0.5rem; }
   .nav-user-name { display: none; }
   .nav-rol-badge { display: none; }
-  .nav-logo > span:not(.nav-logo-icon) { display: none; }
-  .nav-logo-icon { width: 32px; height: 32px; font-size: 0.78rem; }
+  .nav-logo-icon { height: 30px; padding: 3px 7px; }
   .nav-links { gap: 0.2rem; }
   .nav-links a { padding: 0.45rem 0.7rem; font-size: 0.82rem; }
   .nav-logout { padding: 0.4rem 0.7rem; font-size: 0.75rem; margin-left: 0.25rem; }
@@ -1181,7 +1180,7 @@ select {
 
   .login-card { padding: 2rem 1.4rem 1.6rem; }
   .login-titulo { font-size: 1.7rem; }
-  .login-logo-icon { width: 56px; height: 56px; font-size: 1.15rem; }
+  .login-logo-icon { height: 52px; padding: 8px 12px; }
 }
 
 @media (max-width: 480px) {

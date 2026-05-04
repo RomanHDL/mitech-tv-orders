@@ -52,9 +52,10 @@ export default function Nav({ rol, email, nombre }) {
   return (
     <nav className="nav">
       <div className="nav-inner">
-        <Link href={links[0]?.href || '/login'} className="nav-logo">
-          <span className="nav-logo-icon">MT</span>
-          <span>MiTech Pedidos</span>
+        <Link href={links[0]?.href || '/login'} className="nav-logo" aria-label="MiTechnologies">
+          <span className="nav-logo-icon">
+            <img src="/logo-mitech.png" alt="MiTechnologies" />
+          </span>
         </Link>
         <div className="nav-links">
           {links.map((l) => (
