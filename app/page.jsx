@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_GRUPOS, ordenarCondiciones } from '@/lib/catalogos'
-import { IconAlert, IconArrowRight, IconClose, IconCopy, IconInfo, IconPlus } from './components/icons'
+import { MARCAS, PULGADAS, CONDICIONES } from '@/lib/catalogos'
+import { IconAlert, IconArrowRight, IconClose, IconPlus } from './components/icons'
 
 const tvVacia = () => ({ marca: '', pulgadas: '', modelo: '', cantidad: 1 })
 
@@ -33,14 +33,6 @@ export default function FormularioPage() {
     setTvs((prev) => prev.map((tv, idx) => (idx === i ? { ...tv, [campo]: valor } : tv)))
 
   const agregarTv = () => setTvs((prev) => [...prev, tvVacia()])
-
-  const duplicarTv = (i) => {
-    setTvs((prev) => {
-      const copia = { ...prev[i] }
-      return [...prev.slice(0, i + 1), copia, ...prev.slice(i + 1)]
-    })
-  }
-
   const eliminarTv = (i) => setTvs((prev) => prev.filter((_, idx) => idx !== i))
 
   const enviar = async (e) => {
@@ -63,7 +55,7 @@ export default function FormularioPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pedidoNombre: pedidoNombre.trim(),
-          condiciones: ordenarCondiciones(condiciones),
+          condiciones,
           televisiones: tvs.map((tv) => ({
             marca: tv.marca,
             pulgadas: Number(tv.pulgadas),
@@ -88,16 +80,13 @@ export default function FormularioPage() {
     <main className="page">
       <div className="page-header">
         <h1>Nuevo pedido</h1>
-        <p className="subtitle">Captura las TVs y condiciones que se incluyen en este pedido.</p>
+        <p className="subtitle">Captura las TVs que se incluyen en este pedido.</p>
       </div>
 
       <div className="card">
         <form onSubmit={enviar}>
           <div className="section">
-            <label className="label" htmlFor="pedidoNombre">
-              Nombre del pedido
-              <span className="label-help">cómo identificarás este pedido</span>
-            </label>
+            <label className="label" htmlFor="pedidoNombre">Nombre del pedido</label>
             <input
               id="pedidoNombre"
               type="text"
@@ -109,33 +98,22 @@ export default function FormularioPage() {
           </div>
 
           <div className="section">
-            <div className="label">
-              Condiciones
-              <span className="label-help">selecciona todas las que apliquen</span>
+            <div className="label">Condiciones</div>
+            <div className="condiciones">
+              {CONDICIONES.map((c) => (
+                <label
+                  key={c}
+                  className={`condicion-chip ${condiciones.includes(c) ? 'activa' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={condiciones.includes(c)}
+                    onChange={() => toggleCondicion(c)}
+                  />
+                  {c}
+                </label>
+              ))}
             </div>
-            {CONDICIONES_GRUPOS.map((grupo) => (
-              <div key={grupo.titulo} className="grupo-condiciones">
-                <div className="grupo-titulo">{grupo.titulo}</div>
-                <div className="condiciones">
-                  {grupo.items.map((c) => {
-                    const activa = condiciones.includes(c)
-                    return (
-                      <label
-                        key={c}
-                        className={`condicion-chip chip-${grupo.color} ${activa ? 'activa' : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={activa}
-                          onChange={() => toggleCondicion(c)}
-                        />
-                        {c}
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
           </div>
 
           <div className="section">
@@ -143,14 +121,6 @@ export default function FormularioPage() {
               <h2>Televisiones</h2>
               <span className="count">
                 {tvs.length} {tvs.length === 1 ? 'agregada' : 'agregadas'}
-              </span>
-            </div>
-
-            <div className="ayuda-marca">
-              <IconInfo />
-              <span>
-                <strong>Marca</strong> es el fabricante (Samsung, LG…). <strong>Modelo</strong> es
-                el código específico (opcional, ej. UN70AU8000).
               </span>
             </div>
 
@@ -162,35 +132,24 @@ export default function FormularioPage() {
               <div key={i} className="tv-card">
                 <div className="tv-card-header">
                   <span className="tv-card-num">TV #{i + 1}</span>
-                  <div className="tv-card-actions">
+                  {tvs.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => duplicarTv(i)}
-                      className="btn-mini"
-                      aria-label="Duplicar TV"
+                      onClick={() => eliminarTv(i)}
+                      className="btn-quitar"
+                      aria-label="Quitar TV"
                     >
-                      <IconCopy />
-                      Duplicar
+                      <IconClose width={14} height={14} />
+                      Quitar
                     </button>
-                    {tvs.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => eliminarTv(i)}
-                        className="btn-mini btn-mini-danger"
-                        aria-label="Quitar TV"
-                      >
-                        <IconClose width={14} height={14} />
-                        Quitar
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
                 <div className="tv-card-grid">
                   <input
                     list="marcas-list"
                     value={tv.marca}
                     onChange={(e) => updateTv(i, 'marca', e.target.value)}
-                    placeholder="Marca (Samsung, LG…)"
+                    placeholder="Marca"
                     required
                   />
                   <select
@@ -207,7 +166,7 @@ export default function FormularioPage() {
                     type="text"
                     value={tv.modelo}
                     onChange={(e) => updateTv(i, 'modelo', e.target.value)}
-                    placeholder="Modelo opcional"
+                    placeholder="Modelo (opcional)"
                   />
                   <input
                     type="number"

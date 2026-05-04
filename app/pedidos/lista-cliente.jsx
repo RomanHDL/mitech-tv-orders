@@ -3,7 +3,6 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { colorDeCondicion } from '@/lib/catalogos'
 import { IconAlert, IconPlus, IconPrinter, IconSearch, IconTrash } from '../components/icons'
 
 function formatoFecha(iso) {
@@ -15,7 +14,7 @@ function formatoFecha(iso) {
 }
 
 function tagClass(c) {
-  return `tag tag-${colorDeCondicion(c)}`
+  return `tag tag-${c.toLowerCase()}`
 }
 
 export default function ListaCliente({ pedidos }) {
