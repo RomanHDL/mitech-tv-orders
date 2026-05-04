@@ -12,10 +12,10 @@ const LINKS_POR_ROL = {
     { href: '/surtir', label: 'Surtir' },
   ],
   admin: [
-    { href: '/', label: 'Nuevo pedido' },
+    { href: '/', label: 'Nuevo' },
     { href: '/pedidos', label: 'Pedidos' },
     { href: '/surtir', label: 'Surtir' },
-    { href: '/admin/tags', label: 'Tags' },
+    { href: '/admin/usuarios', label: 'Usuarios' },
   ],
 }
 

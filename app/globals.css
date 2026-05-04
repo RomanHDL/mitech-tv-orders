@@ -592,6 +592,25 @@ select {
   color: #fff;
 }
 
+/* Input + boton "Escanear" para NFC UID */
+.usuario-nfc-input {
+  display: flex;
+  gap: 0.5rem;
+}
+.usuario-nfc-input input { flex: 1; }
+.usuario-nfc-input .btn { white-space: nowrap; flex-shrink: 0; }
+
+/* Fila editandose en la tabla de usuarios */
+.tabla-pedidos tr.editando {
+  background: var(--yellow-soft) !important;
+  box-shadow: inset 4px 0 0 var(--primary);
+}
+
+@media (max-width: 540px) {
+  .usuario-nfc-input { flex-direction: column; }
+  .usuario-nfc-input .btn { width: 100%; }
+}
+
 /* Hint debajo del form de tags */
 .tag-hint {
   margin-top: 1.25rem;
