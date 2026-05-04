@@ -65,7 +65,6 @@ export default function LoginCliente() {
         (event) => {
           const decoder = new TextDecoder()
 
-          // 1. Si el tag tiene un text record con "email|pin", usarlo
           for (const record of event.message.records) {
             if (record.recordType === 'text') {
               const texto = decoder.decode(record.data).trim()
@@ -83,7 +82,6 @@ export default function LoginCliente() {
             }
           }
 
-          // 2. Sin text record: usar el UID del tag (hardware serial)
           if (event.serialNumber) {
             enviarLogin({ nfcUid: event.serialNumber })
             return
@@ -112,6 +110,48 @@ export default function LoginCliente() {
 
   return (
     <main className="login-page">
+      <div className="login-decoraciones" aria-hidden="true">
+        <span className="deco deco-burst-yellow">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <polygon
+              points="50,0 56,35 90,15 65,45 100,50 65,55 90,85 56,65 50,100 44,65 10,85 35,55 0,50 35,45 10,15 44,35"
+              fill="#fbbf24"
+              stroke="#0a0a0a"
+              strokeWidth="3"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <span className="deco deco-star-red">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <polygon
+              points="50,5 61,40 95,40 67,58 78,92 50,72 22,92 33,58 5,40 39,40"
+              fill="#ef4444"
+              stroke="#0a0a0a"
+              strokeWidth="3"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <span className="deco deco-circle-blue">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="45" fill="#dbeafe" stroke="#0a0a0a" strokeWidth="3" />
+            <circle cx="50" cy="50" r="22" fill="#2563eb" stroke="#0a0a0a" strokeWidth="3" />
+          </svg>
+        </span>
+        <span className="deco deco-zap">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <polygon
+              points="55,5 25,55 50,55 35,95 75,40 50,40 65,5"
+              fill="#10b981"
+              stroke="#0a0a0a"
+              strokeWidth="3"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </div>
+
       <div className="login-card">
         <div className="login-logo-wrap">
           <span className="login-logo-icon">
@@ -126,7 +166,7 @@ export default function LoginCliente() {
             type="button"
             onClick={escanearNfc}
             disabled={scanning || loading}
-            className="btn btn-primary btn-large login-btn-nfc"
+            className={`btn btn-primary btn-large login-btn-nfc ${scanning ? 'escaneando' : ''}`}
           >
             {scanning ? 'Acerca tu tag NFC…' : 'Escanear tag NFC'}
           </button>
