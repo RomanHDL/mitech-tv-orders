@@ -1,11 +1,22 @@
 # MiTech TV Orders
 
-Aplicación interna para capturar, ordenar e imprimir pedidos de televisiones.
+Aplicación interna de MiTechnologies para capturar, ordenar e imprimir pedidos de televisiones.
+
+Reemplaza pedidos por WhatsApp y Word con un formulario web y una hoja de impresión en letra grande para surtidores.
 
 ## Stack
-- Next.js 15 (App Router) + React 19
-- MongoDB Atlas
-- Deploy en Vercel
+- **Next.js 15** (App Router) + React 19
+- **MongoDB Atlas** (driver oficial, sin Mongoose)
+- **Vercel** (deploy)
+
+## Funcionalidades
+- Formulario público (sin login) en `/`
+- Lista de todos los pedidos en `/pedidos`
+- Eliminar pedidos
+- Vista de impresión optimizada en `/pedidos/[id]/imprimir`:
+  - Agrupada por marca
+  - Ordenada por pulgadas (ascendente)
+  - Letra grande, blanco y negro, sin nav ni botones al imprimir
 
 ## Correr en local
 
@@ -21,57 +32,96 @@ Abrir http://localhost:3000
 
 1. Crear cuenta en https://www.mongodb.com/atlas
 2. Crear cluster gratuito (M0)
-3. En "Database Access" crear usuario y contraseña
-4. En "Network Access" permitir 0.0.0.0/0 (o tu IP)
-5. Copiar el connection string a `.env.local` como `MONGODB_URI`
+3. En **Database Access** crear usuario y contraseña
+4. En **Network Access** permitir `0.0.0.0/0` (acceso desde cualquier IP — necesario para Vercel)
+5. En el cluster, click en **Connect → Drivers** y copiar el connection string
+6. Reemplazar `<password>` y pegar en `.env.local` como `MONGODB_URI`
+
+Ejemplo:
+```
+MONGODB_URI=mongodb+srv://miuser:supersecret@cluster0.abcde.mongodb.net/?retryWrites=true&w=majority
+MONGODB_DB=mitech
+```
+
+La colección `pedidos` se crea automáticamente al primer insert.
 
 ## Deploy en Vercel
 
-1. Push a GitHub
-2. Importar el repo en https://vercel.com/new
-3. Agregar variables de entorno:
-   - `MONGODB_URI`
-   - `MONGODB_DB`
-4. Deploy automático en cada push a `main`
+1. Push a GitHub (este repo)
+2. En https://vercel.com/new importar el repo `mitech-tv-orders`
+3. En **Environment Variables** agregar:
+   - `MONGODB_URI` → connection string completo
+   - `MONGODB_DB` → `mitech`
+4. Click **Deploy**
+5. Cada push a `main` re-despliega automáticamente
 
 ## Estructura
 
 ```
 app/
-  page.jsx                          formulario
-  api/pedidos/route.js              POST crea pedido
-  pedidos/[id]/imprimir/page.jsx    vista de impresión
+  layout.jsx                        layout raíz con nav
+  page.jsx                          formulario de pedidos
+  loading.jsx                       estado de carga global
+  not-found.jsx                     página 404
+  error.jsx                         error boundary global
+  components/nav.jsx                barra de navegación
+  api/pedidos/route.js              POST  crea pedido
+  api/pedidos/[id]/route.js         GET   un pedido
+                                    DELETE elimina pedido
+  pedidos/page.jsx                  lista de pedidos
+  pedidos/lista-cliente.jsx         tabla con eliminar
+  pedidos/[id]/imprimir/
+    page.jsx                        vista de impresión
+    print-button.jsx                botones Volver / Imprimir
+    imprimir.css                    estilos @media print
 lib/
-  mongodb.js                        cliente Mongo (cacheado)
+  mongodb.js                        cliente Mongo cacheado
   catalogos.js                      marcas, pulgadas, condiciones
 ```
 
-## Agregar más marcas
-
-Editar el array `MARCAS` en `lib/catalogos.js`.
-
 ## Modelo de datos
 
-Colección `pedidos`:
+Colección `pedidos` en MongoDB:
 
 ```js
 {
   _id: ObjectId,
-  pedidoNombre: String,
-  condiciones: [String],     // GRA, GRB, GRC
+  pedidoNombre: String,            // "Pedido Jesica"
+  condiciones: [String],           // ["GRA", "GRB"]
   televisiones: [{
-    marca: String,
-    pulgadas: Number,
-    modelo: String,
-    cantidad: Number
+    marca: String,                 // "Samsung"
+    pulgadas: Number,              // 70
+    modelo: String,                // "" si no se especifica
+    cantidad: Number               // 20
   }],
   fecha: Date
 }
 ```
 
-## Flujo de uso
+## Catálogos
 
-1. Usuario abre `/`, llena el formulario (nombre, condiciones, TVs)
-2. Al enviar, se guarda en Mongo y se redirige a `/pedidos/[id]/imprimir`
-3. La vista de impresión agrupa por marca y ordena por pulgadas
-4. Botón "Imprimir" abre el diálogo nativo del navegador
+Editar `lib/catalogos.js` para agregar marcas o pulgadas:
+
+```js
+export const MARCAS = ['Samsung', 'LG', /* ... */]
+export const PULGADAS = [32, 40, /* ... */]
+export const CONDICIONES = ['GRA', 'GRB', 'GRC']
+```
+
+La validación se hace tanto en cliente (al enviar el form) como en servidor (en `/api/pedidos`).
+
+## Endpoints API
+
+| Método  | Ruta                    | Acción                       |
+|---------|-------------------------|------------------------------|
+| POST    | `/api/pedidos`          | Crear pedido                 |
+| GET     | `/api/pedidos/[id]`     | Obtener pedido por id        |
+| DELETE  | `/api/pedidos/[id]`     | Eliminar pedido              |
+
+## Flujo de uso típico
+
+1. Operador abre `/`, llena nombre del pedido y condiciones (GRA/GRB/GRC)
+2. Agrega TVs (marca con buscador, pulgadas, modelo opcional, cantidad)
+3. Click **Enviar pedido** → guarda en Mongo → redirige a la vista de impresión
+4. Click **Imprimir** → diálogo nativo del navegador
+5. Después puede ver y reimprimir desde `/pedidos`

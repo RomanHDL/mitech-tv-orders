@@ -7,6 +7,43 @@ html, body {
   color: #111;
 }
 
+a { color: inherit; }
+
+/* Nav */
+.nav {
+  background: #111;
+  color: #fff;
+  border-bottom: 3px solid #0066cc;
+}
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.75rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-logo {
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
+  color: #fff;
+}
+.nav-links { display: flex; gap: 1.5rem; }
+.nav-links a {
+  text-decoration: none;
+  color: #ccc;
+  font-size: 0.95rem;
+  padding: 0.25rem 0;
+  border-bottom: 2px solid transparent;
+}
+.nav-links a:hover { color: #fff; }
+.nav-links a.activo {
+  color: #fff;
+  border-bottom-color: #0066cc;
+}
+
+/* Form */
 .form-container {
   max-width: 900px;
   margin: 2rem auto;
@@ -69,7 +106,110 @@ h2 { margin: 1.5rem 0 1rem; }
   padding: 0.75rem; border-radius: 4px; margin: 1rem 0;
 }
 
+/* Lista de pedidos */
+.lista-container {
+  max-width: 1100px;
+  margin: 2rem auto;
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.lista-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.lista-header h1 { margin: 0; }
+.btn-nuevo {
+  background: #0066cc; color: #fff;
+  text-decoration: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.btn-nuevo:hover { background: #0055aa; }
+
+.empty {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+.empty a { color: #0066cc; font-weight: 600; }
+
+.tabla-pedidos {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tabla-pedidos th, .tabla-pedidos td {
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+.tabla-pedidos th {
+  background: #f9f9f9;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+}
+.tabla-pedidos tr:hover td { background: #fafafa; }
+
+.acciones {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.btn-imprimir-link {
+  background: #0066cc;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+.btn-imprimir-link:hover { background: #0055aa; }
+.btn-eliminar {
+  background: #fff;
+  color: #c00;
+  border: 1px solid #c00;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.btn-eliminar:hover:not(:disabled) { background: #fee; }
+.btn-eliminar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Mensajes centrados (loading, 404, error) */
+.centro-mensaje {
+  max-width: 500px;
+  margin: 4rem auto;
+  background: #fff;
+  padding: 3rem 2rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  text-align: center;
+}
+.centro-mensaje h1 { margin-bottom: 1rem; }
+.centro-mensaje p { color: #666; margin-bottom: 1.5rem; }
+.centro-mensaje .btn-enviar { display: inline-block; width: auto; text-decoration: none; }
+
+.loading-screen {
+  text-align: center;
+  padding: 4rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
 @media (max-width: 700px) {
   .tv-row { grid-template-columns: 1fr 1fr; }
   .tv-row .tv-num { grid-column: 1 / -1; }
+  .nav-inner { padding: 0.5rem 1rem; flex-direction: column; gap: 0.5rem; }
+  .nav-links { gap: 1rem; }
+  .lista-container, .form-container { margin: 1rem; padding: 1rem; }
+  .tabla-pedidos { font-size: 0.85rem; }
+  .tabla-pedidos th, .tabla-pedidos td { padding: 0.5rem 0.25rem; }
+  .acciones { flex-direction: column; }
 }

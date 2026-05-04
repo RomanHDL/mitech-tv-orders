@@ -7,15 +7,32 @@
   background: #fff;
 }
 
-.btn-imprimir {
+.acciones-imprimir {
   position: fixed;
   top: 1rem; right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+.btn-imprimir, .btn-volver {
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
-  background: #000; color: #fff;
-  border: none; cursor: pointer;
+  border: none;
+  cursor: pointer;
   border-radius: 4px;
+  font-weight: 600;
 }
+
+.btn-imprimir { background: #000; color: #fff; }
+.btn-imprimir:hover { background: #333; }
+
+.btn-volver {
+  background: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+}
+.btn-volver:hover { background: #f5f5f5; }
 
 .encabezado h1 {
   font-size: 2.5rem; margin: 0;
@@ -48,7 +65,7 @@
 @media print {
   @page { margin: 1cm; }
   body { background: #fff !important; }
-  .btn-imprimir { display: none !important; }
+  .acciones-imprimir { display: none !important; }
   .imprimir { margin: 0; padding: 0; max-width: 100%; }
   .marca-bloque { page-break-inside: avoid; }
   .encabezado h1 { font-size: 32pt; }
