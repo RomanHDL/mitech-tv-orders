@@ -54,7 +54,7 @@ export default function Nav({ rol, email, nombre }) {
       <div className="nav-inner">
         <Link href={links[0]?.href || '/login'} className="nav-logo" aria-label="MiTechnologies">
           <span className="nav-logo-icon">
-            <img src="/logo-mitech.png" alt="MiTechnologies" />
+            <img src="/mitech-logo.png" alt="MiTechnologies" width="120" height="38" />
           </span>
         </Link>
         <div className="nav-links">

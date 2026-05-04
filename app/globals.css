@@ -1050,7 +1050,7 @@ select {
 
 .login-divider {
   position: relative;
-  margin: 1.75rem 0;
+  margin: 1.4rem 0;
   text-align: center;
 }
 .login-divider::before {
@@ -1076,7 +1076,7 @@ select {
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 0.95rem;
 }
 .login-field { text-align: left; }
 .login-field label {
@@ -1193,9 +1193,33 @@ select {
   .btn { min-height: 40px; }
   .btn-sm { min-height: 36px; padding: 0.5rem 0.8rem; }
 
-  .login-card { padding: 2.5rem 1.6rem 2rem; }
-  .login-titulo { font-size: 1.8rem; }
-  .login-logo-img { height: 52px !important; }
+  /* Login: stack vertical en mobile (hero compacto arriba, form abajo) */
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+  .login-hero {
+    padding: 2rem 1.5rem;
+    border-right: none;
+    border-bottom: 2px solid var(--black);
+  }
+  .login-hero-titulo { font-size: 2.2rem; }
+  .login-hero-tagline { font-size: 0.95rem; margin-bottom: 1.25rem; }
+  .login-hero-features { gap: 0.4rem; }
+  .login-hero-features li { font-size: 0.85rem; }
+  .login-hero-logo { padding: 0.75rem 1rem; margin-bottom: 1.5rem; }
+  .login-hero-logo img { height: 38px; }
+
+  .login-form-panel { padding: 2rem 1rem; }
+  .login-card { padding: 2rem 1.5rem; }
+  .login-titulo { font-size: 1.65rem; }
+}
+
+@media (max-width: 480px) {
+  .login-hero { padding: 1.75rem 1.2rem; }
+  .login-hero-titulo { font-size: 1.85rem; }
+  .login-hero-features { display: none; }
+  .login-form-panel { padding: 1.5rem 1rem; }
+  .login-card { padding: 1.75rem 1.25rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
