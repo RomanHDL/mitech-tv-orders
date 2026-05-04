@@ -15,6 +15,7 @@ const LINKS_POR_ROL = {
     { href: '/', label: 'Nuevo pedido' },
     { href: '/pedidos', label: 'Pedidos' },
     { href: '/surtir', label: 'Surtir' },
+    { href: '/admin/tags', label: 'Tags' },
   ],
 }
 
