@@ -1,4 +1,4 @@
-/* Vista de surtido (chequeo) — estilo cómic */
+/* Vista de surtido (chequeo) — estilo cómic-empresa */
 
 .surtir {
   max-width: 900px;
@@ -9,9 +9,9 @@
 
 .surtir-header {
   background: var(--card);
-  border: 3px solid var(--black);
+  border: 2px solid var(--black);
   border-radius: var(--radius-lg);
-  padding: 1.6rem;
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow);
 }
@@ -25,9 +25,9 @@
 
 .surtir-titulo {
   font-family: 'Bangers', cursive;
-  font-size: 2rem;
+  font-size: 1.85rem;
   font-weight: 400;
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.55rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1;
@@ -37,43 +37,43 @@
 
 /* Barra de progreso del pedido completo */
 .progreso-resumen {
-  background: var(--yellow);
-  border: 3px solid var(--black);
+  background: var(--yellow-soft);
+  border: 2px solid var(--black);
   border-radius: var(--radius);
-  padding: 1.1rem 1.2rem;
-  box-shadow: var(--shadow-sm);
+  padding: 1.05rem 1.2rem;
+  box-shadow: var(--shadow-xs);
 }
 .progreso-info {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 0.7rem;
+  margin-bottom: 0.65rem;
   gap: 0.5rem;
 }
 .progreso-numero {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--black);
   font-variant-numeric: tabular-nums;
 }
 .progreso-de {
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.95em;
   margin: 0 0.15em;
 }
 .progreso-pct {
   font-family: 'Bangers', cursive;
-  font-size: 2rem;
+  font-size: 1.85rem;
   color: var(--black);
   font-weight: 400;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
 .progreso-track {
-  height: 14px;
+  height: 12px;
   background: #fff;
-  border: 2px solid var(--black);
+  border: 1.5px solid var(--black);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -97,11 +97,10 @@
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  font-family: 'Bangers', cursive;
-  font-size: 1.1rem;
-  font-weight: 400;
+  font-size: 0.85rem;
+  font-weight: 800;
   color: var(--green-dark);
-  margin-top: 0.7rem;
+  margin-top: 0.65rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -115,22 +114,22 @@
 
 .surtir-marca {
   background: var(--card);
-  border: 3px solid var(--black);
+  border: 2px solid var(--black);
   border-radius: var(--radius-lg);
-  padding: 1.4rem;
+  padding: 1.35rem;
   box-shadow: var(--shadow);
 }
 
 .surtir-marca-titulo {
   font-family: 'Bangers', cursive;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin: 0 0 1rem;
+  margin: 0 0 0.95rem;
   color: var(--black);
-  border-bottom: 3px solid var(--black);
-  padding-bottom: 0.55rem;
+  border-bottom: 2px solid var(--black);
+  padding-bottom: 0.5rem;
 }
 
 .surtir-item {
@@ -138,10 +137,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.1rem;
-  border: 2.5px solid var(--black);
+  padding: 0.95rem 1.05rem;
+  border: 2px solid var(--black);
   border-radius: var(--radius);
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.6rem;
   background: #fff;
   box-shadow: var(--shadow-xs);
   transition: all var(--tx);
@@ -152,7 +151,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-.surtir-item.estado-parcial { background: var(--yellow-light); }
+.surtir-item.estado-parcial { background: var(--yellow-soft); }
 .surtir-item.estado-completo {
   background: var(--green-light);
 }
@@ -167,22 +166,23 @@
   min-width: 0;
 }
 .surtir-item-titulo {
-  font-weight: 800;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  font-size: 1rem;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
 }
 .surtir-pulgadas {
   font-family: 'Bangers', cursive;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 400;
   letter-spacing: 0.04em;
 }
 .surtir-modelo {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   font-style: italic;
 }
@@ -190,26 +190,25 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.22rem 0.6rem;
+  padding: 0.2rem 0.55rem;
   background: var(--yellow);
   color: var(--black);
-  border: 2px solid var(--black);
+  border: 1.5px solid var(--black);
   border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 900;
+  font-size: 0.68rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  box-shadow: var(--shadow-xs);
 }
 .surtir-item-cantidad {
   font-size: 0.875rem;
-  color: var(--black);
-  margin-top: 0.3rem;
-  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  font-weight: 600;
 }
 .surtir-item-cantidad strong {
   color: var(--black);
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .surtir-item-controles {
@@ -225,19 +224,19 @@
   font-weight: 800;
 }
 .surtir-counter input {
-  width: 78px;
+  width: 72px;
   text-align: center;
   font-family: 'Bangers', cursive;
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 400;
   letter-spacing: 0.04em;
   padding: 0.4rem 0.5rem;
   font-variant-numeric: tabular-nums;
 }
 .surtir-counter-total {
-  font-size: 1rem;
-  color: var(--black);
-  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -247,12 +246,12 @@
 }
 
 .btn-mini-action {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2.5px solid var(--black);
+  border: 2px solid var(--black);
   background: #fff;
   color: var(--black);
   border-radius: 8px;
@@ -266,8 +265,8 @@
   box-shadow: var(--shadow-sm);
 }
 .btn-mini-action:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 var(--black);
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 var(--black);
 }
 .btn-mini-action:disabled {
   opacity: 0.4;
