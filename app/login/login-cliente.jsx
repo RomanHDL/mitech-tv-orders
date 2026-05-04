@@ -17,14 +17,14 @@ export default function LoginCliente() {
     setNfcSoportado(typeof window !== 'undefined' && 'NDEFReader' in window)
   }, [])
 
-  const enviarLogin = async ({ email: emailVal, pin: pinVal }) => {
+  const enviarLogin = async (body) => {
     setError('')
     setLoading(true)
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailVal, pin: pinVal }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -41,7 +41,7 @@ export default function LoginCliente() {
     }
   }
 
-  const validarYEnviar = async ({ email: e, pin: p }) => {
+  const validarYEnviarManual = async ({ email: e, pin: p }) => {
     if (!p || !/^\d{6,}$/.test(p)) {
       setError('El PIN debe ser mínimo 6 dígitos numéricos')
       return
@@ -64,23 +64,31 @@ export default function LoginCliente() {
         'reading',
         (event) => {
           const decoder = new TextDecoder()
+
+          // 1. Si el tag tiene un text record con "email|pin", usarlo
           for (const record of event.message.records) {
             if (record.recordType === 'text') {
               const texto = decoder.decode(record.data).trim()
-              if (!texto) continue
-
-              // Formato esperado: "email|pin" o solo "pin"
-              let emailTag = ''
-              let pinTag = texto
-              if (texto.includes('|')) {
-                const partes = texto.split('|')
-                emailTag = partes[0].trim()
-                pinTag = partes[1].trim()
+              if (texto) {
+                let emailTag = ''
+                let pinTag = texto
+                if (texto.includes('|')) {
+                  const partes = texto.split('|')
+                  emailTag = partes[0].trim()
+                  pinTag = partes[1].trim()
+                }
+                validarYEnviarManual({ email: emailTag, pin: pinTag })
+                return
               }
-              validarYEnviar({ email: emailTag, pin: pinTag })
-              return
             }
           }
+
+          // 2. Sin text record: usar el UID del tag (hardware serial)
+          if (event.serialNumber) {
+            enviarLogin({ nfcUid: event.serialNumber })
+            return
+          }
+
           setError('Tag NFC sin información válida')
           setScanning(false)
         },
@@ -99,7 +107,7 @@ export default function LoginCliente() {
 
   const submit = (e) => {
     e.preventDefault()
-    validarYEnviar({ email: email.trim(), pin: pin.trim() })
+    validarYEnviarManual({ email: email.trim(), pin: pin.trim() })
   }
 
   return (

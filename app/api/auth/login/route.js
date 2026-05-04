@@ -11,20 +11,31 @@ export async function POST(req) {
 
   const email = typeof body.email === 'string' ? body.email.trim() : ''
   const pin = typeof body.pin === 'string' ? body.pin.trim() : ''
+  const nfcUid = typeof body.nfcUid === 'string' ? body.nfcUid.trim() : ''
 
-  if (!pinValido(pin)) {
-    return NextResponse.json(
-      { error: 'El PIN debe ser mínimo 6 dígitos numéricos' },
-      { status: 400 }
-    )
-  }
-  if (email && !emailValido(email)) {
-    return NextResponse.json({ error: 'Email inválido' }, { status: 400 })
-  }
+  let user
 
-  const user = await buscarUsuario(email, pin)
-  if (!user) {
-    return NextResponse.json({ error: 'Email o PIN incorrecto' }, { status: 401 })
+  if (nfcUid) {
+    // Login por UID del tag NFC (no requiere PIN)
+    user = await buscarUsuario({ nfcUid })
+    if (!user) {
+      return NextResponse.json({ error: 'Tag NFC no registrado' }, { status: 401 })
+    }
+  } else {
+    // Login manual con email + PIN (o solo PIN único)
+    if (!pinValido(pin)) {
+      return NextResponse.json(
+        { error: 'El PIN debe ser mínimo 6 dígitos numéricos' },
+        { status: 400 }
+      )
+    }
+    if (email && !emailValido(email)) {
+      return NextResponse.json({ error: 'Email inválido' }, { status: 400 })
+    }
+    user = await buscarUsuario({ email, pin })
+    if (!user) {
+      return NextResponse.json({ error: 'Email o PIN incorrecto' }, { status: 401 })
+    }
   }
 
   const cookieOpts = {
@@ -35,10 +46,12 @@ export async function POST(req) {
     path: '/',
   }
 
-  const response = NextResponse.json({ rol: user.rol, email: user.email })
+  const response = NextResponse.json({ rol: user.rol, email: user.email || null })
   response.cookies.set('rol', user.rol, cookieOpts)
   response.cookies.set('userId', user._id.toString(), cookieOpts)
-  response.cookies.set('email', user.email, cookieOpts)
+  if (user.email) {
+    response.cookies.set('email', user.email, cookieOpts)
+  }
   if (user.nombre) {
     response.cookies.set('nombre', user.nombre, cookieOpts)
   }
