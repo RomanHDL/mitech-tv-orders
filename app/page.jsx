@@ -3,9 +3,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MARCAS, PULGADAS, CONDICIONES } from '@/lib/catalogos'
-import { IconAlert, IconArrowRight, IconClose, IconPlus } from './components/icons'
+import { IconAlert, IconArrowRight, IconBox, IconClose, IconPlus } from './components/icons'
 
-const tvVacia = () => ({ marca: '', pulgadas: '', modelo: '', cantidad: 1 })
+const tvVacia = () => ({ marca: '', pulgadas: '', modelo: '', cantidad: 1, unidad: 'pieza' })
 
 export default function FormularioPage() {
   const router = useRouter()
@@ -37,6 +37,14 @@ export default function FormularioPage() {
     () => new Set(tvs.map((tv) => tv.marca).filter(Boolean)).size,
     [tvs]
   )
+  const pallets = useMemo(
+    () => tvs.reduce((s, tv) => s + (tv.unidad === 'pallet' ? Number(tv.cantidad) || 0 : 0), 0),
+    [tvs]
+  )
+  const piezas = useMemo(
+    () => tvs.reduce((s, tv) => s + (tv.unidad !== 'pallet' ? Number(tv.cantidad) || 0 : 0), 0),
+    [tvs]
+  )
 
   const toggleCondicion = (c) =>
     setCondiciones((prev) =>
@@ -45,6 +53,11 @@ export default function FormularioPage() {
 
   const updateTv = (i, campo, valor) =>
     setTvs((prev) => prev.map((tv, idx) => (idx === i ? { ...tv, [campo]: valor } : tv)))
+
+  const togglePallet = (i) =>
+    setTvs((prev) => prev.map((tv, idx) => (
+      idx === i ? { ...tv, unidad: tv.unidad === 'pallet' ? 'pieza' : 'pallet' } : tv
+    )))
 
   const agregarTv = () => setTvs((prev) => [...prev, tvVacia()])
   const eliminarTv = (i) => setTvs((prev) => prev.filter((_, idx) => idx !== i))
@@ -75,6 +88,7 @@ export default function FormularioPage() {
             pulgadas: Number(tv.pulgadas),
             modelo: tv.modelo.trim(),
             cantidad: Number(tv.cantidad),
+            unidad: tv.unidad === 'pallet' ? 'pallet' : 'pieza',
           })),
         }),
       })
@@ -89,6 +103,8 @@ export default function FormularioPage() {
       setEnviando(false)
     }
   }
+
+  const hayPallets = pallets > 0
 
   return (
     <main className="page">
@@ -142,64 +158,76 @@ export default function FormularioPage() {
               {MARCAS.map((m) => <option key={m} value={m} />)}
             </datalist>
 
-            {tvs.map((tv, i) => (
-              <div key={i} className="tv-card">
-                <div className="tv-card-header">
-                  <span className="tv-card-num">TV #{i + 1}</span>
-                  {tvs.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => eliminarTv(i)}
-                      className="btn-quitar"
-                      aria-label="Quitar TV"
+            {tvs.map((tv, i) => {
+              const esPallet = tv.unidad === 'pallet'
+              return (
+                <div key={i} className={`tv-card ${esPallet ? 'es-pallet' : ''}`}>
+                  <div className="tv-card-header">
+                    <span className="tv-card-num">TV #{i + 1}</span>
+                    <label className="tv-pallet-toggle">
+                      <input
+                        type="checkbox"
+                        checked={esPallet}
+                        onChange={() => togglePallet(i)}
+                      />
+                      <IconBox />
+                      Pallet
+                    </label>
+                    {tvs.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => eliminarTv(i)}
+                        className="btn-quitar"
+                        aria-label="Quitar TV"
+                      >
+                        <IconClose width={14} height={14} />
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                  <div className="tv-card-grid">
+                    <input
+                      ref={(el) => { if (el) inputRefs.current[i] = el }}
+                      list="marcas-list"
+                      value={tv.marca}
+                      onChange={(e) => updateTv(i, 'marca', e.target.value)}
+                      placeholder="Marca"
+                      required
+                    />
+                    <select
+                      value={tv.pulgadas}
+                      onChange={(e) => updateTv(i, 'pulgadas', e.target.value)}
+                      required
                     >
-                      <IconClose width={14} height={14} />
-                      Quitar
-                    </button>
-                  )}
+                      <option value="">Pulgadas</option>
+                      {PULGADAS.map((p) => (
+                        <option key={p} value={p}>{p}"</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={tv.modelo}
+                      onChange={(e) => updateTv(i, 'modelo', e.target.value)}
+                      placeholder="Modelo (opcional)"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      value={tv.cantidad}
+                      onChange={(e) => updateTv(i, 'cantidad', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && i === tvs.length - 1) {
+                          e.preventDefault()
+                          agregarTv()
+                        }
+                      }}
+                      placeholder={esPallet ? 'Pallets' : 'Cant.'}
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="tv-card-grid">
-                  <input
-                    ref={(el) => { if (el) inputRefs.current[i] = el }}
-                    list="marcas-list"
-                    value={tv.marca}
-                    onChange={(e) => updateTv(i, 'marca', e.target.value)}
-                    placeholder="Marca"
-                    required
-                  />
-                  <select
-                    value={tv.pulgadas}
-                    onChange={(e) => updateTv(i, 'pulgadas', e.target.value)}
-                    required
-                  >
-                    <option value="">Pulgadas</option>
-                    {PULGADAS.map((p) => (
-                      <option key={p} value={p}>{p}"</option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    value={tv.modelo}
-                    onChange={(e) => updateTv(i, 'modelo', e.target.value)}
-                    placeholder="Modelo (opcional)"
-                  />
-                  <input
-                    type="number"
-                    min="1"
-                    value={tv.cantidad}
-                    onChange={(e) => updateTv(i, 'cantidad', e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && i === tvs.length - 1) {
-                        e.preventDefault()
-                        agregarTv()
-                      }
-                    }}
-                    placeholder="Cant."
-                    required
-                  />
-                </div>
-              </div>
-            ))}
+              )
+            })}
 
             <button type="button" onClick={agregarTv} className="btn-agregar-tv">
               <IconPlus />
@@ -218,10 +246,23 @@ export default function FormularioPage() {
                 <div className="resumen-numero">{marcasUnicas}</div>
                 <div className="resumen-etiqueta">Marcas</div>
               </div>
-              <div className="resumen-item">
-                <div className="resumen-numero">{totalUnidades}</div>
-                <div className="resumen-etiqueta">TVs totales</div>
-              </div>
+              {hayPallets ? (
+                <>
+                  <div className="resumen-item">
+                    <div className="resumen-numero">{pallets}</div>
+                    <div className="resumen-etiqueta">Pallets</div>
+                  </div>
+                  <div className="resumen-item">
+                    <div className="resumen-numero">{piezas}</div>
+                    <div className="resumen-etiqueta">Piezas</div>
+                  </div>
+                </>
+              ) : (
+                <div className="resumen-item">
+                  <div className="resumen-numero">{piezas}</div>
+                  <div className="resumen-etiqueta">TVs totales</div>
+                </div>
+              )}
             </div>
           )}
 

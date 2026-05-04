@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { IconAlert, IconPlus, IconPrinter, IconSearch, IconTrash } from '../components/icons'
+import { IconAlert, IconBox, IconClipboard, IconPlus, IconPrinter, IconSearch, IconTrash } from '../components/icons'
 
 function formatoFecha(iso) {
   const d = new Date(iso)
@@ -15,6 +15,12 @@ function formatoFecha(iso) {
 
 function tagClass(c) {
   return `tag tag-${c.toLowerCase()}`
+}
+
+function badgeProgreso(pct) {
+  if (pct >= 100) return { label: 'Completado', clase: 'completo' }
+  if (pct > 0) return { label: `${pct}%`, clase: 'parcial' }
+  return { label: 'Pendiente', clase: 'pendiente' }
 }
 
 export default function ListaCliente({ pedidos }) {
@@ -89,46 +95,61 @@ export default function ListaCliente({ pedidos }) {
               <th>Fecha</th>
               <th>Condiciones</th>
               <th>Modelos</th>
-              <th>Total TVs</th>
+              <th>Total</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {pedidosFiltrados.map((p) => (
-              <tr key={p.id}>
-                <td data-label="Pedido">
-                  <div className="pedido-nombre">{p.pedidoNombre}</div>
-                </td>
-                <td data-label="Fecha">
-                  <div className="pedido-fecha">{formatoFecha(p.fecha)}</div>
-                </td>
-                <td data-label="Condiciones">
-                  <div className="tags-celda">
-                    {p.condiciones.length > 0
-                      ? p.condiciones.map((c) => <span key={c} className={tagClass(c)}>{c}</span>)
-                      : <span className="tag-empty">—</span>}
-                  </div>
-                </td>
-                <td data-label="Modelos">{p.cantidadModelos}</td>
-                <td data-label="Total TVs"><span className="numero-grande">{p.totalTvs}</span></td>
-                <td>
-                  <div className="acciones">
-                    <Link href={`/pedidos/${p.id}/imprimir`} className="btn btn-primary btn-sm">
-                      <IconPrinter />
-                      Imprimir
-                    </Link>
-                    <button
-                      onClick={() => eliminar(p.id, p.pedidoNombre)}
-                      disabled={eliminandoId === p.id}
-                      className="btn btn-danger btn-sm"
-                    >
-                      <IconTrash />
-                      {eliminandoId === p.id ? 'Eliminando…' : 'Eliminar'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {pedidosFiltrados.map((p) => {
+              const badge = badgeProgreso(p.progresoPct)
+              return (
+                <tr key={p.id}>
+                  <td data-label="Pedido">
+                    <div className="pedido-nombre">
+                      {p.pedidoNombre}
+                      <span className={`badge-progreso ${badge.clase}`}>{badge.label}</span>
+                      {p.tienePallets && (
+                        <span className="badge-pallet" title="Incluye pallets">
+                          <IconBox /> Pallets
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td data-label="Fecha">
+                    <div className="pedido-fecha">{formatoFecha(p.fecha)}</div>
+                  </td>
+                  <td data-label="Condiciones">
+                    <div className="tags-celda">
+                      {p.condiciones.length > 0
+                        ? p.condiciones.map((c) => <span key={c} className={tagClass(c)}>{c}</span>)
+                        : <span className="tag-empty">—</span>}
+                    </div>
+                  </td>
+                  <td data-label="Modelos">{p.cantidadModelos}</td>
+                  <td data-label="Total"><span className="numero-grande">{p.totalTvs}</span></td>
+                  <td>
+                    <div className="acciones">
+                      <Link href={`/pedidos/${p.id}/surtir`} className="btn btn-secondary btn-sm">
+                        <IconClipboard />
+                        Surtir
+                      </Link>
+                      <Link href={`/pedidos/${p.id}/imprimir`} className="btn btn-primary btn-sm">
+                        <IconPrinter />
+                        Imprimir
+                      </Link>
+                      <button
+                        onClick={() => eliminar(p.id, p.pedidoNombre)}
+                        disabled={eliminandoId === p.id}
+                        className="btn btn-danger btn-sm"
+                      >
+                        <IconTrash />
+                        {eliminandoId === p.id ? '…' : 'Eliminar'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       )}

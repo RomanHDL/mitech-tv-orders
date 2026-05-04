@@ -13,14 +13,27 @@ async function obtenerPedidos() {
     .limit(100)
     .toArray()
 
-  return pedidos.map((p) => ({
-    id: p._id.toString(),
-    pedidoNombre: p.pedidoNombre,
-    condiciones: p.condiciones || [],
-    fecha: p.fecha.toISOString(),
-    totalTvs: (p.televisiones || []).reduce((s, tv) => s + (tv.cantidad || 0), 0),
-    cantidadModelos: (p.televisiones || []).length,
-  }))
+  return pedidos.map((p) => {
+    const tvs = p.televisiones || []
+    const totalRequerido = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
+    const totalSurtido = tvs.reduce(
+      (s, tv) => s + Math.min(tv.cantidad || 0, tv.cantidadSurtida || 0),
+      0
+    )
+    const tienePallets = tvs.some((tv) => tv.unidad === 'pallet')
+    const pct = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
+    return {
+      id: p._id.toString(),
+      pedidoNombre: p.pedidoNombre,
+      condiciones: p.condiciones || [],
+      fecha: p.fecha.toISOString(),
+      totalTvs: totalRequerido,
+      cantidadModelos: tvs.length,
+      totalSurtido,
+      progresoPct: pct,
+      tienePallets,
+    }
+  })
 }
 
 export default async function ListaPage() {

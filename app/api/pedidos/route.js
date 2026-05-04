@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
-import { MARCAS, PULGADAS, CONDICIONES } from '@/lib/catalogos'
+import { MARCAS, PULGADAS, CONDICIONES, UNIDADES } from '@/lib/catalogos'
 
 export async function POST(req) {
   let body
@@ -35,11 +35,14 @@ export async function POST(req) {
     if (!Number.isInteger(cantidad) || cantidad < 1) {
       return NextResponse.json({ error: `TV #${i + 1}: cantidad inválida` }, { status: 400 })
     }
+    const unidad = UNIDADES.includes(tv.unidad) ? tv.unidad : 'pieza'
     tvsLimpias.push({
       marca: tv.marca,
       pulgadas,
       modelo: typeof tv.modelo === 'string' ? tv.modelo.trim() : '',
       cantidad,
+      unidad,
+      cantidadSurtida: 0,
     })
   }
 
