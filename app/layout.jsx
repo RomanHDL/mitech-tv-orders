@@ -17,11 +17,13 @@ export const metadata = {
 export default async function RootLayout({ children }) {
   const cookieStore = await cookies()
   const rol = cookieStore.get('rol')?.value || null
+  const email = cookieStore.get('email')?.value || null
+  const nombre = cookieStore.get('nombre')?.value || null
 
   return (
     <html lang="es" className={inter.variable}>
       <body>
-        <Nav rol={rol} />
+        <Nav rol={rol} email={email} nombre={nombre} />
         {children}
       </body>
     </html>

@@ -24,7 +24,7 @@ const ROL_LABEL = {
   surtidor: 'Surtidor',
 }
 
-export default function Nav({ rol }) {
+export default function Nav({ rol, email, nombre }) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -33,6 +33,7 @@ export default function Nav({ rol }) {
   if (!rol) return null
 
   const links = LINKS_POR_ROL[rol] || []
+  const displayName = nombre || (email ? email.split('@')[0] : '')
 
   const logout = async () => {
     try {
@@ -61,6 +62,7 @@ export default function Nav({ rol }) {
             </Link>
           ))}
           <span className={`nav-rol-badge rol-${rol}`}>{ROL_LABEL[rol]}</span>
+          {displayName && <span className="nav-user-name">{displayName}</span>}
           <button onClick={logout} className="nav-logout" type="button">
             Salir
           </button>
