@@ -33,7 +33,9 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
   }
 
-  const regex = new RegExp(`^${pedidoNombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+  // Match por substring case-insensitive (mas tolerante a variaciones)
+  const escapado = pedidoNombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(escapado, 'i')
   const result = await db.collection('pedidos').updateMany(
     { pedidoNombre: regex },
     {
@@ -44,6 +46,24 @@ export async function POST(req) {
       },
     }
   )
+
+  // Si no hubo match, devolver lista de nombres existentes para diagnostico.
+  if (result.matchedCount === 0) {
+    const todos = await db
+      .collection('pedidos')
+      .find({}, { projection: { pedidoNombre: 1, creadoPor: 1 } })
+      .toArray()
+    return NextResponse.json({
+      matched: 0,
+      modified: 0,
+      mensaje: `Ningun pedido contiene "${pedidoNombre}". Pedidos existentes:`,
+      pedidos: todos.map((p) => ({
+        id: p._id.toString(),
+        pedidoNombre: p.pedidoNombre,
+        creadoPor: p.creadoPor || null,
+      })),
+    })
+  }
 
   return NextResponse.json({
     matched: result.matchedCount,
