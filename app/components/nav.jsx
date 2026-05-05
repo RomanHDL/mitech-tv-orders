@@ -8,6 +8,7 @@ const LINKS_POR_ROL = {
   capturista: [
     { href: '/', label: 'Nuevo pedido' },
     { href: '/pedidos', label: 'Pedidos' },
+    { href: '/surtir', label: 'Validar' },
   ],
   surtidor: [
     { href: '/surtir', label: 'Surtir' },

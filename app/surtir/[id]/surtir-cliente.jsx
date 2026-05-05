@@ -31,12 +31,10 @@ export default function SurtirCliente({ pedido }) {
   const [error, setError] = useState('')
   // Estado del autoguardado: 'idle' | 'guardando' | 'guardado' | 'error'
   const [estadoGuardado, setEstadoGuardado] = useState('idle')
-  const [montado, setMontado] = useState(false)
   const guardadoTimeout = useRef(null)
   const enVuelo = useRef(0)
 
   useEffect(() => {
-    setMontado(true)
     return () => {
       if (guardadoTimeout.current) clearTimeout(guardadoTimeout.current)
     }
@@ -91,12 +89,6 @@ export default function SurtirCliente({ pedido }) {
       setError(err.message)
       setEstadoGuardado('error')
     }
-  }
-
-  // Render client-only para evitar cualquier mismatch de hidratacion
-  // que rompa los event handlers de los inputs.
-  if (!montado) {
-    return <main className="surtir" />
   }
 
   return (

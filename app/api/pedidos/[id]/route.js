@@ -76,12 +76,7 @@ export async function PATCH(req, { params }) {
     pedido.creadoPorRol === 'capturista' &&
     pedido.creadoPor !== usuario.userId
   ) {
-    return NextResponse.json(
-      {
-        error: `No autorizado: pedido de otra capturista (creadoPor=${pedido.creadoPor}, tuId=${usuario.userId})`,
-      },
-      { status: 403 }
-    )
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
   const tv = pedido.televisiones?.[tvIndex]
