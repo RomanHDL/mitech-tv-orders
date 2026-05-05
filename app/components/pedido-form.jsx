@@ -19,6 +19,7 @@ export default function PedidoForm({
   cancelHref,
 }) {
   const [pedidoNombre, setPedidoNombre] = useState(initialData?.pedidoNombre || '')
+  const [fechaLimite, setFechaLimite] = useState(initialData?.fechaLimite || '')
   const [condiciones, setCondiciones] = useState(initialData?.condiciones || [])
   const [tvs, setTvs] = useState(
     initialData?.televisiones?.length
@@ -100,6 +101,7 @@ export default function PedidoForm({
     try {
       await onSubmit({
         pedidoNombre: pedidoNombre.trim(),
+        fechaLimite: fechaLimite || null,
         condiciones,
         televisiones: tvs.map((tv) => ({
           marca: tv.marca,
@@ -135,6 +137,19 @@ export default function PedidoForm({
               onChange={(e) => setPedidoNombre(e.target.value)}
               placeholder="Ej. Pedido Jesica"
               required
+            />
+          </div>
+
+          <div className="section">
+            <label className="label" htmlFor="fechaLimite">
+              Fecha límite
+              <span className="label-help">opcional</span>
+            </label>
+            <input
+              id="fechaLimite"
+              type="date"
+              value={fechaLimite}
+              onChange={(e) => setFechaLimite(e.target.value)}
             />
           </div>
 

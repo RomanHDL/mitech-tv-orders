@@ -28,6 +28,7 @@ export default function EditarCliente({ pedido }) {
       cancelHref="/pedidos"
       initialData={{
         pedidoNombre: pedido.pedidoNombre,
+        fechaLimite: pedido.fechaLimite,
         condiciones: pedido.condiciones,
         televisiones: pedido.televisiones,
       }}

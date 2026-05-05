@@ -13,7 +13,7 @@ export async function POST(req) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
   }
 
-  const { pedidoNombre, condiciones, televisiones } = body
+  const { pedidoNombre, condiciones, televisiones, fechaLimite } = body
 
   if (typeof pedidoNombre !== 'string' || !pedidoNombre.trim()) {
     return NextResponse.json({ error: 'Nombre de pedido requerido' }, { status: 400 })
@@ -23,6 +23,14 @@ export async function POST(req) {
   }
   if (!Array.isArray(televisiones) || televisiones.length === 0) {
     return NextResponse.json({ error: 'Agrega al menos una televisión' }, { status: 400 })
+  }
+
+  let fechaLimiteValida = null
+  if (fechaLimite) {
+    if (typeof fechaLimite !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fechaLimite)) {
+      return NextResponse.json({ error: 'Fecha límite inválida' }, { status: 400 })
+    }
+    fechaLimiteValida = fechaLimite
   }
 
   const tvsLimpias = []
@@ -55,6 +63,7 @@ export async function POST(req) {
     condiciones,
     televisiones: tvsLimpias,
     fecha: new Date(),
+    fechaLimite: fechaLimiteValida,
     creadoPor: usuario?.userId || null,
     creadoPorNombre: usuario?.nombre || null,
     creadoPorRol: usuario?.rol || null,
