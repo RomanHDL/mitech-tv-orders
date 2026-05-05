@@ -10,6 +10,14 @@ function estadoCard(p) {
   return 'pendiente'
 }
 
+function formatearFechaLimite(iso) {
+  if (!iso) return ''
+  // iso es 'YYYY-MM-DD' — parseamos manual para evitar timezone offsets
+  const [y, m, d] = iso.split('-').map(Number)
+  const fecha = new Date(y, m - 1, d)
+  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
+}
+
 export default function SurtirListaCliente({ pedidos }) {
   const [verCompletados, setVerCompletados] = useState(false)
 
@@ -98,6 +106,11 @@ export default function SurtirListaCliente({ pedidos }) {
                 )}
                 {p.totalPiezas > 0 && (
                   <span>{p.totalPiezas} {p.totalPiezas === 1 ? 'pieza' : 'piezas'}</span>
+                )}
+                {p.fechaLimite && (
+                  <span className="surtir-card-fecha-limite">
+                    Límite: {formatearFechaLimite(p.fechaLimite)}
+                  </span>
                 )}
               </div>
             </Link>

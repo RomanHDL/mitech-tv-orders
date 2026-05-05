@@ -32,6 +32,7 @@ async function obtenerPedidos(usuario) {
       pedidoNombre: p.pedidoNombre,
       condiciones: p.condiciones || [],
       fecha: p.fecha.toISOString(),
+      fechaLimite: p.fechaLimite || '',
       totalRequerido,
       totalSurtido,
       pct,

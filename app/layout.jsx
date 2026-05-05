@@ -2,6 +2,7 @@ import './globals.css'
 import { Inter } from 'next/font/google'
 import { cookies } from 'next/headers'
 import Nav from './components/nav'
+import AutoRefresh from './components/auto-refresh'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,6 +25,7 @@ export default async function RootLayout({ children }) {
     <html lang="es" className={inter.variable}>
       <body>
         <Nav rol={rol} email={email} nombre={nombre} />
+        <AutoRefresh />
         {children}
       </body>
     </html>
