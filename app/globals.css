@@ -738,7 +738,7 @@ select.select-dueno {
 
 .tags-celda {
   display: grid;
-  grid-template-columns: repeat(5, max-content);
+  grid-template-columns: repeat(auto-fit, max-content);
   gap: 0.3rem 0.4rem;
   align-items: center;
   justify-content: start;
@@ -746,8 +746,15 @@ select.select-dueno {
 .tags-celda .tag {
   white-space: nowrap;
 }
-.tabla-pedidos td[data-label="Condiciones"] {
-  min-width: 18rem;
+
+.usuarios-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .usuarios-grid { grid-template-columns: 1fr; }
 }
 
 .tag {
@@ -1370,11 +1377,9 @@ select.select-dueno {
   .tabla-pedidos td[data-label="Condiciones"] {
     flex-direction: column;
     align-items: flex-start;
-    min-width: 0;
   }
   .tabla-pedidos td[data-label="Condiciones"] .tags-celda {
     margin-top: 0.25rem;
-    grid-template-columns: repeat(auto-fit, max-content);
   }
   .acciones { justify-content: flex-start; flex-wrap: wrap; }
   .acciones .btn { flex: 1 0 auto; }

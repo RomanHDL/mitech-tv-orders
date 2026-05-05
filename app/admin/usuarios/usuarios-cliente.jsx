@@ -168,7 +168,7 @@ export default function UsuariosCliente({ usuarios }) {
   }
 
   return (
-    <main className="page">
+    <main className="page-wide">
       <div className="page-header">
         <h1>Usuarios</h1>
         <p className="subtitle">
@@ -176,6 +176,7 @@ export default function UsuariosCliente({ usuarios }) {
         </p>
       </div>
 
+      <div className="usuarios-grid">
       <div className="card">
         <h2>{editandoId ? 'Editar usuario' : 'Agregar usuario'}</h2>
 
@@ -307,13 +308,10 @@ export default function UsuariosCliente({ usuarios }) {
         </form>
       </div>
 
-      <div className="page-header" style={{ marginTop: '2rem', marginBottom: '1rem' }}>
-        <h2 style={{ fontSize: '1.4rem', fontFamily: 'Bangers, cursive', textTransform: 'uppercase', color: 'var(--black)', letterSpacing: '0.04em' }}>
+      <div className="card">
+        <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
           Usuarios registrados ({usuarios.length})
         </h2>
-      </div>
-
-      <div className="card">
         {usuarios.length === 0 ? (
           <div className="empty">
             <p>No hay usuarios todavía.</p>
@@ -371,6 +369,7 @@ export default function UsuariosCliente({ usuarios }) {
             </tbody>
           </table>
         )}
+      </div>
       </div>
     </main>
   )
