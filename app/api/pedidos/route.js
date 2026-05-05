@@ -57,6 +57,7 @@ export async function POST(req) {
     fecha: new Date(),
     creadoPor: usuario?.userId || null,
     creadoPorNombre: usuario?.nombre || null,
+    creadoPorRol: usuario?.rol || null,
   })
 
   return NextResponse.json({ id: result.insertedId.toString() }, { status: 201 })

@@ -18,10 +18,13 @@ export default async function SurtirPage({ params }) {
   const pedido = await obtenerPedido(id)
   if (!pedido) notFound()
 
-  // Capturista solo accede a sus pedidos. Legacy (sin creadoPor) abierto
-  // a todas las capturistas.
+  // Capturista solo se bloquea de pedidos creados por OTRA capturista.
   const usuario = await getUsuario()
-  if (usuario?.rol === 'capturista' && pedido.creadoPor && pedido.creadoPor !== usuario.userId) {
+  if (
+    usuario?.rol === 'capturista' &&
+    pedido.creadoPorRol === 'capturista' &&
+    pedido.creadoPor !== usuario.userId
+  ) {
     notFound()
   }
 

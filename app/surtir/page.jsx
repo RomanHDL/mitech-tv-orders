@@ -7,12 +7,12 @@ export const dynamic = 'force-dynamic'
 async function obtenerPedidos(usuario) {
   const db = await getDb()
 
-  // Capturistas solo ven sus propios pedidos. Los pedidos legacy (sin
-  // creadoPor) son visibles para todas las capturistas para no romper el
-  // flujo en curso.
+  // Capturistas solo se aíslan entre ellas: ven los pedidos hechos por
+  // admin/surtidor o legacy (sin creadoPorRol) más los suyos. Pedidos de
+  // OTRA capturista quedan ocultos.
   const filtro =
     usuario?.rol === 'capturista'
-      ? { $or: [{ creadoPor: null }, { creadoPor: usuario.userId }] }
+      ? { $or: [{ creadoPorRol: { $ne: 'capturista' } }, { creadoPor: usuario.userId }] }
       : {}
 
   const pedidos = await db.collection('pedidos')

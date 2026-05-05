@@ -61,16 +61,21 @@ export async function PATCH(req, { params }) {
 
   const pedido = await db.collection('pedidos').findOne(
     { _id: new ObjectId(id) },
-    { projection: { televisiones: 1, creadoPor: 1 } }
+    { projection: { televisiones: 1, creadoPor: 1, creadoPorRol: 1 } }
   )
   if (!pedido) {
     return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
   }
 
-  // Capturista solo puede tocar sus propios pedidos. Los legacy (sin
-  // creadoPor) quedan compartidos entre capturistas.
+  // Una capturista solo se bloquea cuando el pedido fue creado por OTRA
+  // capturista. Pedidos de admin/surtidor o legacy (sin creadoPorRol) son
+  // editables por cualquier capturista.
   const usuario = await getUsuario()
-  if (usuario?.rol === 'capturista' && pedido.creadoPor && pedido.creadoPor !== usuario.userId) {
+  if (
+    usuario?.rol === 'capturista' &&
+    pedido.creadoPorRol === 'capturista' &&
+    pedido.creadoPor !== usuario.userId
+  ) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
