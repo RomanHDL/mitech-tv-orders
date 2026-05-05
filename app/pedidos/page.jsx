@@ -6,6 +6,19 @@ import { IconDocument, IconPlus } from '../components/icons'
 
 export const dynamic = 'force-dynamic'
 
+async function obtenerUsuariosAsignables() {
+  const db = await getDb()
+  const usuarios = await db.collection('usuarios')
+    .find({ rol: { $in: ['admin', 'capturista'] } })
+    .sort({ nombre: 1 })
+    .toArray()
+  return usuarios.map((u) => ({
+    id: u._id.toString(),
+    nombre: u.nombre || u.email || '(sin nombre)',
+    rol: u.rol,
+  }))
+}
+
 async function obtenerPedidos() {
   const db = await getDb()
   const pedidos = await db.collection('pedidos')
@@ -39,12 +52,18 @@ async function obtenerPedidos() {
       totalSurtido,
       progresoPct: pct,
       tienePallets,
+      creadoPor: p.creadoPor || '',
+      creadoPorNombre: p.creadoPorNombre || '',
     }
   })
 }
 
 export default async function ListaPage() {
-  const [pedidos, rol] = await Promise.all([obtenerPedidos(), getRol()])
+  const [pedidos, rol, usuarios] = await Promise.all([
+    obtenerPedidos(),
+    getRol(),
+    obtenerUsuariosAsignables(),
+  ])
 
   return (
     <main className="page-wide">
@@ -70,7 +89,7 @@ export default async function ListaPage() {
           </div>
         </div>
       ) : (
-        <ListaCliente pedidos={pedidos} rol={rol} />
+        <ListaCliente pedidos={pedidos} rol={rol} usuarios={usuarios} />
       )}
     </main>
   )

@@ -22,9 +22,10 @@ function badgeProgreso(pct) {
   return { label: 'Pendiente', clase: 'pendiente' }
 }
 
-export default function ListaCliente({ pedidos, rol }) {
+export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
   const router = useRouter()
   const [eliminandoId, setEliminandoId] = useState(null)
+  const [asignandoId, setAsignandoId] = useState(null)
   const [error, setError] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [, startTransition] = useTransition()
@@ -39,6 +40,27 @@ export default function ListaCliente({ pedidos, rol }) {
       p.condiciones.some((c) => c.toLowerCase().includes(q))
     )
   }, [pedidos, busqueda])
+
+  const cambiarDueno = async (pedidoId, userId) => {
+    setError('')
+    setAsignandoId(pedidoId)
+    try {
+      const res = await fetch(`/api/admin/pedidos/${pedidoId}/dueno`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userId || null }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'No se pudo asignar dueño')
+      }
+      startTransition(() => router.refresh())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAsignandoId(null)
+    }
+  }
 
   const eliminar = async (id, nombre) => {
     if (!confirm(`¿Eliminar el pedido "${nombre}"? Esta acción no se puede deshacer.`)) return
@@ -94,6 +116,7 @@ export default function ListaCliente({ pedidos, rol }) {
             <tr>
               <th>Pedido</th>
               <th>Fecha</th>
+              {esAdmin && <th>Dueño</th>}
               <th>Condiciones</th>
               <th>Modelos</th>
               <th>Total</th>
@@ -119,6 +142,23 @@ export default function ListaCliente({ pedidos, rol }) {
                   <td data-label="Fecha">
                     <div className="pedido-fecha">{p.fechaFmt}</div>
                   </td>
+                  {esAdmin && (
+                    <td data-label="Dueño">
+                      <select
+                        className="select-dueno"
+                        value={p.creadoPor || ''}
+                        disabled={asignandoId === p.id}
+                        onChange={(e) => cambiarDueno(p.id, e.target.value)}
+                      >
+                        <option value="">— sin dueño —</option>
+                        {usuarios.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.nombre} ({u.rol})
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  )}
                   <td data-label="Condiciones">
                     <div className="tags-celda">
                       {p.condiciones.length > 0
