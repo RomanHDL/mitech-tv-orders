@@ -12,14 +12,6 @@ import {
   IconTrash,
 } from '../components/icons'
 
-function formatoFecha(iso) {
-  const d = new Date(iso)
-  return d.toLocaleString('es-MX', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
 function tagClass(c) {
   return `tag tag-${c.toLowerCase()}`
 }
@@ -125,7 +117,7 @@ export default function ListaCliente({ pedidos, rol }) {
                     </div>
                   </td>
                   <td data-label="Fecha">
-                    <div className="pedido-fecha">{formatoFecha(p.fecha)}</div>
+                    <div className="pedido-fecha">{p.fechaFmt}</div>
                   </td>
                   <td data-label="Condiciones">
                     <div className="tags-celda">

@@ -14,6 +14,12 @@ async function obtenerPedidos() {
     .limit(100)
     .toArray()
 
+  const fmt = new Intl.DateTimeFormat('es-MX', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'America/Mexico_City',
+  })
+
   return pedidos.map((p) => {
     const tvs = p.televisiones || []
     const totalRequerido = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
@@ -27,7 +33,7 @@ async function obtenerPedidos() {
       id: p._id.toString(),
       pedidoNombre: p.pedidoNombre,
       condiciones: p.condiciones || [],
-      fecha: p.fecha.toISOString(),
+      fechaFmt: p.fecha ? fmt.format(p.fecha) : '',
       totalTvs: totalRequerido,
       cantidadModelos: tvs.length,
       totalSurtido,
