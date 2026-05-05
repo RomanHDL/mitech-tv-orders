@@ -174,6 +174,23 @@ export default function SurtirCliente({ pedido }) {
               const enProgreso = surtida > 0 && !completo
               const estado = completo ? 'completo' : enProgreso ? 'parcial' : 'pendiente'
               const esPallet = tv.unidad === 'pallet'
+              const descTv = `${marca} ${tv.pulgadas}"${tv.modelo ? ' ' + tv.modelo : ''}`
+              const unidadTxt = unidadLabel(tv.cantidad, tv.unidad)
+
+              const marcarTodas = () => {
+                const restantes = tv.cantidad - surtida
+                const ok = window.confirm(
+                  `¿Marcar como surtidas las ${restantes} ${unidadTxt} restantes de ${descTv}?\n\nQuedará en ${tv.cantidad}/${tv.cantidad}.`
+                )
+                if (ok) actualizar(idx, tv.cantidad)
+              }
+
+              const reiniciar = () => {
+                const ok = window.confirm(
+                  `¿Reiniciar el conteo de ${descTv}?\n\nSe borrarán las ${surtida} ${unidadTxt} ya marcadas.`
+                )
+                if (ok) actualizar(idx, 0)
+              }
 
               return (
                 <div key={idx} className={`surtir-item estado-${estado}`}>
@@ -228,7 +245,7 @@ export default function SurtirCliente({ pedido }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => actualizar(idx, tv.cantidad)}
+                        onClick={marcarTodas}
                         disabled={completo}
                         className="btn-mini-action btn-listo"
                         aria-label="Marcar todas"
@@ -238,7 +255,7 @@ export default function SurtirCliente({ pedido }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => actualizar(idx, 0)}
+                        onClick={reiniciar}
                         disabled={surtida === 0}
                         className="btn-mini-action btn-reset"
                         aria-label="Reiniciar"
