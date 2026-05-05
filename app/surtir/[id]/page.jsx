@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
+import { getUsuario } from '@/lib/auth'
 import SurtirCliente from './surtir-cliente'
 import './surtir.css'
 
@@ -16,6 +17,13 @@ export default async function SurtirPage({ params }) {
   const { id } = await params
   const pedido = await obtenerPedido(id)
   if (!pedido) notFound()
+
+  // Capturista solo accede a sus pedidos. Legacy (sin creadoPor) abierto
+  // a todas las capturistas.
+  const usuario = await getUsuario()
+  if (usuario?.rol === 'capturista' && pedido.creadoPor && pedido.creadoPor !== usuario.userId) {
+    notFound()
+  }
 
   // Convertir a estructura serializable para Client Component
   const datos = {

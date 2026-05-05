@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
 import { MARCAS, PULGADAS, CONDICIONES, UNIDADES } from '@/lib/catalogos'
+import { getUsuario } from '@/lib/auth'
 
 export async function GET(_req, { params }) {
   const { id } = await params
@@ -60,11 +61,19 @@ export async function PATCH(req, { params }) {
 
   const pedido = await db.collection('pedidos').findOne(
     { _id: new ObjectId(id) },
-    { projection: { televisiones: 1 } }
+    { projection: { televisiones: 1, creadoPor: 1 } }
   )
   if (!pedido) {
     return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
   }
+
+  // Capturista solo puede tocar sus propios pedidos. Los legacy (sin
+  // creadoPor) quedan compartidos entre capturistas.
+  const usuario = await getUsuario()
+  if (usuario?.rol === 'capturista' && pedido.creadoPor && pedido.creadoPor !== usuario.userId) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  }
+
   const tv = pedido.televisiones?.[tvIndex]
   if (!tv) {
     return NextResponse.json({ error: 'TV no existe en el pedido' }, { status: 400 })

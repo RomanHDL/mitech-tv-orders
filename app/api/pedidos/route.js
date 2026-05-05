@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { MARCAS, PULGADAS, CONDICIONES, UNIDADES } from '@/lib/catalogos'
+import { getUsuario } from '@/lib/auth'
 
 export async function POST(req) {
+  const usuario = await getUsuario()
+
   let body
   try {
     body = await req.json()
@@ -52,6 +55,8 @@ export async function POST(req) {
     condiciones,
     televisiones: tvsLimpias,
     fecha: new Date(),
+    creadoPor: usuario?.userId || null,
+    creadoPorNombre: usuario?.nombre || null,
   })
 
   return NextResponse.json({ id: result.insertedId.toString() }, { status: 201 })

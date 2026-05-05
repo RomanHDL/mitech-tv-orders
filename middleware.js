@@ -56,10 +56,13 @@ function verificarAcceso(pathname, method, rol) {
   if (rol === 'admin') return true
 
   if (rol === 'capturista') {
-    // HTML: '/' (form) y '/pedidos' (listar)
+    // HTML: '/' (form), '/pedidos' (listar) y validación de sus pedidos
     if (pathname === '/' || pathname === '/pedidos') return true
-    // API: solo crear pedidos (POST /api/pedidos)
+    if (pathname === '/surtir' || pathname.startsWith('/surtir/')) return true
+    // API: crear pedidos y tracking de validación (la validación de ownership
+    // se hace en el handler para devolver 403 cuando no es su pedido)
     if (method === 'POST' && pathname === '/api/pedidos') return true
+    if (method === 'PATCH' && /^\/api\/pedidos\/[^/]+$/.test(pathname)) return true
     return false
   }
 
