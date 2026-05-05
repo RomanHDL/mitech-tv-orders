@@ -67,15 +67,9 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
   }
 
-  // Una capturista solo se bloquea cuando el pedido fue creado por OTRA
-  // capturista. Pedidos de admin/surtidor o legacy (sin creadoPorRol) son
-  // editables por cualquier capturista.
+  // Una capturista solo puede tocar pedidos cuyo dueño es ella misma.
   const usuario = await getUsuario()
-  if (
-    usuario?.rol === 'capturista' &&
-    pedido.creadoPorRol === 'capturista' &&
-    pedido.creadoPor !== usuario.userId
-  ) {
+  if (usuario?.rol === 'capturista' && pedido.creadoPor !== usuario.userId) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 

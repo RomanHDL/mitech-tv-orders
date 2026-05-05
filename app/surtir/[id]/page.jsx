@@ -18,13 +18,9 @@ export default async function SurtirPage({ params }) {
   const pedido = await obtenerPedido(id)
   if (!pedido) notFound()
 
-  // Capturista solo se bloquea de pedidos creados por OTRA capturista.
+  // Capturista solo puede abrir pedidos cuyo dueño es ella misma.
   const usuario = await getUsuario()
-  if (
-    usuario?.rol === 'capturista' &&
-    pedido.creadoPorRol === 'capturista' &&
-    pedido.creadoPor !== usuario.userId
-  ) {
+  if (usuario?.rol === 'capturista' && pedido.creadoPor !== usuario.userId) {
     notFound()
   }
 

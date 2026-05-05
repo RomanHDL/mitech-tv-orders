@@ -7,13 +7,9 @@ export const dynamic = 'force-dynamic'
 async function obtenerPedidos(usuario) {
   const db = await getDb()
 
-  // Capturistas solo se aíslan entre ellas: ven los pedidos hechos por
-  // admin/surtidor o legacy (sin creadoPorRol) más los suyos. Pedidos de
-  // OTRA capturista quedan ocultos.
+  // Capturistas solo ven los pedidos cuyo dueño son ellas mismas.
   const filtro =
-    usuario?.rol === 'capturista'
-      ? { $or: [{ creadoPorRol: { $ne: 'capturista' } }, { creadoPor: usuario.userId }] }
-      : {}
+    usuario?.rol === 'capturista' ? { creadoPor: usuario.userId } : {}
 
   const pedidos = await db.collection('pedidos')
     .find(filtro)
