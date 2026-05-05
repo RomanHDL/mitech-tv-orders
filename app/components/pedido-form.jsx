@@ -89,6 +89,7 @@ export default function PedidoForm({
     setError('')
 
     if (!pedidoNombre.trim()) return setError('Falta el nombre del pedido')
+    if (!fechaLimite) return setError('Falta la fecha límite')
     if (tvs.length === 0) return setError('Agrega al menos una televisión')
 
     for (const [i, tv] of tvs.entries()) {
@@ -101,7 +102,7 @@ export default function PedidoForm({
     try {
       await onSubmit({
         pedidoNombre: pedidoNombre.trim(),
-        fechaLimite: fechaLimite || null,
+        fechaLimite,
         condiciones,
         televisiones: tvs.map((tv) => ({
           marca: tv.marca,
@@ -141,15 +142,13 @@ export default function PedidoForm({
           </div>
 
           <div className="section">
-            <label className="label" htmlFor="fechaLimite">
-              Fecha límite
-              <span className="label-help">opcional</span>
-            </label>
+            <label className="label" htmlFor="fechaLimite">Fecha límite</label>
             <input
               id="fechaLimite"
               type="date"
               value={fechaLimite}
               onChange={(e) => setFechaLimite(e.target.value)}
+              required
             />
           </div>
 

@@ -116,12 +116,8 @@ export async function PUT(req, { params }) {
     return NextResponse.json({ error: 'Agrega al menos una televisión' }, { status: 400 })
   }
 
-  let fechaLimiteValida = null
-  if (fechaLimite) {
-    if (typeof fechaLimite !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fechaLimite)) {
-      return NextResponse.json({ error: 'Fecha límite inválida' }, { status: 400 })
-    }
-    fechaLimiteValida = fechaLimite
+  if (typeof fechaLimite !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fechaLimite)) {
+    return NextResponse.json({ error: 'Fecha límite requerida' }, { status: 400 })
   }
 
   const db = await getDb()
@@ -172,7 +168,7 @@ export async function PUT(req, { params }) {
         pedidoNombre: pedidoNombre.trim(),
         condiciones,
         televisiones: tvsLimpias,
-        fechaLimite: fechaLimiteValida,
+        fechaLimite,
       },
     }
   )

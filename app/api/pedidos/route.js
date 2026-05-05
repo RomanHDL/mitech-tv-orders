@@ -25,12 +25,8 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Agrega al menos una televisión' }, { status: 400 })
   }
 
-  let fechaLimiteValida = null
-  if (fechaLimite) {
-    if (typeof fechaLimite !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fechaLimite)) {
-      return NextResponse.json({ error: 'Fecha límite inválida' }, { status: 400 })
-    }
-    fechaLimiteValida = fechaLimite
+  if (typeof fechaLimite !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fechaLimite)) {
+    return NextResponse.json({ error: 'Fecha límite requerida' }, { status: 400 })
   }
 
   const tvsLimpias = []
@@ -63,7 +59,7 @@ export async function POST(req) {
     condiciones,
     televisiones: tvsLimpias,
     fecha: new Date(),
-    fechaLimite: fechaLimiteValida,
+    fechaLimite,
     creadoPor: usuario?.userId || null,
     creadoPorNombre: usuario?.nombre || null,
     creadoPorRol: usuario?.rol || null,
