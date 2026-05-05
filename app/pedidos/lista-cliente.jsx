@@ -167,7 +167,11 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                     </div>
                   </td>
                   <td data-label="Modelos">{p.cantidadModelos}</td>
-                  <td data-label="Total"><span className="numero-grande">{p.totalTvs}</span></td>
+                  <td data-label="Total">
+                    <span className="numero-grande">
+                      {p.totalSurtido}/{p.totalTvs}
+                    </span>
+                  </td>
                   <td>
                     <div className="acciones">
                       <Link href={`/pedidos/${p.id}/imprimir`} className="btn btn-primary btn-sm">
