@@ -31,12 +31,16 @@ export default function SurtirCliente({ pedido }) {
   const [error, setError] = useState('')
   // Estado del autoguardado: 'idle' | 'guardando' | 'guardado' | 'error'
   const [estadoGuardado, setEstadoGuardado] = useState('idle')
+  // Última acción para deshacer: { idx, valorAnterior, label } | null
+  const [ultimaAccion, setUltimaAccion] = useState(null)
   const guardadoTimeout = useRef(null)
+  const undoTimeout = useRef(null)
   const enVuelo = useRef(0)
 
   useEffect(() => {
     return () => {
       if (guardadoTimeout.current) clearTimeout(guardadoTimeout.current)
+      if (undoTimeout.current) clearTimeout(undoTimeout.current)
     }
   }, [])
 
@@ -50,11 +54,39 @@ export default function SurtirCliente({ pedido }) {
   const progreso = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
   const completado = totalRequerido > 0 && totalSurtido >= totalRequerido
 
-  const actualizar = async (idx, valorBruto) => {
+  const registrarUndo = (accion) => {
+    if (undoTimeout.current) clearTimeout(undoTimeout.current)
+    setUltimaAccion(accion)
+    undoTimeout.current = setTimeout(() => setUltimaAccion(null), 6000)
+  }
+
+  const deshacer = () => {
+    if (!ultimaAccion) return
+    if (undoTimeout.current) clearTimeout(undoTimeout.current)
+    const accion = ultimaAccion
+    setUltimaAccion(null)
+    actualizar(accion.idx, accion.valorAnterior, { esUndo: true })
+  }
+
+  const actualizar = async (idx, valorBruto, opciones = {}) => {
     const tv = tvs[idx]
     const valor = Math.max(0, Math.min(tv.cantidad, Number(valorBruto) || 0))
+    const valorAnterior = tv.cantidadSurtida || 0
+
+    if (valor === valorAnterior) return
 
     setTvs((prev) => prev.map((t, i) => (i === idx ? { ...t, cantidadSurtida: valor } : t)))
+
+    if (!opciones.esUndo) {
+      const delta = valor - valorAnterior
+      const signo = delta > 0 ? '+' : ''
+      const desc = opciones.descripcion || `TV ${idx + 1}`
+      registrarUndo({
+        idx,
+        valorAnterior,
+        label: `${signo}${delta} en ${desc} (ahora ${valor}/${tv.cantidad})`,
+      })
+    }
 
     enVuelo.current += 1
     setEstadoGuardado('guardando')
@@ -182,14 +214,14 @@ export default function SurtirCliente({ pedido }) {
                 const ok = window.confirm(
                   `¿Marcar como surtidas las ${restantes} ${unidadTxt} restantes de ${descTv}?\n\nQuedará en ${tv.cantidad}/${tv.cantidad}.`
                 )
-                if (ok) actualizar(idx, tv.cantidad)
+                if (ok) actualizar(idx, tv.cantidad, { descripcion: descTv })
               }
 
               const reiniciar = () => {
                 const ok = window.confirm(
                   `¿Reiniciar el conteo de ${descTv}?\n\nSe borrarán las ${surtida} ${unidadTxt} ya marcadas.`
                 )
-                if (ok) actualizar(idx, 0)
+                if (ok) actualizar(idx, 0, { descripcion: descTv })
               }
 
               return (
@@ -216,7 +248,7 @@ export default function SurtirCliente({ pedido }) {
                         min="0"
                         max={tv.cantidad}
                         value={surtida}
-                        onChange={(e) => actualizar(idx, e.target.value)}
+                        onChange={(e) => actualizar(idx, e.target.value, { descripcion: descTv })}
                         aria-label="Cantidad surtida"
                       />
                       <span className="surtir-counter-total">/ {tv.cantidad}</span>
@@ -225,7 +257,7 @@ export default function SurtirCliente({ pedido }) {
                     <div className="surtir-acciones">
                       <button
                         type="button"
-                        onClick={() => actualizar(idx, surtida - 1)}
+                        onClick={() => actualizar(idx, surtida - 1, { descripcion: descTv })}
                         disabled={surtida === 0}
                         className="btn-mini-action"
                         aria-label="Restar uno"
@@ -235,7 +267,7 @@ export default function SurtirCliente({ pedido }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => actualizar(idx, surtida + 1)}
+                        onClick={() => actualizar(idx, surtida + 1, { descripcion: descTv })}
                         disabled={completo}
                         className="btn-mini-action"
                         aria-label="Sumar uno"
@@ -271,6 +303,18 @@ export default function SurtirCliente({ pedido }) {
           </section>
         ))}
       </div>
+
+      {ultimaAccion && (
+        <div className="undo-toast" role="status">
+          <div className="undo-toast-mensaje">
+            <IconCheck width={16} height={16} />
+            <span>{ultimaAccion.label}</span>
+          </div>
+          <button type="button" onClick={deshacer} className="undo-toast-btn">
+            Deshacer
+          </button>
+        </div>
+      )}
     </main>
   )
 }
