@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import * as XLSX from 'xlsx'
 import {
   IconAlert,
   IconBox,
@@ -13,77 +14,106 @@ import {
   IconTrash,
 } from '../components/icons'
 
-function csvEscape(valor) {
-  const s = valor === null || valor === undefined ? '' : String(valor)
-  if (/[",\n\r;]/.test(s)) return `"${s.replace(/"/g, '""')}"`
-  return s
+// Excel limita los nombres de pestaña a 31 caracteres y no permite \ / ? * [ ]
+function sanitizarNombrePestana(nombre, usados) {
+  let base = String(nombre || 'Pedido').replace(/[\\/?*[\]:]/g, '-').trim()
+  if (!base) base = 'Pedido'
+  if (base.length > 31) base = base.slice(0, 31)
+  let final = base
+  let i = 2
+  while (usados.has(final.toLowerCase())) {
+    const sufijo = ` (${i})`
+    final = base.slice(0, 31 - sufijo.length) + sufijo
+    i++
+  }
+  usados.add(final.toLowerCase())
+  return final
 }
 
-function descargarPedidosCSV(pedidos) {
-  const encabezados = [
+function descargarPedidosXLSX(pedidos) {
+  const wb = XLSX.utils.book_new()
+
+  // --- Tab "Historial": resumen ordenado por fecha (más recientes primero) ---
+  const historialEncabezados = [
     'Pedido',
     'Fecha creación',
     'Fecha límite',
     'Dueño',
     'Condiciones',
-    'Marca',
-    'Pulgadas',
-    'Modelo',
-    'Unidad',
+    'Modelos',
     'Cantidad requerida',
     'Cantidad surtida',
+    'Progreso',
     'Estado',
   ]
+  const historialFilas = pedidos.map((p) => {
+    const tvs = p.televisiones || []
+    const requerido = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
+    const surtido = tvs.reduce(
+      (s, tv) => s + Math.min(tv.cantidad || 0, tv.cantidadSurtida || 0),
+      0
+    )
+    const pct = requerido > 0 ? Math.round((surtido / requerido) * 100) : 0
+    const estado = pct >= 100 ? 'Completado' : pct > 0 ? 'Parcial' : 'Pendiente'
+    return [
+      p.pedidoNombre,
+      p.fechaFmt,
+      p.fechaLimite,
+      p.creadoPorNombre,
+      (p.condiciones || []).join(' / '),
+      tvs.length,
+      requerido,
+      surtido,
+      `${pct}%`,
+      estado,
+    ]
+  })
+  const wsHistorial = XLSX.utils.aoa_to_sheet([historialEncabezados, ...historialFilas])
+  wsHistorial['!cols'] = [
+    { wch: 24 }, { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 22 },
+    { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 },
+  ]
+  XLSX.utils.book_append_sheet(wb, wsHistorial, 'Historial')
 
-  const filas = []
+  // --- Una pestaña por pedido ---
+  const nombresUsados = new Set(['historial'])
   for (const p of pedidos) {
     const tvs = p.televisiones || []
-    if (tvs.length === 0) {
-      filas.push([
-        p.pedidoNombre, p.fechaFmt, p.fechaLimite, p.creadoPorNombre,
-        (p.condiciones || []).join(' / '), '', '', '', '', '', '', '',
-      ])
-      continue
-    }
-    for (const tv of tvs) {
+    const encabezadoInfo = [
+      ['Pedido', p.pedidoNombre],
+      ['Fecha creación', p.fechaFmt],
+      ['Fecha límite', p.fechaLimite || ''],
+      ['Dueño', p.creadoPorNombre || ''],
+      ['Condiciones', (p.condiciones || []).join(' / ')],
+      [],
+    ]
+    const detalleEncabezados = [
+      'Marca', 'Pulgadas', 'Modelo', 'Unidad',
+      'Cantidad requerida', 'Cantidad surtida', 'Estado',
+    ]
+    const detalleFilas = tvs.map((tv) => {
       const surt = Math.min(tv.cantidad, tv.cantidadSurtida || 0)
       const estado = surt >= tv.cantidad
         ? 'Completo'
-        : surt > 0
-          ? 'Parcial'
-          : 'Pendiente'
-      filas.push([
-        p.pedidoNombre,
-        p.fechaFmt,
-        p.fechaLimite,
-        p.creadoPorNombre,
-        (p.condiciones || []).join(' / '),
-        tv.marca,
-        tv.pulgadas,
-        tv.modelo,
-        tv.unidad,
-        tv.cantidad,
-        surt,
-        estado,
-      ])
-    }
+        : surt > 0 ? 'Parcial' : 'Pendiente'
+      return [tv.marca, tv.pulgadas, tv.modelo, tv.unidad, tv.cantidad, surt, estado]
+    })
+
+    const ws = XLSX.utils.aoa_to_sheet([
+      ...encabezadoInfo,
+      detalleEncabezados,
+      ...detalleFilas,
+    ])
+    ws['!cols'] = [
+      { wch: 16 }, { wch: 10 }, { wch: 22 }, { wch: 10 },
+      { wch: 18 }, { wch: 18 }, { wch: 12 },
+    ]
+    const nombrePestana = sanitizarNombrePestana(p.pedidoNombre, nombresUsados)
+    XLSX.utils.book_append_sheet(wb, ws, nombrePestana)
   }
 
-  const lineas = [encabezados, ...filas].map((fila) =>
-    fila.map(csvEscape).join(',')
-  )
-  // BOM UTF-8 para que Excel detecte acentos correctamente.
-  const csv = '﻿' + lineas.join('\r\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
   const hoy = new Date().toISOString().slice(0, 10)
-  a.href = url
-  a.download = `pedidos-${hoy}.csv`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  XLSX.writeFile(wb, `pedidos-${hoy}.xlsx`)
 }
 
 function tagClass(c) {
@@ -170,7 +200,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
         <div className="lista-toolbar-acciones">
           <button
             type="button"
-            onClick={() => descargarPedidosCSV(pedidosFiltrados)}
+            onClick={() => descargarPedidosXLSX(pedidosFiltrados)}
             disabled={pedidosFiltrados.length === 0}
             className="btn btn-excel"
             title="Descargar pedidos en Excel"
