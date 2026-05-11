@@ -308,6 +308,8 @@ h2 {
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-secondary { background: #fff; color: var(--black); }
 .btn-danger { background: var(--red); color: #fff; }
+.btn-excel { background: #15803d; color: #fff; }
+.btn-excel:hover:not(:disabled) { background: #166534; }
 
 .btn-large {
   padding: 0.85rem 1.8rem;
@@ -573,12 +575,14 @@ select.select-dueno {
 }
 .resumen-item { text-align: center; }
 .resumen-numero {
-  font-family: 'Bangers', cursive;
-  font-size: 2.3rem;
-  font-weight: 400;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 1.9rem;
+  font-weight: 800;
   color: var(--black);
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 .resumen-etiqueta {
   font-size: 0.7rem;
@@ -675,6 +679,12 @@ select.select-dueno {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+.lista-toolbar-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 .search-box {
   flex: 1;
@@ -782,11 +792,13 @@ select.select-dueno {
 .tag-empty { color: var(--text-subtle); font-size: 0.85rem; font-weight: 500; }
 
 .numero-grande {
-  font-family: 'Bangers', cursive;
-  font-size: 1.35rem;
-  font-weight: 400;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
   color: var(--black);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 .acciones {
@@ -927,11 +939,13 @@ select.select-dueno {
   letter-spacing: 0.06em;
 }
 .surtir-card-numero .pct {
-  font-family: 'Bangers', cursive;
-  font-weight: 400;
-  font-size: 1.3rem;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
   color: var(--black);
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 .surtir-card-meta {

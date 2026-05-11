@@ -47,6 +47,7 @@ async function obtenerPedidos() {
       pedidoNombre: p.pedidoNombre,
       condiciones: p.condiciones || [],
       fechaFmt: p.fecha ? fmt.format(p.fecha) : '',
+      fechaLimite: p.fechaLimite || '',
       totalTvs: totalRequerido,
       cantidadModelos: tvs.length,
       totalSurtido,
@@ -54,6 +55,14 @@ async function obtenerPedidos() {
       tienePallets,
       creadoPor: p.creadoPor || '',
       creadoPorNombre: p.creadoPorNombre || '',
+      televisiones: tvs.map((tv) => ({
+        marca: tv.marca || '',
+        pulgadas: tv.pulgadas || 0,
+        modelo: tv.modelo || '',
+        unidad: tv.unidad || 'pieza',
+        cantidad: tv.cantidad || 0,
+        cantidadSurtida: tv.cantidadSurtida || 0,
+      })),
     }
   })
 }

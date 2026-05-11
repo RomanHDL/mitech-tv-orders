@@ -105,12 +105,13 @@
   margin: 0 0.15em;
 }
 .progreso-pct {
-  font-family: 'Bangers', cursive;
-  font-size: 1.85rem;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 1.5rem;
   color: var(--black);
-  font-weight: 400;
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 .progreso-track {
   height: 12px;
@@ -217,10 +218,12 @@
   letter-spacing: -0.01em;
 }
 .surtir-pulgadas {
-  font-family: 'Bangers', cursive;
-  font-size: 1.4rem;
-  font-weight: 400;
-  letter-spacing: 0.04em;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 .surtir-modelo {
   font-size: 0.8rem;
@@ -268,12 +271,13 @@
 .surtir-counter input {
   width: 72px;
   text-align: center;
-  font-family: 'Bangers', cursive;
-  font-size: 1.3rem;
-  font-weight: 400;
-  letter-spacing: 0.04em;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0;
   padding: 0.4rem 0.5rem;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 .surtir-counter-total {
   font-size: 0.95rem;

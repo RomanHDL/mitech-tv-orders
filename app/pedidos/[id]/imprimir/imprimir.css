@@ -16,8 +16,18 @@ body { background: #fff; }
   max-width: 820px;
   margin: 0 auto;
   padding: 2rem 2rem 1.5rem;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-feature-settings: "tnum" 1;
   color: #000;
+}
+
+/* Énfasis específico en los dígitos del pedido para que 1 y 7 no se confundan */
+.tv-pulgadas,
+.tv-cantidad,
+.marca-subtotal,
+.total-final {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 /* Acciones (Volver / Imprimir) — no se imprimen */

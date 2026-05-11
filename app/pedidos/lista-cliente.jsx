@@ -6,11 +6,85 @@ import Link from 'next/link'
 import {
   IconAlert,
   IconBox,
+  IconExcel,
   IconPlus,
   IconPrinter,
   IconSearch,
   IconTrash,
 } from '../components/icons'
+
+function csvEscape(valor) {
+  const s = valor === null || valor === undefined ? '' : String(valor)
+  if (/[",\n\r;]/.test(s)) return `"${s.replace(/"/g, '""')}"`
+  return s
+}
+
+function descargarPedidosCSV(pedidos) {
+  const encabezados = [
+    'Pedido',
+    'Fecha creación',
+    'Fecha límite',
+    'Dueño',
+    'Condiciones',
+    'Marca',
+    'Pulgadas',
+    'Modelo',
+    'Unidad',
+    'Cantidad requerida',
+    'Cantidad surtida',
+    'Estado',
+  ]
+
+  const filas = []
+  for (const p of pedidos) {
+    const tvs = p.televisiones || []
+    if (tvs.length === 0) {
+      filas.push([
+        p.pedidoNombre, p.fechaFmt, p.fechaLimite, p.creadoPorNombre,
+        (p.condiciones || []).join(' / '), '', '', '', '', '', '', '',
+      ])
+      continue
+    }
+    for (const tv of tvs) {
+      const surt = Math.min(tv.cantidad, tv.cantidadSurtida || 0)
+      const estado = surt >= tv.cantidad
+        ? 'Completo'
+        : surt > 0
+          ? 'Parcial'
+          : 'Pendiente'
+      filas.push([
+        p.pedidoNombre,
+        p.fechaFmt,
+        p.fechaLimite,
+        p.creadoPorNombre,
+        (p.condiciones || []).join(' / '),
+        tv.marca,
+        tv.pulgadas,
+        tv.modelo,
+        tv.unidad,
+        tv.cantidad,
+        surt,
+        estado,
+      ])
+    }
+  }
+
+  const lineas = [encabezados, ...filas].map((fila) =>
+    fila.map(csvEscape).join(',')
+  )
+  // BOM UTF-8 para que Excel detecte acentos correctamente.
+  const csv = '﻿' + lineas.join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  const hoy = new Date().toISOString().slice(0, 10)
+  a.href = url
+  a.download = `pedidos-${hoy}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 
 function tagClass(c) {
   return `tag tag-${c.toLowerCase()}`
@@ -93,10 +167,22 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
-        <Link href="/" className="btn btn-primary">
-          <IconPlus />
-          Nuevo pedido
-        </Link>
+        <div className="lista-toolbar-acciones">
+          <button
+            type="button"
+            onClick={() => descargarPedidosCSV(pedidosFiltrados)}
+            disabled={pedidosFiltrados.length === 0}
+            className="btn btn-excel"
+            title="Descargar pedidos en Excel"
+          >
+            <IconExcel />
+            Excel
+          </button>
+          <Link href="/" className="btn btn-primary">
+            <IconPlus />
+            Nuevo pedido
+          </Link>
+        </div>
       </div>
 
       {error && (
