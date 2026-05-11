@@ -30,14 +30,49 @@ function sanitizarNombrePestana(nombre, usados) {
   return final
 }
 
+// fechaLimite viene como 'YYYY-MM-DD'. Calcula días hasta hoy (0 = hoy, negativo = vencido).
+function diasHastaLimite(fechaLimite) {
+  if (!fechaLimite) return null
+  const [y, m, d] = fechaLimite.split('-').map(Number)
+  if (!y || !m || !d) return null
+  const limite = new Date(y, m - 1, d)
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const diff = limite.getTime() - hoy.getTime()
+  return Math.round(diff / (1000 * 60 * 60 * 24))
+}
+
+function tiempoRestanteTexto(dias) {
+  if (dias === null) return { texto: '—', clase: 'sin-fecha' }
+  if (dias < 0) {
+    const abs = Math.abs(dias)
+    return { texto: `Vencido (${abs} ${abs === 1 ? 'día' : 'días'})`, clase: 'vencido' }
+  }
+  if (dias === 0) return { texto: 'Hoy', clase: 'urgente' }
+  if (dias === 1) return { texto: 'Mañana', clase: 'urgente' }
+  if (dias <= 3) return { texto: `${dias} días`, clase: 'urgente' }
+  if (dias <= 7) return { texto: `${dias} días`, clase: 'cercano' }
+  return { texto: `${dias} días`, clase: 'normal' }
+}
+
+function formatearFechaLimite(iso) {
+  if (!iso) return '—'
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return iso
+  const fecha = new Date(y, m - 1, d)
+  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
+}
+
 function descargarPedidosXLSX(pedidos) {
   const wb = XLSX.utils.book_new()
 
   // --- Tab "Historial": resumen ordenado por fecha (más recientes primero) ---
   const historialEncabezados = [
+    'Número de pedido',
     'Pedido',
     'Fecha creación',
     'Fecha límite',
+    'Tiempo restante',
     'Dueño',
     'Condiciones',
     'Modelos',
@@ -55,10 +90,14 @@ function descargarPedidosXLSX(pedidos) {
     )
     const pct = requerido > 0 ? Math.round((surtido / requerido) * 100) : 0
     const estado = pct >= 100 ? 'Completado' : pct > 0 ? 'Parcial' : 'Pendiente'
+    const dias = diasHastaLimite(p.fechaLimite)
+    const tiempo = tiempoRestanteTexto(dias).texto
     return [
+      p.numeroPedido || '',
       p.pedidoNombre,
       p.fechaFmt,
       p.fechaLimite,
+      tiempo,
       p.creadoPorNombre,
       (p.condiciones || []).join(' / '),
       tvs.length,
@@ -70,8 +109,9 @@ function descargarPedidosXLSX(pedidos) {
   })
   const wsHistorial = XLSX.utils.aoa_to_sheet([historialEncabezados, ...historialFilas])
   wsHistorial['!cols'] = [
-    { wch: 24 }, { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 22 },
-    { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 },
+    { wch: 14 }, { wch: 24 }, { wch: 18 }, { wch: 14 }, { wch: 16 },
+    { wch: 18 }, { wch: 22 }, { wch: 8 }, { wch: 12 }, { wch: 12 },
+    { wch: 10 }, { wch: 12 },
   ]
   XLSX.utils.book_append_sheet(wb, wsHistorial, 'Historial')
 
@@ -79,10 +119,13 @@ function descargarPedidosXLSX(pedidos) {
   const nombresUsados = new Set(['historial'])
   for (const p of pedidos) {
     const tvs = p.televisiones || []
+    const dias = diasHastaLimite(p.fechaLimite)
     const encabezadoInfo = [
+      ['Número de pedido', p.numeroPedido || ''],
       ['Pedido', p.pedidoNombre],
       ['Fecha creación', p.fechaFmt],
       ['Fecha límite', p.fechaLimite || ''],
+      ['Tiempo restante', tiempoRestanteTexto(dias).texto],
       ['Dueño', p.creadoPorNombre || ''],
       ['Condiciones', (p.condiciones || []).join(' / ')],
       [],
@@ -108,7 +151,11 @@ function descargarPedidosXLSX(pedidos) {
       { wch: 16 }, { wch: 10 }, { wch: 22 }, { wch: 10 },
       { wch: 18 }, { wch: 18 }, { wch: 12 },
     ]
-    const nombrePestana = sanitizarNombrePestana(p.pedidoNombre, nombresUsados)
+    // Preferimos el número de pedido en la pestaña si existe, si no el nombre.
+    const baseNombre = p.numeroPedido
+      ? `${p.numeroPedido} - ${p.pedidoNombre}`
+      : p.pedidoNombre
+    const nombrePestana = sanitizarNombrePestana(baseNombre, nombresUsados)
     XLSX.utils.book_append_sheet(wb, ws, nombrePestana)
   }
 
@@ -141,6 +188,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
     if (!q) return pedidos
     return pedidos.filter((p) =>
       p.pedidoNombre.toLowerCase().includes(q) ||
+      (p.numeroPedido || '').toLowerCase().includes(q) ||
       p.condiciones.some((c) => c.toLowerCase().includes(q))
     )
   }, [pedidos, busqueda])
@@ -192,7 +240,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
           <IconSearch className="icon-search" />
           <input
             type="text"
-            placeholder="Buscar por nombre o condición…"
+            placeholder="Buscar por número, nombre o condición…"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -230,11 +278,13 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
         <table className="tabla-pedidos">
           <thead>
             <tr>
+              <th>N° Pedido</th>
               <th>Pedido</th>
-              <th>Fecha</th>
+              <th>Fecha creación</th>
+              <th>Fecha límite</th>
+              <th>Tiempo restante</th>
               {esAdmin && <th>Dueño</th>}
               <th>Condiciones</th>
-              <th>Modelos</th>
               <th>Total</th>
               <th></th>
             </tr>
@@ -242,8 +292,13 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
           <tbody>
             {pedidosFiltrados.map((p) => {
               const badge = badgeProgreso(p.progresoPct)
+              const dias = diasHastaLimite(p.fechaLimite)
+              const tiempo = tiempoRestanteTexto(dias)
               return (
                 <tr key={p.id}>
+                  <td data-label="N° Pedido">
+                    <span className="numero-pedido">{p.numeroPedido || '—'}</span>
+                  </td>
                   <td data-label="Pedido">
                     <div className="pedido-nombre">
                       {p.pedidoNombre}
@@ -255,8 +310,16 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                       )}
                     </div>
                   </td>
-                  <td data-label="Fecha">
+                  <td data-label="Fecha creación">
                     <div className="pedido-fecha">{p.fechaFmt}</div>
+                  </td>
+                  <td data-label="Fecha límite">
+                    <div className="pedido-fecha">{formatearFechaLimite(p.fechaLimite)}</div>
+                  </td>
+                  <td data-label="Tiempo restante">
+                    <span className={`tiempo-restante tr-${tiempo.clase}`}>
+                      {tiempo.texto}
+                    </span>
                   </td>
                   {esAdmin && (
                     <td data-label="Dueño">
@@ -282,7 +345,6 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                         : <span className="tag-empty">—</span>}
                     </div>
                   </td>
-                  <td data-label="Modelos">{p.cantidadModelos}</td>
                   <td data-label="Total">
                     <span className="numero-grande">
                       {p.totalSurtido}/{p.totalTvs}

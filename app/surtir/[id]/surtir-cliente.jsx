@@ -159,7 +159,9 @@ export default function SurtirCliente({ pedido }) {
           )}
         </div>
 
-        <h1 className="surtir-titulo">{pedido.pedidoNombre}</h1>
+        <h1 className="surtir-titulo">
+          {pedido.numeroPedido ? `#${pedido.numeroPedido} — ` : ''}{pedido.pedidoNombre}
+        </h1>
 
         {pedido.condiciones.length > 0 && (
           <div className="tags-celda surtir-tags">
@@ -257,7 +259,12 @@ export default function SurtirCliente({ pedido }) {
                     <div className="surtir-acciones">
                       <button
                         type="button"
-                        onClick={() => actualizar(idx, surtida - 1, { descripcion: descTv })}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            `¿Restar 1 ${unidadTxt} de ${descTv}?\n\nQuedará en ${surtida - 1}/${tv.cantidad}.`
+                          )
+                          if (ok) actualizar(idx, surtida - 1, { descripcion: descTv })
+                        }}
                         disabled={surtida === 0}
                         className="btn-mini-action"
                         aria-label="Restar uno"
@@ -267,7 +274,12 @@ export default function SurtirCliente({ pedido }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => actualizar(idx, surtida + 1, { descripcion: descTv })}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            `¿Agregar 1 ${unidadTxt} a ${descTv}?\n\nQuedará en ${surtida + 1}/${tv.cantidad}.`
+                          )
+                          if (ok) actualizar(idx, surtida + 1, { descripcion: descTv })
+                        }}
                         disabled={completo}
                         className="btn-mini-action"
                         aria-label="Sumar uno"

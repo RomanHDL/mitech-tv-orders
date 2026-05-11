@@ -13,8 +13,11 @@ export async function POST(req) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
   }
 
-  const { pedidoNombre, condiciones, televisiones, fechaLimite } = body
+  const { numeroPedido, pedidoNombre, condiciones, televisiones, fechaLimite } = body
 
+  if (typeof numeroPedido !== 'string' || !numeroPedido.trim()) {
+    return NextResponse.json({ error: 'Número de pedido requerido' }, { status: 400 })
+  }
   if (typeof pedidoNombre !== 'string' || !pedidoNombre.trim()) {
     return NextResponse.json({ error: 'Nombre de pedido requerido' }, { status: 400 })
   }
@@ -55,6 +58,7 @@ export async function POST(req) {
 
   const db = await getDb()
   const result = await db.collection('pedidos').insertOne({
+    numeroPedido: numeroPedido.trim(),
     pedidoNombre: pedidoNombre.trim(),
     condiciones,
     televisiones: tvsLimpias,

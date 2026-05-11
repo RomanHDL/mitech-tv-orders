@@ -27,6 +27,7 @@ export default async function SurtirPage({ params }) {
   // Convertir a estructura serializable para Client Component
   const datos = {
     id: pedido._id.toString(),
+    numeroPedido: pedido.numeroPedido || '',
     pedidoNombre: pedido.pedidoNombre,
     condiciones: pedido.condiciones || [],
     televisiones: (pedido.televisiones || []).map((tv) => ({

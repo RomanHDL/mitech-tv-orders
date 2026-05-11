@@ -18,6 +18,7 @@ export default function PedidoForm({
   submitLabel = 'Crear pedido',
   cancelHref,
 }) {
+  const [numeroPedido, setNumeroPedido] = useState(initialData?.numeroPedido || '')
   const [pedidoNombre, setPedidoNombre] = useState(initialData?.pedidoNombre || '')
   const [fechaLimite, setFechaLimite] = useState(initialData?.fechaLimite || '')
   const [condiciones, setCondiciones] = useState(initialData?.condiciones || [])
@@ -88,6 +89,7 @@ export default function PedidoForm({
     e.preventDefault()
     setError('')
 
+    if (!numeroPedido.trim()) return setError('Falta el número de pedido')
     if (!pedidoNombre.trim()) return setError('Falta el nombre del pedido')
     if (!fechaLimite) return setError('Falta la fecha límite')
     if (tvs.length === 0) return setError('Agrega al menos una televisión')
@@ -101,6 +103,7 @@ export default function PedidoForm({
     setEnviando(true)
     try {
       await onSubmit({
+        numeroPedido: numeroPedido.trim(),
         pedidoNombre: pedidoNombre.trim(),
         fechaLimite,
         condiciones,
@@ -129,6 +132,18 @@ export default function PedidoForm({
 
       <div className="card">
         <form onSubmit={enviar}>
+          <div className="section">
+            <label className="label" htmlFor="numeroPedido">Número de pedido</label>
+            <input
+              id="numeroPedido"
+              type="text"
+              value={numeroPedido}
+              onChange={(e) => setNumeroPedido(e.target.value)}
+              placeholder="Ej. 12345"
+              required
+            />
+          </div>
+
           <div className="section">
             <label className="label" htmlFor="pedidoNombre">Nombre del pedido</label>
             <input

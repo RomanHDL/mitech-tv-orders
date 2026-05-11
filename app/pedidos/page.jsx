@@ -44,6 +44,7 @@ async function obtenerPedidos() {
     const pct = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
     return {
       id: p._id.toString(),
+      numeroPedido: p.numeroPedido || '',
       pedidoNombre: p.pedidoNombre,
       condiciones: p.condiciones || [],
       fechaFmt: p.fecha ? fmt.format(p.fecha) : '',

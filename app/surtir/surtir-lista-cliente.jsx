@@ -73,7 +73,10 @@ export default function SurtirListaCliente({ pedidos }) {
               className={`surtir-card estado-${estadoCard(p)}`}
             >
               <div className="surtir-card-header">
-                <h2>{p.pedidoNombre}</h2>
+                <h2>
+                  {p.numeroPedido && <span className="surtir-card-numero-pedido">#{p.numeroPedido}</span>}
+                  {p.pedidoNombre}
+                </h2>
                 <div className="surtir-card-tags">
                   {p.condiciones.map((c) => (
                     <span key={c} className={`tag tag-${c.toLowerCase()}`}>{c}</span>

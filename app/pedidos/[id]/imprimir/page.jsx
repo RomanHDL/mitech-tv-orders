@@ -79,7 +79,9 @@ export default async function ImprimirPage({ params }) {
       >
         <header className="encabezado">
           <div className="brand">MITECHNOLOGIES</div>
-          <h1>PEDIDO: {pedido.pedidoNombre.toUpperCase()}</h1>
+          <h1>
+            PEDIDO {pedido.numeroPedido ? `#${pedido.numeroPedido}` : ''}: {pedido.pedidoNombre.toUpperCase()}
+          </h1>
           {pedido.condiciones.length > 0 && (
             <h2>CONDICIONES: {pedido.condiciones.join(' / ')}</h2>
           )}

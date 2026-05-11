@@ -29,6 +29,7 @@ async function obtenerPedidos(usuario) {
     const totalPiezas = tvs.reduce((s, tv) => s + (tv.unidad !== 'pallet' ? tv.cantidad : 0), 0)
     return {
       id: p._id.toString(),
+      numeroPedido: p.numeroPedido || '',
       pedidoNombre: p.pedidoNombre,
       condiciones: p.condiciones || [],
       fecha: p.fecha.toISOString(),

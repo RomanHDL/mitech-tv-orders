@@ -746,6 +746,38 @@ select.select-dueno {
   font-variant-numeric: tabular-nums;
 }
 
+.numero-pedido {
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--black);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.tiempo-restante {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border: 1.5px solid var(--black);
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.tiempo-restante.tr-vencido { background: var(--red); color: #fff; }
+.tiempo-restante.tr-urgente { background: var(--yellow); color: var(--black); }
+.tiempo-restante.tr-cercano { background: var(--primary-light); color: var(--black); }
+.tiempo-restante.tr-normal { background: var(--green-light); color: var(--green-dark); }
+.tiempo-restante.tr-sin-fecha {
+  background: #fff;
+  color: var(--text-subtle);
+  border-color: var(--text-subtle);
+}
+
 .tags-celda {
   display: grid;
   grid-template-columns: repeat(5, max-content);
@@ -892,6 +924,19 @@ select.select-dueno {
   text-transform: none;
   letter-spacing: -0.015em;
   color: var(--black);
+}
+.surtir-card-numero-pedido {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  border: 1.5px solid var(--black);
+  border-radius: 6px;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 .surtir-card-tags {
   display: flex;

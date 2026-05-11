@@ -18,6 +18,7 @@ export default async function EditarPage({ params }) {
 
   const datos = {
     id: pedido._id.toString(),
+    numeroPedido: pedido.numeroPedido || '',
     pedidoNombre: pedido.pedidoNombre,
     fechaLimite: pedido.fechaLimite || '',
     condiciones: pedido.condiciones || [],

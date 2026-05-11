@@ -27,6 +27,7 @@ export default function EditarCliente({ pedido }) {
       submitLabel="Guardar cambios"
       cancelHref="/pedidos"
       initialData={{
+        numeroPedido: pedido.numeroPedido,
         pedidoNombre: pedido.pedidoNombre,
         fechaLimite: pedido.fechaLimite,
         condiciones: pedido.condiciones,
