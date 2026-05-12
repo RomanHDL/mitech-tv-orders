@@ -170,10 +170,13 @@ body { background: #fff; }
   letter-spacing: 0.01em;
 }
 .tv-modelo {
-  font-weight: 600;
-  color: #444;
-  font-style: italic;
-  font-size: calc(1.2rem * var(--fs-mult));
+  font-weight: 900;
+  color: #000;
+  font-style: normal;
+  font-size: calc(1.7rem * var(--fs-mult));
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "tnum" 1, "ss01" 1, "zero" 1;
 }
 
 .total-final {
