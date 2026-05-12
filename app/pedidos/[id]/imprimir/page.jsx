@@ -219,22 +219,6 @@ export default async function ImprimirPage({ params }) {
           </div>
         </section>
 
-        {/* Firmas */}
-        <section className="firmas">
-          <div className="firma-cell">
-            <div className="firma-linea" />
-            <div className="firma-label">PREPARÓ</div>
-          </div>
-          <div className="firma-cell">
-            <div className="firma-linea" />
-            <div className="firma-label">REVISÓ</div>
-          </div>
-          <div className="firma-cell">
-            <div className="firma-linea" />
-            <div className="firma-label">RECIBIÓ</div>
-          </div>
-        </section>
-
         {/* Pie de página */}
         <footer className="pie">
           Generado {generadoFmt} · {totalLabel} · {totalModelos} modelos · {grupos.length}{' '}

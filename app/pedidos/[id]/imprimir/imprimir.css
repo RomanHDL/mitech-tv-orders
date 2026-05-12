@@ -316,28 +316,6 @@ body { background: #fff; }
   margin-top: calc(0.25rem * var(--fs-mult));
 }
 
-/* ─── Firmas ──────────────────────────────────────────── */
-.firmas {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: calc(1.25rem * var(--fs-mult));
-  margin-top: calc(1.4rem * var(--fs-mult));
-  break-inside: avoid;
-}
-.firma-cell { text-align: center; }
-.firma-linea {
-  border-top: 1.5px solid #000;
-  margin-bottom: calc(0.25rem * var(--fs-mult));
-  height: calc(2.2rem * var(--fs-mult));
-}
-.firma-label {
-  font-size: calc(0.68rem * var(--fs-mult));
-  letter-spacing: 0.25em;
-  font-weight: 800;
-  color: #444;
-  text-transform: uppercase;
-}
-
 /* ─── Pie de página ───────────────────────────────────── */
 .pie {
   margin-top: calc(0.9rem * var(--fs-mult));
@@ -360,7 +338,6 @@ body { background: #fff; }
   }
   .contenido-imprimir { padding: 1rem; }
   .info-grid { grid-template-columns: repeat(2, 1fr); }
-  .firmas { grid-template-columns: 1fr; gap: calc(0.8rem * var(--fs-mult)); }
 }
 
 /* ─── Print ───────────────────────────────────────────── */
