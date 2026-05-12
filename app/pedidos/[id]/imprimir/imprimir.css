@@ -21,13 +21,14 @@ body { background: #fff; }
   color: #000;
 }
 
-/* Énfasis específico en los dígitos del pedido para que 1 y 7 no se confundan */
+/* Énfasis específico en los dígitos del pedido para que 1, 7 y 0 no se confundan.
+   tnum = tabular numbers (anchos iguales), ss01 = slashed zero en fuentes que lo soportan. */
 .tv-pulgadas,
 .tv-cantidad,
 .marca-subtotal,
 .total-final {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "tnum" 1, "ss01" 1, "zero" 1;
 }
 
 /* Acciones (Volver / Imprimir) — no se imprimen */
@@ -146,27 +147,33 @@ body { background: #fff; }
 }
 
 .marca-bloque li {
-  font-weight: bold;
-  padding: calc(0.25rem * var(--fs-mult)) 0;
+  font-weight: 800;
+  padding: calc(0.32rem * var(--fs-mult)) 0;
   display: flex;
-  gap: calc(0.6rem * var(--fs-mult));
+  gap: calc(0.65rem * var(--fs-mult));
   align-items: baseline;
   border-bottom: 1px dashed #ddd;
-  font-size: calc(1.5rem * var(--fs-mult));
+  font-size: calc(1.85rem * var(--fs-mult));
+  line-height: 1.15;
 }
 .marca-bloque li:last-child { border-bottom: none; }
 
 .tv-pulgadas {
   font-weight: 900;
   white-space: nowrap;
-  min-width: calc(3.5rem * var(--fs-mult));
+  min-width: calc(4rem * var(--fs-mult));
+  letter-spacing: 0.02em;
 }
-.tv-cantidad { flex: 1; }
+.tv-cantidad {
+  flex: 1;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
 .tv-modelo {
-  font-weight: normal;
-  color: #555;
+  font-weight: 600;
+  color: #444;
   font-style: italic;
-  font-size: calc(1.05rem * var(--fs-mult));
+  font-size: calc(1.2rem * var(--fs-mult));
 }
 
 .total-final {

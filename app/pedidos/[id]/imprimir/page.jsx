@@ -34,10 +34,13 @@ function formatearSubtotal(pallets, piezas) {
 }
 
 function estimarMultiplicador(lineas) {
-  if (lineas > 90) return 0.45
-  if (lineas > 60) return 0.6
-  if (lineas > 35) return 0.75
-  if (lineas > 18) return 0.9
+  // Ajustado para la base más grande (1.85rem por línea de TV).
+  // fit-to-page.jsx hace el ajuste fino al cargar, esto solo evita
+  // un flash de tamaño demasiado grande antes de medir.
+  if (lineas > 90) return 0.4
+  if (lineas > 60) return 0.55
+  if (lineas > 35) return 0.7
+  if (lineas > 18) return 0.85
   return 1
 }
 
