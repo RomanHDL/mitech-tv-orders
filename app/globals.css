@@ -716,10 +716,12 @@ select.select-dueno {
   padding: 0 0.25rem;
 }
 
-/* FORZAR layout horizontal en TODOS los anchos — nunca cascada */
+/* FORZAR layout horizontal en TODOS los anchos — nunca cascada.
+   Cada celda en UNA SOLA LÍNEA; si la tabla no cabe, .tabla-wrap scrollea. */
 .tabla-pedidos {
   display: table !important;
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.9rem;
@@ -729,9 +731,35 @@ select.select-dueno {
 .tabla-pedidos tbody { display: table-row-group !important; }
 .tabla-pedidos tr { display: table-row !important; }
 .tabla-pedidos th,
-.tabla-pedidos td { display: table-cell !important; }
+.tabla-pedidos td {
+  display: table-cell !important;
+  white-space: nowrap !important;
+  vertical-align: middle;
+}
 .tabla-pedidos td::before { content: none !important; }
-.tabla-pedidos .pedido-nombre { flex-wrap: nowrap; white-space: normal; }
+/* Pedido (nombre + badge): en una sola fila inline */
+.tabla-pedidos .pedido-nombre {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  align-items: center;
+  gap: 0.4rem;
+}
+/* Condiciones: chips en una sola fila inline */
+.tabla-pedidos .tags-celda {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  gap: 0.35rem;
+  align-items: center;
+}
+/* Acciones: botones siempre en una fila */
+.tabla-pedidos .acciones {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: flex-end;
+}
 .tabla-pedidos thead th {
   text-align: left;
   padding: 0.7rem 1rem;
