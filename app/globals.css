@@ -1495,6 +1495,44 @@ select.select-dueno {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ─── Laptop (769 – 1280px): mismo layout, escalado para que quepa ─── */
+
+@media (max-width: 1280px) {
+  /* Página: menos padding lateral para ganar ancho útil */
+  .page, .page-wide { padding: 0 1rem; margin: 1.5rem auto; }
+
+  /* Card: padding más compacto sin cambiar estructura */
+  .card { padding: 1.4rem 1.25rem; }
+
+  /* Tabla: misma estructura, fuente y celdas más compactas */
+  .tabla-pedidos { font-size: 0.84rem; }
+  .tabla-pedidos thead th { padding: 0.55rem 0.65rem; font-size: 0.65rem; }
+  .tabla-pedidos tbody td { padding: 0.7rem 0.65rem; }
+  .pedido-nombre { font-size: 0.9rem; }
+  .pedido-fecha { font-size: 0.78rem; }
+  .numero-pedido { font-size: 0.88rem; }
+  .numero-grande { font-size: 0.95rem; }
+  .tiempo-restante { font-size: 0.68rem; padding: 0.18rem 0.5rem; }
+  .badge-progreso, .badge-pallet { font-size: 0.6rem; padding: 0.17rem 0.45rem; }
+  .tag { font-size: 0.62rem; padding: 0.15rem 0.5rem; }
+  .tags-celda { gap: 0.25rem 0.35rem; }
+  .tabla-pedidos td[data-label="Condiciones"] { min-width: 12rem; }
+
+  /* Botones de acciones: compactos para que la fila completa quepa */
+  .acciones { gap: 0.35rem; }
+  .acciones .btn-sm {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.74rem;
+  }
+
+  /* Select de dueño: mismo aspecto, un poco más angosto */
+  select.select-dueno {
+    min-width: 9.5rem;
+    font-size: 0.8rem;
+    padding: 0.32rem 1.8rem 0.32rem 0.55rem;
+  }
+}
+
 /* ─── Mobile ──────────────────────────────────────────── */
 
 @media (max-width: 768px) {
