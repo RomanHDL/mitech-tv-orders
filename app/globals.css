@@ -705,9 +705,11 @@ select.select-dueno {
   pointer-events: none;
 }
 
-/* Wrapper opcional: si la tabla queda más ancha que su contenedor, el wrapper hace scroll horizontal */
+/* Wrapper: si la tabla queda más ancha que su contenedor, el wrapper hace scroll horizontal
+   manteniendo la información DENTRO de la card en vez de salirse */
 .tabla-wrap {
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin: 0 -0.25rem;
@@ -975,7 +977,7 @@ select.select-dueno {
   font-size: 0.65rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   .historial-grupo-header { gap: 0.6rem; padding: 0.85rem 0.95rem; flex-wrap: wrap; }
   .historial-grupo-titulo h3 { font-size: 1rem; }
   .historial-grupo-stats { width: 100%; justify-content: flex-end; }
@@ -1533,9 +1535,47 @@ select.select-dueno {
   }
 }
 
-/* ─── Mobile ──────────────────────────────────────────── */
+/* ─── Tablet/laptop chico (601-768px): cosméticos, mantiene horizontal ─ */
 
-@media (max-width: 768px) {
+@media (max-width: 768px) and (min-width: 601px) {
+  .nav-inner { padding: 0 0.85rem; height: 56px; gap: 0.5rem; }
+  .nav-user-name { display: none; }
+  .nav-rol-badge { display: none; }
+  .nav-logo-icon { height: 32px; padding: 3px 7px; }
+  .nav-logo-icon img { height: 22px; }
+  .nav-links { gap: 0.2rem; }
+  .nav-links a { padding: 0.45rem 0.7rem; font-size: 0.82rem; }
+  .nav-logout { padding: 0.4rem 0.7rem; font-size: 0.75rem; margin-left: 0.25rem; }
+
+  .page, .page-wide { margin: 1rem auto; padding: 0 0.75rem; }
+  .card { padding: 1.1rem 0.9rem; }
+
+  h1 { font-size: 1.7rem; }
+
+  /* Tabla: SE MANTIENE HORIZONTAL, solo más compacta — el wrapper .tabla-wrap
+     hace scroll horizontal dentro de la card si no cabe */
+  .tabla-pedidos { font-size: 0.78rem; }
+  .tabla-pedidos thead th { padding: 0.45rem 0.5rem; font-size: 0.6rem; }
+  .tabla-pedidos tbody td { padding: 0.6rem 0.5rem; }
+  .pedido-nombre { font-size: 0.85rem; }
+  .pedido-fecha { font-size: 0.74rem; }
+  .numero-pedido { font-size: 0.82rem; }
+  .numero-grande { font-size: 0.88rem; }
+  .tiempo-restante { font-size: 0.62rem; padding: 0.15rem 0.45rem; }
+  .badge-progreso, .badge-pallet { font-size: 0.56rem; padding: 0.15rem 0.4rem; }
+  .tag { font-size: 0.58rem; padding: 0.12rem 0.45rem; }
+  .acciones { gap: 0.3rem; }
+  .acciones .btn-sm { padding: 0.35rem 0.55rem; font-size: 0.7rem; }
+  select.select-dueno {
+    min-width: 8rem;
+    font-size: 0.75rem;
+    padding: 0.3rem 1.6rem 0.3rem 0.5rem;
+  }
+}
+
+/* ─── Mobile real (≤600px): cambia layout a vertical/cascada ─────── */
+
+@media (max-width: 600px) {
   .nav-inner { padding: 0 0.85rem; height: 56px; gap: 0.5rem; }
   .nav-user-name { display: none; }
   .nav-rol-badge { display: none; }
