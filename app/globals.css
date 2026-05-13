@@ -1573,7 +1573,8 @@ select.select-dueno {
   }
 }
 
-/* ─── Mobile real (≤600px): cambia layout a vertical/cascada ─────── */
+/* ─── Mobile (≤600px): cosméticos, NO cascada — la tabla se queda
+       horizontal y el wrapper .tabla-wrap hace scroll dentro de la card ─ */
 
 @media (max-width: 600px) {
   .nav-inner { padding: 0 0.85rem; height: 56px; gap: 0.5rem; }
@@ -1598,50 +1599,13 @@ select.select-dueno {
   .resumen-pedido { padding: 1.1rem; }
   .resumen-numero { font-size: 1.85rem; }
 
-  .tabla-pedidos thead { display: none; }
-  .tabla-pedidos, .tabla-pedidos tbody { display: block; width: 100%; }
-  .tabla-pedidos tr {
-    display: block;
-    border: 2px solid var(--black);
-    border-radius: var(--radius);
-    margin-bottom: 0.85rem;
-    padding: 0.9rem;
-    background: #fff;
-    box-shadow: var(--shadow-xs);
-  }
-  .tabla-pedidos tr:hover { background: #fff !important; }
-  .tabla-pedidos td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.4rem 0;
-    border: none;
-    gap: 1rem;
-  }
-  .tabla-pedidos td::before {
-    content: attr(data-label);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    font-weight: 700;
-    letter-spacing: 0.05em;
-  }
-  .tabla-pedidos td[data-label="Pedido"]::before { display: none; }
-  .tabla-pedidos td[data-label="Pedido"] {
-    padding-bottom: 0.55rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 0.25rem;
-  }
-  .tabla-pedidos td[data-label="Condiciones"] {
-    flex-direction: column;
-    align-items: flex-start;
-    min-width: 0;
-  }
-  .tabla-pedidos td[data-label="Condiciones"] .tags-celda {
-    margin-top: 0.25rem;
-  }
-  .acciones { justify-content: flex-start; flex-wrap: wrap; }
-  .acciones .btn { flex: 1 0 auto; }
+  /* Tabla: mantener horizontal incluso en móvil, scroll en .tabla-wrap */
+  .tabla-pedidos { font-size: 0.72rem; }
+  .tabla-pedidos thead th { padding: 0.4rem 0.45rem; font-size: 0.55rem; }
+  .tabla-pedidos tbody td { padding: 0.5rem 0.45rem; }
+  .pedido-nombre { font-size: 0.8rem; }
+  .pedido-fecha { font-size: 0.7rem; }
+  .acciones .btn-sm { padding: 0.3rem 0.5rem; font-size: 0.66rem; }
 
   /* Form acciones: apilar Cancelar + Guardar */
   .form-acciones { flex-direction: column; gap: 0.55rem; }

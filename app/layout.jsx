@@ -13,6 +13,9 @@ const inter = Inter({
 export const metadata = {
   title: 'MiTech — Pedidos TV',
   description: 'Captura e impresión de pedidos de televisiones',
+  icons: {
+    icon: '/mitech-logo.png',
+  },
 }
 
 export default async function RootLayout({ children }) {
