@@ -716,13 +716,22 @@ select.select-dueno {
   padding: 0 0.25rem;
 }
 
+/* FORZAR layout horizontal en TODOS los anchos — nunca cascada */
 .tabla-pedidos {
+  display: table !important;
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.9rem;
   table-layout: auto;
 }
+.tabla-pedidos thead { display: table-header-group !important; }
+.tabla-pedidos tbody { display: table-row-group !important; }
+.tabla-pedidos tr { display: table-row !important; }
+.tabla-pedidos th,
+.tabla-pedidos td { display: table-cell !important; }
+.tabla-pedidos td::before { content: none !important; }
+.tabla-pedidos .pedido-nombre { flex-wrap: nowrap; white-space: normal; }
 .tabla-pedidos thead th {
   text-align: left;
   padding: 0.7rem 1rem;
