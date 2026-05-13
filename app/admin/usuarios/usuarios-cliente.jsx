@@ -317,6 +317,7 @@ export default function UsuariosCliente({ usuarios }) {
             <p>No hay usuarios todavía.</p>
           </div>
         ) : (
+          <div className="tabla-wrap">
           <table className="tabla-pedidos">
             <thead>
               <tr>
@@ -368,6 +369,7 @@ export default function UsuariosCliente({ usuarios }) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
       </div>

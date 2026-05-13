@@ -275,6 +275,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
           <p>No se encontraron pedidos con "{busqueda}".</p>
         </div>
       ) : (
+        <div className="tabla-wrap">
         <table className="tabla-pedidos">
           <thead>
             <tr>
@@ -378,6 +379,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
             })}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   )

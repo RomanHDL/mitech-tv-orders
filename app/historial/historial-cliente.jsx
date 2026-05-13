@@ -155,6 +155,7 @@ export default function HistorialCliente({ grupos }) {
 
                 {abierto && (
                   <div className="historial-grupo-detalle">
+                    <div className="tabla-wrap">
                     <table className="tabla-pedidos tabla-historial">
                       <thead>
                         <tr>
@@ -234,6 +235,7 @@ export default function HistorialCliente({ grupos }) {
                         })}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 )}
               </div>
