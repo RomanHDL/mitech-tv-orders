@@ -58,16 +58,16 @@ export default function PedidoForm({
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
   }, [cantidadTotal])
 
-  // Una TV "Sin límite" toma el valor de "Cantidad total del pedido" cuando existe.
-  // Si no hay total del pedido, vale 0 (verdaderamente ilimitada).
-  const cantidadDeTv = (tv) => {
-    if (tv.sinLimite) return limite > 0 ? limite : 0
+  // Una TV "Sin límite" NO suma al cupo del pedido. Visualmente muestra el
+  // valor de "Cantidad total del pedido" cuando existe, pero para sumas vale 0.
+  const cantidadParaSuma = (tv) => {
+    if (tv.sinLimite) return 0
     return Number(tv.cantidad) || 0
   }
 
   const totalUnidades = useMemo(
-    () => tvs.reduce((s, tv) => s + cantidadDeTv(tv), 0),
-    [tvs, limite]
+    () => tvs.reduce((s, tv) => s + cantidadParaSuma(tv), 0),
+    [tvs]
   )
   const marcasUnicas = useMemo(
     () => new Set(tvs.map((tv) => tv.marca).filter(Boolean)).size,
@@ -75,17 +75,17 @@ export default function PedidoForm({
   )
   const pallets = useMemo(
     () => tvs.reduce(
-      (s, tv) => s + (tv.unidad === 'pallet' ? cantidadDeTv(tv) : 0),
+      (s, tv) => s + (tv.unidad === 'pallet' ? cantidadParaSuma(tv) : 0),
       0
     ),
-    [tvs, limite]
+    [tvs]
   )
   const piezas = useMemo(
     () => tvs.reduce(
-      (s, tv) => s + (tv.unidad !== 'pallet' ? cantidadDeTv(tv) : 0),
+      (s, tv) => s + (tv.unidad !== 'pallet' ? cantidadParaSuma(tv) : 0),
       0
     ),
-    [tvs, limite]
+    [tvs]
   )
 
   const cupoRestante = limite > 0 ? Math.max(0, limite - totalUnidades) : Infinity
@@ -110,7 +110,7 @@ export default function PedidoForm({
     if (!Number.isFinite(valor) || valor < 0) valor = 0
     if (limite > 0) {
       const otrosTotal = tvs.reduce(
-        (s, t, idx) => (idx === i ? s : s + cantidadDeTv(t)),
+        (s, t, idx) => (idx === i ? s : s + cantidadParaSuma(t)),
         0
       )
       const maxPermitido = Math.max(0, limite - otrosTotal)
@@ -313,7 +313,7 @@ export default function PedidoForm({
               const esPallet = tv.unidad === 'pallet'
               const esSinLimite = !!tv.sinLimite
               const otrosTotal = tvs.reduce(
-                (s, t, idx) => (idx === i ? s : s + cantidadDeTv(t)),
+                (s, t, idx) => (idx === i ? s : s + cantidadParaSuma(t)),
                 0
               )
               const maxCantidad = limite > 0 ? Math.max(0, limite - otrosTotal) : undefined
