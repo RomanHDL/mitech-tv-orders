@@ -58,10 +58,16 @@ export default function PedidoForm({
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
   }, [cantidadTotal])
 
-  // Las TVs "Sin límite" no aportan al total numérico del pedido.
+  // Una TV "Sin límite" toma el valor de "Cantidad total del pedido" cuando existe.
+  // Si no hay total del pedido, vale 0 (verdaderamente ilimitada).
+  const cantidadDeTv = (tv) => {
+    if (tv.sinLimite) return limite > 0 ? limite : 0
+    return Number(tv.cantidad) || 0
+  }
+
   const totalUnidades = useMemo(
-    () => tvs.reduce((s, tv) => s + (tv.sinLimite ? 0 : Number(tv.cantidad) || 0), 0),
-    [tvs]
+    () => tvs.reduce((s, tv) => s + cantidadDeTv(tv), 0),
+    [tvs, limite]
   )
   const marcasUnicas = useMemo(
     () => new Set(tvs.map((tv) => tv.marca).filter(Boolean)).size,
@@ -69,19 +75,18 @@ export default function PedidoForm({
   )
   const pallets = useMemo(
     () => tvs.reduce(
-      (s, tv) => s + (!tv.sinLimite && tv.unidad === 'pallet' ? Number(tv.cantidad) || 0 : 0),
+      (s, tv) => s + (tv.unidad === 'pallet' ? cantidadDeTv(tv) : 0),
       0
     ),
-    [tvs]
+    [tvs, limite]
   )
   const piezas = useMemo(
     () => tvs.reduce(
-      (s, tv) => s + (!tv.sinLimite && tv.unidad !== 'pallet' ? Number(tv.cantidad) || 0 : 0),
+      (s, tv) => s + (tv.unidad !== 'pallet' ? cantidadDeTv(tv) : 0),
       0
     ),
-    [tvs]
+    [tvs, limite]
   )
-  const hayTvSinLimite = useMemo(() => tvs.some((tv) => tv.sinLimite), [tvs])
 
   const cupoRestante = limite > 0 ? Math.max(0, limite - totalUnidades) : Infinity
   const pedidoCerrado = limite > 0 && totalUnidades >= limite
@@ -105,7 +110,7 @@ export default function PedidoForm({
     if (!Number.isFinite(valor) || valor < 0) valor = 0
     if (limite > 0) {
       const otrosTotal = tvs.reduce(
-        (s, t, idx) => (idx === i || t.sinLimite ? s : s + (Number(t.cantidad) || 0)),
+        (s, t, idx) => (idx === i ? s : s + cantidadDeTv(t)),
         0
       )
       const maxPermitido = Math.max(0, limite - otrosTotal)
@@ -178,7 +183,7 @@ export default function PedidoForm({
           marca: tv.marca,
           pulgadas: Number(tv.pulgadas),
           modelo: tv.modelo.trim(),
-          cantidad: tv.sinLimite ? 0 : Number(tv.cantidad),
+          cantidad: tv.sinLimite ? (limite > 0 ? limite : 0) : Number(tv.cantidad),
           unidad: tv.unidad === 'pallet' ? 'pallet' : 'pieza',
           sinLimite: !!tv.sinLimite,
         })),
@@ -308,7 +313,7 @@ export default function PedidoForm({
               const esPallet = tv.unidad === 'pallet'
               const esSinLimite = !!tv.sinLimite
               const otrosTotal = tvs.reduce(
-                (s, t, idx) => (idx === i || t.sinLimite ? s : s + (Number(t.cantidad) || 0)),
+                (s, t, idx) => (idx === i ? s : s + cantidadDeTv(t)),
                 0
               )
               const maxCantidad = limite > 0 ? Math.max(0, limite - otrosTotal) : undefined
@@ -379,9 +384,21 @@ export default function PedidoForm({
                       ))}
                     </select>
                     {esSinLimite ? (
-                      <div className="cantidad-sin-limite" aria-label="Cantidad sin límite">
-                        <span className="cantidad-sin-limite-simbolo">∞</span>
-                        <span className="cantidad-sin-limite-texto">Sin límite</span>
+                      <div
+                        className="cantidad-sin-limite"
+                        aria-label={limite > 0 ? `Cantidad total del pedido: ${limite}` : 'Cantidad sin límite'}
+                      >
+                        {limite > 0 ? (
+                          <>
+                            <span className="cantidad-sin-limite-numero">{limite}</span>
+                            <span className="cantidad-sin-limite-texto">Total del pedido</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="cantidad-sin-limite-simbolo">∞</span>
+                            <span className="cantidad-sin-limite-texto">Sin límite</span>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <input

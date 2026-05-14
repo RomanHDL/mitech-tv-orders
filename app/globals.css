@@ -410,6 +410,19 @@ h2 {
   font-size: 1.3rem;
   line-height: 1;
 }
+.cantidad-sin-limite-numero {
+  font-size: 1.15rem;
+  line-height: 1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cantidad-sin-limite-texto {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted, #555);
+}
 
 .limite-resumen {
   margin-top: 0.7rem;
