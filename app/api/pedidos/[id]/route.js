@@ -151,12 +151,14 @@ export async function PUT(req, { params }) {
     if (!PULGADAS.includes(pulgadas)) {
       return NextResponse.json({ error: `TV #${i + 1}: pulgadas inválidas` }, { status: 400 })
     }
-    const cantidad = Number(tv.cantidad)
-    if (!Number.isInteger(cantidad) || cantidad < 1) {
+    const tvSinLimite = !!tv.sinLimite
+    const cantidad = Number(tv.cantidad) || 0
+    if (!tvSinLimite && (!Number.isInteger(cantidad) || cantidad < 1)) {
       return NextResponse.json({ error: `TV #${i + 1}: cantidad inválida` }, { status: 400 })
     }
+    const cantidadFinal = tvSinLimite ? 0 : cantidad
     const unidad = UNIDADES.includes(tv.unidad) ? tv.unidad : 'pieza'
-    const modelo = typeof tv.modelo === 'string' ? tv.modelo.trim() : ''
+    const modelo = typeof tv.modelo === 'string' ? tv.modelo.trim().toUpperCase() : ''
     if (!SKU_REGEX.test(modelo)) {
       return NextResponse.json(
         { error: `TV #${i + 1}: el SKU debe tener de 8 a 10 letras o números` },
@@ -173,14 +175,22 @@ export async function PUT(req, { params }) {
         (v.unidad || 'pieza') === unidad
     )
     const cantidadSurtida = matching
-      ? Math.min(cantidad, matching.cantidadSurtida || 0)
+      ? (tvSinLimite ? (matching.cantidadSurtida || 0) : Math.min(cantidadFinal, matching.cantidadSurtida || 0))
       : 0
 
-    tvsLimpias.push({ marca: tv.marca, pulgadas, modelo, cantidad, unidad, cantidadSurtida })
+    tvsLimpias.push({
+      marca: tv.marca,
+      pulgadas,
+      modelo,
+      cantidad: cantidadFinal,
+      unidad,
+      sinLimite: tvSinLimite,
+      cantidadSurtida,
+    })
   }
 
   if (cantidadTotalLimpia !== null) {
-    const sumaTvs = tvsLimpias.reduce((s, tv) => s + tv.cantidad, 0)
+    const sumaTvs = tvsLimpias.reduce((s, tv) => s + (tv.sinLimite ? 0 : tv.cantidad), 0)
     if (sumaTvs > cantidadTotalLimpia) {
       return NextResponse.json(
         { error: `La suma de cantidades (${sumaTvs}) excede la cantidad total del pedido (${cantidadTotalLimpia})` },

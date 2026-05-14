@@ -29,6 +29,7 @@ export default async function EditarPage({ params }) {
       modelo: tv.modelo || '',
       cantidad: tv.cantidad,
       unidad: tv.unidad || 'pieza',
+      sinLimite: !!tv.sinLimite,
     })),
   }
 

@@ -367,24 +367,14 @@ h2 {
   text-transform: none;
 }
 
-.cantidad-total-row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-.cantidad-total-row > input {
-  flex: 1 1 200px;
-  min-width: 0;
-}
-.sin-limite-toggle {
+.tv-sin-limite-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.95rem;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
   border: 2px solid var(--black);
   border-radius: 999px;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   background: #fff;
@@ -392,21 +382,33 @@ h2 {
   user-select: none;
   white-space: nowrap;
 }
-.sin-limite-toggle input { margin: 0; cursor: pointer; }
-.sin-limite-toggle:hover {
+.tv-sin-limite-toggle input { margin: 0; cursor: pointer; }
+.tv-sin-limite-toggle:hover {
   background: var(--yellow-soft);
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow-xs);
 }
-.sin-limite-toggle.activa {
+.tv-sin-limite-toggle.activa {
   background: var(--primary);
   color: #fff;
   font-weight: 700;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-xs);
 }
-.sin-limite-mensaje {
-  margin-top: 0.5rem;
-  color: var(--text-muted);
+.cantidad-sin-limite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  border: 2px dashed var(--black);
+  border-radius: var(--radius, 6px);
+  background: var(--yellow-soft, #fff8e1);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--black);
+  user-select: none;
+}
+.cantidad-sin-limite-simbolo {
+  font-size: 1.3rem;
+  line-height: 1;
 }
 
 .limite-resumen {
