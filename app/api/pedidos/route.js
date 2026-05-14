@@ -63,17 +63,13 @@ export async function POST(req) {
       return NextResponse.json({ error: `TV #${i + 1}: cantidad inválida` }, { status: 400 })
     }
     const unidad = UNIDADES.includes(tv.unidad) ? tv.unidad : 'pieza'
-    // Una TV "Sin límite" guarda como cantidad el total del pedido (para que
-    // surtir/imprimir/listas la muestren con el número correcto), pero la
-    // suma del pedido (más abajo) la sigue ignorando.
-    const cantidadFinal = tvSinLimite
-      ? (cantidadTotalLimpia || 0)
-      : cantidad
+    // Las TVs "Sin límite" se guardan con cantidad: 0. El total del pedido
+    // lo lleva cantidadTotal (a nivel pedido), no la suma de cantidades.
     tvsLimpias.push({
       marca: tv.marca,
       pulgadas,
       modelo: sku,
-      cantidad: cantidadFinal,
+      cantidad: tvSinLimite ? 0 : cantidad,
       unidad,
       sinLimite: tvSinLimite,
       cantidadSurtida: 0,

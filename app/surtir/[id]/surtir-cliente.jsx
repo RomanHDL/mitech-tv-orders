@@ -46,11 +46,16 @@ export default function SurtirCliente({ pedido }) {
 
   const grupos = useMemo(() => agruparPorMarca(tvs), [tvs])
 
-  const totalRequerido = tvs.reduce((s, tv) => s + tv.cantidad, 0)
-  const totalSurtido = tvs.reduce(
-    (s, tv) => s + Math.min(tv.cantidad, tv.cantidadSurtida || 0),
-    0
-  )
+  const sumaCantidades = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
+  const totalRequerido =
+    typeof pedido.cantidadTotal === 'number' && pedido.cantidadTotal > 0
+      ? pedido.cantidadTotal
+      : sumaCantidades
+  const totalSurtido = tvs.reduce((s, tv) => {
+    const surt = tv.cantidadSurtida || 0
+    if (tv.sinLimite || (tv.cantidad || 0) === 0) return s + surt
+    return s + Math.min(tv.cantidad || 0, surt)
+  }, 0)
   const progreso = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
   const completado = totalRequerido > 0 && totalSurtido >= totalRequerido
 

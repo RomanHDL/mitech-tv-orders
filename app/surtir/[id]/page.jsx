@@ -30,12 +30,14 @@ export default async function SurtirPage({ params }) {
     numeroPedido: pedido.numeroPedido || '',
     pedidoNombre: pedido.pedidoNombre,
     condiciones: pedido.condiciones || [],
+    cantidadTotal: typeof pedido.cantidadTotal === 'number' ? pedido.cantidadTotal : null,
     televisiones: (pedido.televisiones || []).map((tv) => ({
       marca: tv.marca,
       pulgadas: tv.pulgadas,
       modelo: tv.modelo || '',
       cantidad: tv.cantidad,
       unidad: tv.unidad || 'pieza',
+      sinLimite: !!tv.sinLimite,
       cantidadSurtida: tv.cantidadSurtida || 0,
     })),
   }
