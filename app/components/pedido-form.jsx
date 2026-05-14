@@ -2,14 +2,11 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { MARCAS, PULGADAS, CONDICIONES } from '@/lib/catalogos'
+import { MARCAS, PULGADAS, CONDICIONES, SKU_REGEX } from '@/lib/catalogos'
 import { IconAlert, IconArrowRight, IconBox, IconClose, IconPlus } from './icons'
 
 const tvVacia = () => ({ marca: '', pulgadas: '', modelo: '', cantidad: 1, unidad: 'pieza' })
 
-// Componente reutilizable de formulario de pedido (crear y editar).
-// Recibe initialData opcional, una función onSubmit que guarda los datos,
-// y opciones de presentación (titulo, submitLabel, etc).
 export default function PedidoForm({
   initialData,
   onSubmit,
@@ -22,6 +19,11 @@ export default function PedidoForm({
   const [pedidoNombre, setPedidoNombre] = useState(initialData?.pedidoNombre || '')
   const [fechaLimite, setFechaLimite] = useState(initialData?.fechaLimite || '')
   const [condiciones, setCondiciones] = useState(initialData?.condiciones || [])
+  const [cantidadTotal, setCantidadTotal] = useState(
+    initialData?.cantidadTotal != null && initialData?.cantidadTotal > 0
+      ? String(initialData.cantidadTotal)
+      : ''
+  )
   const [tvs, setTvs] = useState(
     initialData?.televisiones?.length
       ? initialData.televisiones.map((tv) => ({
@@ -50,6 +52,11 @@ export default function PedidoForm({
     previousLength.current = tvs.length
   }, [tvs.length])
 
+  const limite = useMemo(() => {
+    const n = Number(cantidadTotal)
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
+  }, [cantidadTotal])
+
   const totalUnidades = useMemo(
     () => tvs.reduce((s, tv) => s + (Number(tv.cantidad) || 0), 0),
     [tvs]
@@ -67,6 +74,10 @@ export default function PedidoForm({
     [tvs]
   )
 
+  const cupoRestante = limite > 0 ? Math.max(0, limite - totalUnidades) : Infinity
+  const pedidoCerrado = limite > 0 && totalUnidades >= limite
+  const pedidoExcedido = limite > 0 && totalUnidades > limite
+
   const toggleCondicion = (c) =>
     setCondiciones((prev) =>
       prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
@@ -75,6 +86,31 @@ export default function PedidoForm({
   const updateTv = (i, campo, valor) =>
     setTvs((prev) => prev.map((tv, idx) => (idx === i ? { ...tv, [campo]: valor } : tv)))
 
+  // Para cantidad: respeta el cupo restante (suma de las demás TVs vs límite).
+  const updateCantidad = (i, raw) => {
+    if (raw === '') {
+      updateTv(i, 'cantidad', '')
+      return
+    }
+    let valor = Number(raw)
+    if (!Number.isFinite(valor) || valor < 0) valor = 0
+    if (limite > 0) {
+      const otrosTotal = tvs.reduce(
+        (s, t, idx) => (idx === i ? s : s + (Number(t.cantidad) || 0)),
+        0
+      )
+      const maxPermitido = Math.max(0, limite - otrosTotal)
+      if (valor > maxPermitido) valor = maxPermitido
+    }
+    updateTv(i, 'cantidad', valor)
+  }
+
+  // SKU: permitir letras y números, máximo 10. Conserva el caso para mostrar al usuario.
+  const updateSku = (i, raw) => {
+    const limpio = String(raw).replace(/[^A-Za-z0-9]/g, '').slice(0, 10)
+    updateTv(i, 'modelo', limpio)
+  }
+
   const togglePallet = (i) =>
     setTvs((prev) =>
       prev.map((tv, idx) =>
@@ -82,7 +118,10 @@ export default function PedidoForm({
       )
     )
 
-  const agregarTv = () => setTvs((prev) => [...prev, tvVacia()])
+  const agregarTv = () => {
+    if (pedidoCerrado) return
+    setTvs((prev) => [...prev, tvVacia()])
+  }
   const eliminarTv = (i) => setTvs((prev) => prev.filter((_, idx) => idx !== i))
 
   const enviar = async (e) => {
@@ -97,7 +136,16 @@ export default function PedidoForm({
     for (const [i, tv] of tvs.entries()) {
       if (!MARCAS.includes(tv.marca)) return setError(`TV #${i + 1}: marca inválida`)
       if (!PULGADAS.includes(Number(tv.pulgadas))) return setError(`TV #${i + 1}: pulgadas inválidas`)
+      if (!SKU_REGEX.test(tv.modelo || '')) {
+        return setError(`TV #${i + 1}: el SKU debe tener de 8 a 10 letras o números`)
+      }
       if (!Number(tv.cantidad) || Number(tv.cantidad) < 1) return setError(`TV #${i + 1}: cantidad inválida`)
+    }
+
+    if (limite > 0 && totalUnidades !== limite) {
+      return setError(
+        `La suma de cantidades (${totalUnidades}) no coincide con la cantidad total del pedido (${limite}).`
+      )
     }
 
     setEnviando(true)
@@ -107,6 +155,7 @@ export default function PedidoForm({
         pedidoNombre: pedidoNombre.trim(),
         fechaLimite,
         condiciones,
+        cantidadTotal: limite > 0 ? limite : null,
         televisiones: tvs.map((tv) => ({
           marca: tv.marca,
           pulgadas: Number(tv.pulgadas),
@@ -122,6 +171,7 @@ export default function PedidoForm({
   }
 
   const hayPallets = pallets > 0
+  const progresoLimite = limite > 0 ? Math.min(100, Math.round((totalUnidades / limite) * 100)) : 0
 
   return (
     <main className="page">
@@ -168,6 +218,43 @@ export default function PedidoForm({
           </div>
 
           <div className="section">
+            <label className="label" htmlFor="cantidadTotal">
+              Cantidad total del pedido
+              <span className="hint"> · vacío = sin límite</span>
+            </label>
+            <input
+              id="cantidadTotal"
+              type="number"
+              min="0"
+              step="1"
+              value={cantidadTotal}
+              onChange={(e) => setCantidadTotal(e.target.value)}
+              placeholder="Ej. 50 (o déjalo vacío)"
+            />
+            {limite > 0 && (
+              <div className={`limite-resumen ${pedidoCerrado ? 'lleno' : ''} ${pedidoExcedido ? 'excedido' : ''}`}>
+                <div className="limite-info">
+                  <span className="limite-numero">
+                    {totalUnidades} <span className="limite-de">de</span> {limite}
+                  </span>
+                  <span className="limite-pct">{progresoLimite}%</span>
+                </div>
+                <div className="progreso-track">
+                  <div className="progreso-fill" style={{ width: `${progresoLimite}%` }} />
+                </div>
+                {pedidoCerrado && !pedidoExcedido && (
+                  <div className="limite-mensaje">Pedido completo · no se pueden agregar más TVs</div>
+                )}
+                {pedidoExcedido && (
+                  <div className="limite-mensaje error">
+                    Excedido por {totalUnidades - limite}. Reduce cantidades o aumenta el total.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="section">
             <div className="label">Condiciones</div>
             <div className="condiciones">
               {CONDICIONES.map((c) => (
@@ -200,6 +287,12 @@ export default function PedidoForm({
 
             {tvs.map((tv, i) => {
               const esPallet = tv.unidad === 'pallet'
+              const otrosTotal = tvs.reduce(
+                (s, t, idx) => (idx === i ? s : s + (Number(t.cantidad) || 0)),
+                0
+              )
+              const maxCantidad = limite > 0 ? Math.max(0, limite - otrosTotal) : undefined
+              const skuOk = SKU_REGEX.test(tv.modelo || '')
               return (
                 <div key={i} className={`tv-card ${esPallet ? 'es-pallet' : ''}`}>
                   <div className="tv-card-header">
@@ -228,6 +321,18 @@ export default function PedidoForm({
                   <div className="tv-card-grid">
                     <input
                       ref={(el) => { if (el) inputRefs.current[i] = el }}
+                      type="text"
+                      value={tv.modelo}
+                      onChange={(e) => updateSku(i, e.target.value)}
+                      placeholder="SKU (8-10 letras/números)"
+                      pattern="[A-Za-z0-9]{8,10}"
+                      title="El SKU debe tener entre 8 y 10 letras o números"
+                      minLength={8}
+                      maxLength={10}
+                      aria-invalid={tv.modelo && !skuOk ? 'true' : undefined}
+                      required
+                    />
+                    <input
                       list="marcas-list"
                       value={tv.marca}
                       onChange={(e) => updateTv(i, 'marca', e.target.value)}
@@ -245,16 +350,11 @@ export default function PedidoForm({
                       ))}
                     </select>
                     <input
-                      type="text"
-                      value={tv.modelo}
-                      onChange={(e) => updateTv(i, 'modelo', e.target.value)}
-                      placeholder="Modelo (opcional)"
-                    />
-                    <input
                       type="number"
                       min="1"
+                      max={maxCantidad}
                       value={tv.cantidad}
-                      onChange={(e) => updateTv(i, 'cantidad', e.target.value)}
+                      onChange={(e) => updateCantidad(i, e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && i === tvs.length - 1) {
                           e.preventDefault()
@@ -269,10 +369,16 @@ export default function PedidoForm({
               )
             })}
 
-            <button type="button" onClick={agregarTv} className="btn-agregar-tv">
+            <button
+              type="button"
+              onClick={agregarTv}
+              className="btn-agregar-tv"
+              disabled={pedidoCerrado}
+              title={pedidoCerrado ? 'Pedido completo (límite alcanzado)' : undefined}
+            >
               <IconPlus />
-              Agregar televisión
-              <span className="atajo">o presiona Enter</span>
+              {pedidoCerrado ? 'Pedido completo' : 'Agregar televisión'}
+              {!pedidoCerrado && <span className="atajo">o presiona Enter</span>}
             </button>
           </div>
 

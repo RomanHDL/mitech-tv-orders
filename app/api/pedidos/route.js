@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
-import { MARCAS, PULGADAS, CONDICIONES, UNIDADES } from '@/lib/catalogos'
+import { MARCAS, PULGADAS, CONDICIONES, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
 import { getUsuario } from '@/lib/auth'
 
 export async function POST(req) {
@@ -13,7 +13,7 @@ export async function POST(req) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
   }
 
-  const { numeroPedido, pedidoNombre, condiciones, televisiones, fechaLimite } = body
+  const { numeroPedido, pedidoNombre, condiciones, televisiones, fechaLimite, cantidadTotal } = body
 
   if (typeof numeroPedido !== 'string' || !numeroPedido.trim()) {
     return NextResponse.json({ error: 'Número de pedido requerido' }, { status: 400 })
@@ -32,6 +32,15 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Fecha límite requerida' }, { status: 400 })
   }
 
+  let cantidadTotalLimpia = null
+  if (cantidadTotal !== null && cantidadTotal !== undefined && cantidadTotal !== '') {
+    const n = Number(cantidadTotal)
+    if (!Number.isInteger(n) || n < 1) {
+      return NextResponse.json({ error: 'Cantidad total inválida' }, { status: 400 })
+    }
+    cantidadTotalLimpia = n
+  }
+
   const tvsLimpias = []
   for (const [i, tv] of televisiones.entries()) {
     if (!MARCAS.includes(tv.marca)) {
@@ -41,6 +50,13 @@ export async function POST(req) {
     if (!PULGADAS.includes(pulgadas)) {
       return NextResponse.json({ error: `TV #${i + 1}: pulgadas inválidas` }, { status: 400 })
     }
+    const sku = typeof tv.modelo === 'string' ? tv.modelo.trim() : ''
+    if (!SKU_REGEX.test(sku)) {
+      return NextResponse.json(
+        { error: `TV #${i + 1}: el SKU debe tener de 8 a 10 letras o números` },
+        { status: 400 }
+      )
+    }
     const cantidad = Number(tv.cantidad)
     if (!Number.isInteger(cantidad) || cantidad < 1) {
       return NextResponse.json({ error: `TV #${i + 1}: cantidad inválida` }, { status: 400 })
@@ -49,11 +65,21 @@ export async function POST(req) {
     tvsLimpias.push({
       marca: tv.marca,
       pulgadas,
-      modelo: typeof tv.modelo === 'string' ? tv.modelo.trim() : '',
+      modelo: sku,
       cantidad,
       unidad,
       cantidadSurtida: 0,
     })
+  }
+
+  if (cantidadTotalLimpia !== null) {
+    const sumaTvs = tvsLimpias.reduce((s, tv) => s + tv.cantidad, 0)
+    if (sumaTvs > cantidadTotalLimpia) {
+      return NextResponse.json(
+        { error: `La suma de cantidades (${sumaTvs}) excede la cantidad total del pedido (${cantidadTotalLimpia})` },
+        { status: 400 }
+      )
+    }
   }
 
   const db = await getDb()
@@ -61,6 +87,7 @@ export async function POST(req) {
     numeroPedido: numeroPedido.trim(),
     pedidoNombre: pedidoNombre.trim(),
     condiciones,
+    cantidadTotal: cantidadTotalLimpia,
     televisiones: tvsLimpias,
     fecha: new Date(),
     fechaLimite,

@@ -360,6 +360,79 @@ h2 {
   color: var(--text-muted);
   font-weight: 500;
 }
+.label .hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: none;
+}
+
+.limite-resumen {
+  margin-top: 0.7rem;
+  background: var(--yellow-soft);
+  border: 2px solid var(--black);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  box-shadow: var(--shadow-xs);
+}
+.limite-info {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.limite-numero {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--black);
+  font-variant-numeric: tabular-nums;
+}
+.limite-de {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.95em;
+  margin: 0 0.15em;
+}
+.limite-pct {
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.limite-resumen .progreso-track {
+  height: 10px;
+  background: #fff;
+  border: 1.5px solid var(--black);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.limite-resumen .progreso-fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.25s ease;
+}
+.limite-resumen.lleno {
+  background: var(--green-light, #e6f7ea);
+}
+.limite-resumen.lleno .progreso-fill {
+  background: var(--green, #1f9d55);
+}
+.limite-resumen.excedido {
+  background: #fde2e2;
+}
+.limite-resumen.excedido .progreso-fill {
+  background: #d33;
+}
+.limite-mensaje {
+  margin-top: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--black);
+}
+.limite-mensaje.error {
+  color: #a11;
+}
 
 input[type="text"],
 input[type="number"],

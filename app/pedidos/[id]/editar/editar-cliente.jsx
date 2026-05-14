@@ -31,6 +31,7 @@ export default function EditarCliente({ pedido }) {
         pedidoNombre: pedido.pedidoNombre,
         fechaLimite: pedido.fechaLimite,
         condiciones: pedido.condiciones,
+        cantidadTotal: pedido.cantidadTotal,
         televisiones: pedido.televisiones,
       }}
       onSubmit={enviar}
