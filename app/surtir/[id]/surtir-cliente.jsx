@@ -75,7 +75,8 @@ export default function SurtirCliente({ pedido }) {
 
   const actualizar = async (idx, valorBruto, opciones = {}) => {
     const tv = tvs[idx]
-    const valor = Math.max(0, Math.min(tv.cantidad, Number(valorBruto) || 0))
+    const limiteTv = tv.sinLimite ? Infinity : tv.cantidad
+    const valor = Math.max(0, Math.min(limiteTv, Number(valorBruto) || 0))
     const valorAnterior = tv.cantidadSurtida || 0
 
     if (valor === valorAnterior) return
@@ -208,15 +209,19 @@ export default function SurtirCliente({ pedido }) {
 
             {items.map((tv) => {
               const idx = tv._idx
-              const surtida = Math.min(tv.cantidad, tv.cantidadSurtida || 0)
-              const completo = surtida >= tv.cantidad
+              const esSinLimite = !!tv.sinLimite
+              const surtida = esSinLimite
+                ? (tv.cantidadSurtida || 0)
+                : Math.min(tv.cantidad, tv.cantidadSurtida || 0)
+              const completo = !esSinLimite && surtida >= tv.cantidad
               const enProgreso = surtida > 0 && !completo
               const estado = completo ? 'completo' : enProgreso ? 'parcial' : 'pendiente'
               const esPallet = tv.unidad === 'pallet'
               const descTv = `${marca} ${tv.pulgadas}"${tv.modelo ? ' ' + tv.modelo : ''}`
-              const unidadTxt = unidadLabel(tv.cantidad, tv.unidad)
+              const unidadTxt = unidadLabel(tv.cantidad || 1, tv.unidad)
 
               const marcarTodas = () => {
+                if (esSinLimite) return
                 const restantes = tv.cantidad - surtida
                 const ok = window.confirm(
                   `¿Marcar como surtidas las ${restantes} ${unidadTxt} restantes de ${descTv}?\n\nQuedará en ${tv.cantidad}/${tv.cantidad}.`
@@ -244,7 +249,13 @@ export default function SurtirCliente({ pedido }) {
                       {tv.modelo && <span className="surtir-modelo">{tv.modelo}</span>}
                     </div>
                     <div className="surtir-item-cantidad">
-                      <strong>{tv.cantidad}</strong> {unidadLabel(tv.cantidad, tv.unidad)}
+                      {esSinLimite ? (
+                        <strong>Sin límite</strong>
+                      ) : (
+                        <>
+                          <strong>{tv.cantidad}</strong> {unidadLabel(tv.cantidad, tv.unidad)}
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -253,12 +264,14 @@ export default function SurtirCliente({ pedido }) {
                       <input
                         type="number"
                         min="0"
-                        max={tv.cantidad}
+                        max={esSinLimite ? undefined : tv.cantidad}
                         value={surtida}
                         onChange={(e) => actualizar(idx, e.target.value, { descripcion: descTv })}
                         aria-label="Cantidad surtida"
                       />
-                      <span className="surtir-counter-total">/ {tv.cantidad}</span>
+                      <span className="surtir-counter-total">
+                        {esSinLimite ? '/ ∞' : `/ ${tv.cantidad}`}
+                      </span>
                     </div>
 
                     <div className="surtir-acciones">
@@ -295,10 +308,10 @@ export default function SurtirCliente({ pedido }) {
                       <button
                         type="button"
                         onClick={marcarTodas}
-                        disabled={completo}
+                        disabled={completo || esSinLimite}
                         className="btn-mini-action btn-listo"
                         aria-label="Marcar todas"
-                        title="Marcar todas"
+                        title={esSinLimite ? 'No aplica (sin límite)' : 'Marcar todas'}
                       >
                         <IconCheck />
                       </button>

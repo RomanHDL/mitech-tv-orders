@@ -56,6 +56,8 @@ async function obtenerPedidos() {
       condiciones: p.condiciones || [],
       fechaFmt: p.fecha ? fmt.format(p.fecha) : '',
       fechaLimite: p.fechaLimite || '',
+      cantidadTotal:
+        typeof p.cantidadTotal === 'number' && p.cantidadTotal > 0 ? p.cantidadTotal : null,
       totalTvs: totalRequerido,
       cantidadModelos: tvs.length,
       totalSurtido,
@@ -69,6 +71,7 @@ async function obtenerPedidos() {
         modelo: tv.modelo || '',
         unidad: tv.unidad || 'pieza',
         cantidad: tv.cantidad || 0,
+        sinLimite: !!tv.sinLimite,
         cantidadSurtida: tv.cantidadSurtida || 0,
       })),
     }

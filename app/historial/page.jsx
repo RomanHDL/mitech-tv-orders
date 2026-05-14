@@ -24,14 +24,19 @@ async function obtenerPedidos(usuario) {
 
   return pedidos.map((p) => {
     const tvs = p.televisiones || []
-    const totalRequerido = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
-    const totalSurtido = tvs.reduce(
-      (s, tv) => s + Math.min(tv.cantidad || 0, tv.cantidadSurtida || 0),
-      0
-    )
+    const sumaCantidades = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
+    const totalRequerido =
+      typeof p.cantidadTotal === 'number' && p.cantidadTotal > 0
+        ? p.cantidadTotal
+        : sumaCantidades
+    const totalSurtido = tvs.reduce((s, tv) => {
+      const surt = tv.cantidadSurtida || 0
+      if (tv.sinLimite || (tv.cantidad || 0) === 0) return s + surt
+      return s + Math.min(tv.cantidad || 0, surt)
+    }, 0)
     const pct = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
-    const totalPallets = tvs.reduce((s, tv) => s + (tv.unidad === 'pallet' ? tv.cantidad : 0), 0)
-    const totalPiezas = tvs.reduce((s, tv) => s + (tv.unidad !== 'pallet' ? tv.cantidad : 0), 0)
+    const totalPallets = tvs.reduce((s, tv) => s + (tv.unidad === 'pallet' ? (tv.cantidad || 0) : 0), 0)
+    const totalPiezas = tvs.reduce((s, tv) => s + (tv.unidad !== 'pallet' ? (tv.cantidad || 0) : 0), 0)
     return {
       id: p._id.toString(),
       numeroPedido: p.numeroPedido || '',

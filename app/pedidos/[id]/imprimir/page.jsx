@@ -82,12 +82,16 @@ export default async function ImprimirPage({ params }) {
 
   const grupos = agruparPorMarca(pedido.televisiones)
   const totalPallets = pedido.televisiones.reduce(
-    (s, tv) => s + (tv.unidad === 'pallet' ? tv.cantidad : 0), 0
+    (s, tv) => s + (tv.unidad === 'pallet' ? (tv.cantidad || 0) : 0), 0
   )
   const totalPiezas = pedido.televisiones.reduce(
-    (s, tv) => s + (tv.unidad !== 'pallet' ? tv.cantidad : 0), 0
+    (s, tv) => s + (tv.unidad !== 'pallet' ? (tv.cantidad || 0) : 0), 0
   )
   const totalModelos = pedido.televisiones.length
+  const cantidadTotalPedido =
+    typeof pedido.cantidadTotal === 'number' && pedido.cantidadTotal > 0
+      ? pedido.cantidadTotal
+      : null
   const totalLineas = grupos.reduce((s, g) => s + g.items.length + 1, 0)
   const fechaFmt = new Date(pedido.fecha).toLocaleDateString('es-MX', {
     day: '2-digit', month: 'long', year: 'numeric',
@@ -180,9 +184,11 @@ export default async function ImprimirPage({ params }) {
                 {items.map((tv, i) => (
                   <li key={i} className={tv.unidad === 'pallet' ? 'es-pallet' : ''}>
                     <span className="col-pulgadas">{tv.pulgadas}"</span>
-                    <span className="col-cantidad">{tv.cantidad}</span>
+                    <span className="col-cantidad">
+                      {tv.sinLimite ? 'S/L' : tv.cantidad}
+                    </span>
                     <span className="col-unidad">
-                      {unidadLabel(tv.cantidad, tv.unidad, true)}
+                      {tv.sinLimite ? '' : unidadLabel(tv.cantidad, tv.unidad, true)}
                     </span>
                     <span className="col-modelo">
                       {tv.modelo ? tv.modelo : <span className="modelo-vacio">—</span>}
@@ -198,10 +204,17 @@ export default async function ImprimirPage({ params }) {
         <section className="resumen-final">
           <hr className="resumen-rule" />
           <div className="resumen-grid">
-            <div className="resumen-cell">
-              <div className="resumen-numero">{totalPiezas}</div>
-              <div className="resumen-label">{totalPiezas === 1 ? 'Pieza' : 'Piezas'}</div>
-            </div>
+            {cantidadTotalPedido !== null ? (
+              <div className="resumen-cell">
+                <div className="resumen-numero">{cantidadTotalPedido}</div>
+                <div className="resumen-label">Total del pedido</div>
+              </div>
+            ) : (
+              <div className="resumen-cell">
+                <div className="resumen-numero">{totalPiezas}</div>
+                <div className="resumen-label">{totalPiezas === 1 ? 'Pieza' : 'Piezas'}</div>
+              </div>
+            )}
             {totalPallets > 0 && (
               <div className="resumen-cell">
                 <div className="resumen-numero">{totalPallets}</div>

@@ -83,11 +83,16 @@ function descargarPedidosXLSX(pedidos) {
   ]
   const historialFilas = pedidos.map((p) => {
     const tvs = p.televisiones || []
-    const requerido = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
-    const surtido = tvs.reduce(
-      (s, tv) => s + Math.min(tv.cantidad || 0, tv.cantidadSurtida || 0),
-      0
-    )
+    const sumaCantidades = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
+    const requerido =
+      typeof p.cantidadTotal === 'number' && p.cantidadTotal > 0
+        ? p.cantidadTotal
+        : sumaCantidades
+    const surtido = tvs.reduce((s, tv) => {
+      const sur = tv.cantidadSurtida || 0
+      if (tv.sinLimite || (tv.cantidad || 0) === 0) return s + sur
+      return s + Math.min(tv.cantidad || 0, sur)
+    }, 0)
     const pct = requerido > 0 ? Math.round((surtido / requerido) * 100) : 0
     const estado = pct >= 100 ? 'Completado' : pct > 0 ? 'Parcial' : 'Pendiente'
     const dias = diasHastaLimite(p.fechaLimite)
@@ -135,11 +140,16 @@ function descargarPedidosXLSX(pedidos) {
       'Cantidad requerida', 'Cantidad surtida', 'Estado',
     ]
     const detalleFilas = tvs.map((tv) => {
-      const surt = Math.min(tv.cantidad, tv.cantidadSurtida || 0)
-      const estado = surt >= tv.cantidad
-        ? 'Completo'
-        : surt > 0 ? 'Parcial' : 'Pendiente'
-      return [tv.marca, tv.pulgadas, tv.modelo, tv.unidad, tv.cantidad, surt, estado]
+      const surt = tv.sinLimite
+        ? (tv.cantidadSurtida || 0)
+        : Math.min(tv.cantidad || 0, tv.cantidadSurtida || 0)
+      const cantidadLabel = tv.sinLimite ? 'Sin límite' : tv.cantidad
+      const estado = tv.sinLimite
+        ? (surt > 0 ? 'Parcial' : 'Pendiente')
+        : (surt >= tv.cantidad
+            ? 'Completo'
+            : surt > 0 ? 'Parcial' : 'Pendiente')
+      return [tv.marca, tv.pulgadas, tv.modelo, tv.unidad, cantidadLabel, surt, estado]
     })
 
     const ws = XLSX.utils.aoa_to_sheet([

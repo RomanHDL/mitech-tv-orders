@@ -77,7 +77,7 @@ export async function PATCH(req, { params }) {
   if (!tv) {
     return NextResponse.json({ error: 'TV no existe en el pedido' }, { status: 400 })
   }
-  if (cantidadSurtida > tv.cantidad) {
+  if (!tv.sinLimite && cantidadSurtida > tv.cantidad) {
     return NextResponse.json({ error: 'No se puede surtir más que la cantidad pedida' }, { status: 400 })
   }
 
