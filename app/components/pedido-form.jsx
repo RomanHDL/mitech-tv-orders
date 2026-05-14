@@ -405,7 +405,7 @@ export default function PedidoForm({
                 </>
               ) : (
                 <div className="resumen-item">
-                  <div className="resumen-numero">{piezas}</div>
+                  <div className="resumen-numero">{limite > 0 ? limite : piezas}</div>
                   <div className="resumen-etiqueta">TVs totales</div>
                 </div>
               )}
