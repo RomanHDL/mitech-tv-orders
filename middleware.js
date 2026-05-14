@@ -4,12 +4,19 @@ export function middleware(request) {
   const { pathname } = request.nextUrl
   const method = request.method
 
-  // Rutas públicas: login y endpoints de auth
+  // Rutas públicas: login, endpoints de auth y descubrimiento del stack
   if (
     pathname === '/login' ||
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/_next/') ||
-    pathname === '/favicon.ico'
+    pathname === '/favicon.ico' ||
+    pathname === '/stack' ||
+    pathname === '/stack.json' ||
+    pathname === '/stack.md' ||
+    pathname === '/llms.txt' ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
+    pathname === '/api/public/stack'
   ) {
     return NextResponse.next()
   }
