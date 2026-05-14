@@ -156,7 +156,7 @@ export async function PUT(req, { params }) {
     if (!tvSinLimite && (!Number.isInteger(cantidad) || cantidad < 1)) {
       return NextResponse.json({ error: `TV #${i + 1}: cantidad inválida` }, { status: 400 })
     }
-    const cantidadFinal = tvSinLimite ? 0 : cantidad
+    const cantidadFinal = tvSinLimite ? (cantidadTotalLimpia || 0) : cantidad
     const unidad = UNIDADES.includes(tv.unidad) ? tv.unidad : 'pieza'
     const modelo = typeof tv.modelo === 'string' ? tv.modelo.trim().toUpperCase() : ''
     if (!SKU_REGEX.test(modelo)) {
