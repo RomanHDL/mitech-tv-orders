@@ -16,7 +16,8 @@ export function middleware(request) {
     pathname === '/llms.txt' ||
     pathname === '/sitemap.xml' ||
     pathname === '/robots.txt' ||
-    pathname === '/api/public/stack'
+    pathname === '/api/public/stack' ||
+    pathname === '/api/public/health'
   ) {
     return NextResponse.next()
   }
