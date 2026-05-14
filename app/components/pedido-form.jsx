@@ -165,10 +165,18 @@ export default function PedidoForm({
       }
     }
 
-    if (limite > 0 && totalUnidades !== limite) {
-      return setError(
-        `La suma de cantidades (${totalUnidades}) no coincide con la cantidad total del pedido (${limite}).`
-      )
+    if (limite > 0) {
+      const haySinLimite = tvs.some((tv) => tv.sinLimite)
+      if (totalUnidades > limite) {
+        return setError(
+          `La suma de cantidades (${totalUnidades}) excede la cantidad total del pedido (${limite}).`
+        )
+      }
+      if (totalUnidades < limite && !haySinLimite) {
+        return setError(
+          `La suma de cantidades (${totalUnidades}) no coincide con la cantidad total del pedido (${limite}).`
+        )
+      }
     }
 
     setEnviando(true)
