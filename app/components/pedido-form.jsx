@@ -24,6 +24,9 @@ export default function PedidoForm({
       ? String(initialData.cantidadTotal)
       : ''
   )
+  const [sinLimite, setSinLimite] = useState(
+    !(initialData?.cantidadTotal != null && initialData?.cantidadTotal > 0)
+  )
   const [tvs, setTvs] = useState(
     initialData?.televisiones?.length
       ? initialData.televisiones.map((tv) => ({
@@ -53,9 +56,10 @@ export default function PedidoForm({
   }, [tvs.length])
 
   const limite = useMemo(() => {
+    if (sinLimite) return 0
     const n = Number(cantidadTotal)
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
-  }, [cantidadTotal])
+  }, [cantidadTotal, sinLimite])
 
   const totalUnidades = useMemo(
     () => tvs.reduce((s, tv) => s + (Number(tv.cantidad) || 0), 0),
@@ -105,9 +109,9 @@ export default function PedidoForm({
     updateTv(i, 'cantidad', valor)
   }
 
-  // SKU: permitir letras y números, máximo 10. Conserva el caso para mostrar al usuario.
+  // SKU: solo alfanuméricos, máximo 10, convertido a mayúsculas.
   const updateSku = (i, raw) => {
-    const limpio = String(raw).replace(/[^A-Za-z0-9]/g, '').slice(0, 10)
+    const limpio = String(raw).replace(/[^A-Za-z0-9]/g, '').slice(0, 10).toUpperCase()
     updateTv(i, 'modelo', limpio)
   }
 
@@ -220,17 +224,32 @@ export default function PedidoForm({
           <div className="section">
             <label className="label" htmlFor="cantidadTotal">
               Cantidad total del pedido
-              <span className="hint"> · vacío = sin límite</span>
             </label>
-            <input
-              id="cantidadTotal"
-              type="number"
-              min="0"
-              step="1"
-              value={cantidadTotal}
-              onChange={(e) => setCantidadTotal(e.target.value)}
-              placeholder="Ej. 50 (o déjalo vacío)"
-            />
+            <div className="cantidad-total-row">
+              <input
+                id="cantidadTotal"
+                type="number"
+                min="1"
+                step="1"
+                value={sinLimite ? '' : cantidadTotal}
+                onChange={(e) => setCantidadTotal(e.target.value)}
+                placeholder="Ej. 100"
+                disabled={sinLimite}
+              />
+              <label className={`sin-limite-toggle ${sinLimite ? 'activa' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={sinLimite}
+                  onChange={(e) => setSinLimite(e.target.checked)}
+                />
+                Sin límite
+              </label>
+            </div>
+            {sinLimite && (
+              <div className="limite-mensaje sin-limite-mensaje">
+                Sin límite — se pueden agregar las TVs que necesites.
+              </div>
+            )}
             {limite > 0 && (
               <div className={`limite-resumen ${pedidoCerrado ? 'lleno' : ''} ${pedidoExcedido ? 'excedido' : ''}`}>
                 <div className="limite-info">
