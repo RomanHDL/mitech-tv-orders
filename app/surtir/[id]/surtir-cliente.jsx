@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { unidadLabel } from '@/lib/catalogos'
+import ComentariosPedido from '../../components/comentarios-pedido'
 import {
   IconAlert,
   IconArrowLeft,
@@ -201,6 +202,13 @@ export default function SurtirCliente({ pedido }) {
           <span>{error}</span>
         </div>
       )}
+
+      <ComentariosPedido
+        pedidoId={pedido.id}
+        comentariosIniciales={pedido.comentarios || ''}
+        actualizadoIso={pedido.comentariosActualizado}
+        actualizadoPorNombre={pedido.comentariosActualizadoPorNombre}
+      />
 
       <div className="surtir-lista">
         {grupos.map(({ marca, items }) => (

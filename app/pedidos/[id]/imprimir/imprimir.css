@@ -166,6 +166,31 @@ body { background: #fff; }
 .condicion-chip.cond-grb { background: #fcd34d; color: #000; }
 .condicion-chip.cond-grc { background: #ef4444; color: #fff; }
 
+/* Comentarios del envío en la impresión */
+.comentarios-banda {
+  margin: calc(0.55rem * var(--fs-mult)) 0;
+  padding: calc(0.5rem * var(--fs-mult)) calc(0.75rem * var(--fs-mult));
+  border: 1.5px solid #000;
+  border-radius: 6px;
+  background: #fffbeb;
+}
+.comentarios-banda-label {
+  display: block;
+  font-size: calc(0.65rem * var(--fs-mult));
+  letter-spacing: 0.2em;
+  color: #666;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: calc(0.25rem * var(--fs-mult));
+}
+.comentarios-banda-texto {
+  margin: 0;
+  font-size: calc(0.85rem * var(--fs-mult));
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
 .encabezado hr {
   border: 0;
   border-top: 3px solid #000;

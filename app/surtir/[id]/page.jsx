@@ -31,6 +31,11 @@ export default async function SurtirPage({ params }) {
     pedidoNombre: pedido.pedidoNombre,
     condiciones: pedido.condiciones || [],
     cantidadTotal: typeof pedido.cantidadTotal === 'number' ? pedido.cantidadTotal : null,
+    comentarios: typeof pedido.comentarios === 'string' ? pedido.comentarios : '',
+    comentariosActualizado: pedido.comentariosActualizado
+      ? pedido.comentariosActualizado.toISOString()
+      : null,
+    comentariosActualizadoPorNombre: pedido.comentariosActualizadoPorNombre || null,
     televisiones: (pedido.televisiones || []).map((tv) => ({
       marca: tv.marca,
       pulgadas: tv.pulgadas,

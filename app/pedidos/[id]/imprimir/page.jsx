@@ -169,6 +169,13 @@ export default async function ImprimirPage({ params }) {
             </div>
           )}
 
+          {typeof pedido.comentarios === 'string' && pedido.comentarios.trim() && (
+            <div className="comentarios-banda">
+              <span className="comentarios-banda-label">COMENTARIOS DEL ENVÍO</span>
+              <p className="comentarios-banda-texto">{pedido.comentarios}</p>
+            </div>
+          )}
+
           <hr />
         </header>
 
