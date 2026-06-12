@@ -5,20 +5,6 @@ import * as XLSX from 'xlsx'
 import { parsearTexto, filasAItems } from '@/lib/importar-pedido'
 import { IconAlert, IconClipboard, IconExcel, IconDocument, IconCheck, IconClose, IconPlus } from './icons'
 
-// Lee un File como base64 (sin el prefijo data URL).
-function fileABase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const res = String(reader.result || '')
-      const coma = res.indexOf(',')
-      resolve(coma >= 0 ? res.slice(coma + 1) : res)
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
 const TABS = [
   { id: 'pegar', label: 'Pegar', Icon: IconClipboard },
   { id: 'excel', label: 'Excel', Icon: IconExcel },
@@ -32,6 +18,7 @@ export default function ImportarPedidoPanel({ onImportar }) {
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [progreso, setProgreso] = useState(0)
   const excelRef = useRef(null)
   const fotoRef = useRef(null)
 
@@ -87,26 +74,33 @@ export default function ImportarPedidoPanel({ onImportar }) {
     }
   }
 
+  // Lee la foto con OCR gratis EN EL NAVEGADOR (tesseract.js). Sin API key.
   const onFoto = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     setError('')
     setCargando(true)
+    setProgreso(0)
     try {
-      const imageBase64 = await fileABase64(file)
-      const res = await fetch('/api/importar/imagen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64, mediaType: file.type }),
+      const { default: Tesseract } = await import('tesseract.js')
+      const { data } = await Tesseract.recognize(file, 'eng', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') setProgreso(Math.round(m.progress * 100))
+        },
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Error al leer la imagen')
-      cargarFilas(data.rows || [])
+      const filas = parsearTexto(data.text || '')
+      if (!filas.length) {
+        setError('No se pudo leer la tabla de la foto. Prueba con una imagen más nítida, o usa Pegar/Excel.')
+        setItems([])
+      } else {
+        cargarFilas(filas)
+      }
     } catch (err) {
-      setError(err.message)
+      setError(err?.message || 'No se pudo procesar la imagen')
       setItems([])
     } finally {
       setCargando(false)
+      setProgreso(0)
       if (fotoRef.current) fotoRef.current.value = ''
     }
   }
@@ -179,9 +173,9 @@ export default function ImportarPedidoPanel({ onImportar }) {
             <input ref={fotoRef} type="file" accept="image/*" onChange={onFoto} hidden />
             <button type="button" className="btn btn-secondary" onClick={() => fotoRef.current?.click()} disabled={cargando}>
               <IconDocument width={16} height={16} />
-              {cargando ? 'Leyendo imagen…' : 'Elegir foto del pedido'}
+              {cargando ? `Leyendo foto… ${progreso}%` : 'Elegir foto del pedido'}
             </button>
-            <p className="hint">La IA lee la tabla de la foto (marca, modelo, cantidad).</p>
+            <p className="hint">Lee la tabla de la foto gratis. Revisa los renglones marcados antes de importar.</p>
           </div>
         )}
 
