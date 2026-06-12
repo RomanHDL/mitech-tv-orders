@@ -127,9 +127,9 @@ export default function PedidoForm({
       )
     )
 
-  // SKU: solo alfanuméricos, máximo 10, convertido a mayúsculas.
+  // SKU/Modelo: solo alfanuméricos, mayúsculas, tal cual viene (máx 20).
   const updateSku = (i, raw) => {
-    const limpio = String(raw).replace(/[^A-Za-z0-9]/g, '').slice(0, 10).toUpperCase()
+    const limpio = String(raw).replace(/[^A-Za-z0-9]/g, '').slice(0, 20).toUpperCase()
     updateTv(i, 'modelo', limpio)
   }
 
@@ -177,7 +177,7 @@ export default function PedidoForm({
       if (!MARCAS.includes(tv.marca)) return setError(`TV #${i + 1}: marca inválida`)
       if (!PULGADAS.includes(Number(tv.pulgadas))) return setError(`TV #${i + 1}: pulgadas inválidas`)
       if (!SKU_REGEX.test(tv.modelo || '')) {
-        return setError(`TV #${i + 1}: el SKU debe tener de 8 a 10 letras o números`)
+        return setError(`TV #${i + 1}: captura el modelo / SKU (mín. 3 letras o números)`)
       }
       if (!tv.sinLimite && (!Number(tv.cantidad) || Number(tv.cantidad) < 1)) {
         return setError(`TV #${i + 1}: cantidad inválida`)
@@ -387,11 +387,11 @@ export default function PedidoForm({
                       type="text"
                       value={tv.modelo}
                       onChange={(e) => updateSku(i, e.target.value)}
-                      placeholder="SKU (8-10 letras/números)"
-                      pattern="[A-Za-z0-9]{8,10}"
-                      title="El SKU debe tener entre 8 y 10 letras o números"
-                      minLength={8}
-                      maxLength={10}
+                      placeholder="SKU / Modelo"
+                      pattern="[A-Za-z0-9]{3,20}"
+                      title="Código del modelo tal como viene en el pedido"
+                      minLength={3}
+                      maxLength={20}
                       aria-invalid={tv.modelo && !skuOk ? 'true' : undefined}
                       required
                     />

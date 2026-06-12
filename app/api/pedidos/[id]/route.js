@@ -161,7 +161,7 @@ export async function PUT(req, { params }) {
     const modelo = typeof tv.modelo === 'string' ? tv.modelo.trim().toUpperCase() : ''
     if (!SKU_REGEX.test(modelo)) {
       return NextResponse.json(
-        { error: `TV #${i + 1}: el SKU debe tener de 8 a 10 letras o números` },
+        { error: `TV #${i + 1}: captura el modelo / SKU (mín. 3 letras o números)` },
         { status: 400 }
       )
     }
