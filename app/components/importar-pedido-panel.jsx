@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import * as XLSX from 'xlsx'
-import { parsearTexto, filasAItems } from '@/lib/importar-pedido'
+import { parsearTexto, filasAItems, aplicarCatalogo } from '@/lib/importar-pedido'
 import { IconAlert, IconClipboard, IconExcel, IconDocument, IconCheck, IconClose, IconPlus } from './icons'
 
 const TABS = [
@@ -21,6 +21,25 @@ export default function ImportarPedidoPanel({ onImportar }) {
   const [progreso, setProgreso] = useState(0)
   const excelRef = useRef(null)
   const fotoRef = useRef(null)
+  // Catálogo ONN (modelo -> pulgada). Solo el admin lo recibe; otros roles
+  // reciben 403 y el mapa queda vacío (no autollena).
+  const catalogoRef = useRef({})
+
+  useEffect(() => {
+    let activo = true
+    fetch('/api/admin/catalogo-onn')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((lista) => {
+        if (!activo || !Array.isArray(lista)) return
+        const mapa = {}
+        for (const it of lista) mapa[it.modelo] = it.pulgadas
+        catalogoRef.current = mapa
+        // Reaplica a lo ya cargado por si el catálogo llegó después de pegar.
+        setItems((prev) => (prev.length ? aplicarCatalogo(prev, mapa) : prev))
+      })
+      .catch(() => {})
+    return () => { activo = false }
+  }, [])
 
   const totalPiezas = useMemo(
     () => items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0),
@@ -38,7 +57,7 @@ export default function ImportarPedidoPanel({ onImportar }) {
   }
 
   const cargarFilas = (filas) => {
-    const nuevos = filasAItems(filas)
+    const nuevos = aplicarCatalogo(filasAItems(filas), catalogoRef.current)
     if (!nuevos.length) {
       setError('No se encontraron renglones. Revisa que sean columnas Marca / Modelo / Cantidad.')
       setItems([])
