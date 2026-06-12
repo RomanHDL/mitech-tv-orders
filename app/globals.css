@@ -693,6 +693,150 @@ select.select-dueno {
 }
 .btn-agregar-tv:hover .atajo { color: var(--primary); }
 
+/* ─── Importar pedido en lote ─────────────────────────── */
+
+.btn-importar-toggle {
+  width: 100%;
+  background: #fff;
+  border: 2px dashed var(--black);
+  border-radius: var(--radius);
+  padding: 0.8rem;
+  color: var(--black);
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--tx);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+}
+.btn-importar-toggle:hover {
+  background: var(--primary-soft);
+  border-style: solid;
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+.btn-importar-toggle .atajo {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.importar-panel {
+  border: 2px solid var(--black);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: var(--primary-soft);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1rem;
+}
+.importar-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+.importar-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+.importar-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: inherit;
+  background: #fff;
+  color: var(--text-muted);
+  border: 1.5px solid var(--black);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--tx);
+}
+.importar-tab.activa {
+  background: var(--primary);
+  color: #fff;
+}
+.importar-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.importar-textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  padding: 0.7rem;
+  border: 2px solid var(--black);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  background: #fff;
+}
+.importar-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 2px dashed var(--text-subtle);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  text-align: center;
+}
+.importar-resumen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.importar-revisar {
+  background: var(--warning-light);
+  color: var(--warning-dark);
+  border: 1.5px solid var(--warning);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+.importar-preview {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 2px solid var(--black);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+.importar-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.importar-preview th,
+.importar-preview td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.importar-preview th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  font-weight: 700;
+}
+.importar-preview td svg { color: var(--success-dark); vertical-align: middle; }
+.importar-preview .celda-revisar {
+  background: var(--warning-light);
+  color: var(--warning-dark);
+  font-weight: 700;
+}
+
 /* ─── Resumen del pedido ──────────────────────────────── */
 
 .resumen-pedido {

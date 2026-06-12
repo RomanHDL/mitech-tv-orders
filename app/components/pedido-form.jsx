@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { MARCAS, PULGADAS, CONDICIONES, SKU_REGEX } from '@/lib/catalogos'
 import { IconAlert, IconArrowRight, IconBox, IconClose, IconPlus } from './icons'
+import ImportarPedidoPanel from './importar-pedido-panel'
 
 const tvVacia = () => ({ marca: '', pulgadas: '', modelo: '', cantidad: 1, unidad: 'pieza', sinLimite: false })
 
@@ -144,6 +145,24 @@ export default function PedidoForm({
     setTvs((prev) => [...prev, tvVacia()])
   }
   const eliminarTv = (i) => setTvs((prev) => prev.filter((_, idx) => idx !== i))
+
+  // Carga en lote (pegar / Excel / foto). Mapea los items al estado de TVs.
+  // Si lo único que hay es la tarjeta vacía inicial, la reemplaza; si no, agrega.
+  const importarTvs = (items) => {
+    if (pedidoCerrado || !items?.length) return
+    const nuevas = items.map((it) => ({
+      marca: it.marca,
+      pulgadas: it.pulgadas ? String(it.pulgadas) : '',
+      modelo: it.modelo,
+      cantidad: it.cantidad || 1,
+      unidad: it.unidad || 'pieza',
+      sinLimite: false,
+    }))
+    setTvs((prev) => {
+      const soloVacia = prev.length === 1 && !prev[0].marca && !prev[0].modelo
+      return soloVacia ? nuevas : [...prev, ...nuevas]
+    })
+  }
 
   const enviar = async (e) => {
     e.preventDefault()
@@ -312,6 +331,8 @@ export default function PedidoForm({
                 {tvs.length} {tvs.length === 1 ? 'agregada' : 'agregadas'}
               </span>
             </div>
+
+            {!pedidoCerrado && <ImportarPedidoPanel onImportar={importarTvs} />}
 
             <datalist id="marcas-list">
               {MARCAS.map((m) => <option key={m} value={m} />)}

@@ -1,0 +1,231 @@
+'use client'
+
+import { useState, useRef, useMemo } from 'react'
+import * as XLSX from 'xlsx'
+import { parsearTexto, filasAItems } from '@/lib/importar-pedido'
+import { IconAlert, IconClipboard, IconExcel, IconDocument, IconCheck, IconClose, IconPlus } from './icons'
+
+// Lee un File como base64 (sin el prefijo data URL).
+function fileABase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const res = String(reader.result || '')
+      const coma = res.indexOf(',')
+      resolve(coma >= 0 ? res.slice(coma + 1) : res)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+const TABS = [
+  { id: 'pegar', label: 'Pegar', Icon: IconClipboard },
+  { id: 'excel', label: 'Excel', Icon: IconExcel },
+  { id: 'foto', label: 'Foto', Icon: IconDocument },
+]
+
+export default function ImportarPedidoPanel({ onImportar }) {
+  const [abierto, setAbierto] = useState(false)
+  const [tab, setTab] = useState('pegar')
+  const [texto, setTexto] = useState('')
+  const [items, setItems] = useState([])
+  const [error, setError] = useState('')
+  const [cargando, setCargando] = useState(false)
+  const excelRef = useRef(null)
+  const fotoRef = useRef(null)
+
+  const totalPiezas = useMemo(
+    () => items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0),
+    [items]
+  )
+  const conRevisar = useMemo(
+    () => items.filter((it) => !it._flags.marcaOk || !it._flags.skuOk || !it._flags.pulgadasOk).length,
+    [items]
+  )
+
+  const reset = () => {
+    setTexto('')
+    setItems([])
+    setError('')
+  }
+
+  const cargarFilas = (filas) => {
+    const nuevos = filasAItems(filas)
+    if (!nuevos.length) {
+      setError('No se encontraron renglones. Revisa que sean columnas Marca / Modelo / Cantidad.')
+      setItems([])
+      return
+    }
+    setError('')
+    setItems(nuevos)
+  }
+
+  const onPegar = (valor) => {
+    setTexto(valor)
+    if (valor.trim()) cargarFilas(parsearTexto(valor))
+    else setItems([])
+  }
+
+  const onExcel = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setError('')
+    try {
+      const buf = await file.arrayBuffer()
+      const wb = XLSX.read(buf, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false })
+      const lineas = aoa
+        .map((fila) => (Array.isArray(fila) ? fila.map((c) => (c == null ? '' : String(c))).join('\t') : ''))
+        .join('\n')
+      cargarFilas(parsearTexto(lineas))
+    } catch {
+      setError('No se pudo leer el archivo de Excel.')
+    } finally {
+      if (excelRef.current) excelRef.current.value = ''
+    }
+  }
+
+  const onFoto = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setError('')
+    setCargando(true)
+    try {
+      const imageBase64 = await fileABase64(file)
+      const res = await fetch('/api/importar/imagen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64, mediaType: file.type }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Error al leer la imagen')
+      cargarFilas(data.rows || [])
+    } catch (err) {
+      setError(err.message)
+      setItems([])
+    } finally {
+      setCargando(false)
+      if (fotoRef.current) fotoRef.current.value = ''
+    }
+  }
+
+  const confirmar = () => {
+    if (!items.length) return
+    onImportar(items)
+    reset()
+    setAbierto(false)
+  }
+
+  if (!abierto) {
+    return (
+      <button type="button" className="btn-importar-toggle" onClick={() => setAbierto(true)}>
+        <IconPlus />
+        Importar pedido en lote
+        <span className="atajo">pegar · Excel · foto</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="importar-panel">
+      <div className="importar-panel-header">
+        <strong>Importar pedido</strong>
+        <button type="button" className="btn-quitar" onClick={() => { reset(); setAbierto(false) }} aria-label="Cerrar">
+          <IconClose width={14} height={14} />
+          Cerrar
+        </button>
+      </div>
+
+      <div className="importar-tabs">
+        {TABS.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            type="button"
+            className={`importar-tab ${tab === id ? 'activa' : ''}`}
+            onClick={() => { setTab(id); }}
+          >
+            <Icon width={16} height={16} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="importar-body">
+        {tab === 'pegar' && (
+          <textarea
+            className="importar-textarea"
+            value={texto}
+            onChange={(e) => onPegar(e.target.value)}
+            placeholder={'Pega aquí (copiado de Excel o WhatsApp). Una TV por renglón:\nHISENSE\t32H40G\t66\nONN\t100012585\t194'}
+            rows={6}
+          />
+        )}
+
+        {tab === 'excel' && (
+          <div className="importar-dropzone">
+            <input ref={excelRef} type="file" accept=".xlsx,.xls,.csv" onChange={onExcel} hidden />
+            <button type="button" className="btn btn-secondary" onClick={() => excelRef.current?.click()}>
+              <IconExcel width={16} height={16} />
+              Elegir archivo .xlsx / .csv
+            </button>
+            <p className="hint">Columnas: Marca · Modelo · Cantidad</p>
+          </div>
+        )}
+
+        {tab === 'foto' && (
+          <div className="importar-dropzone">
+            <input ref={fotoRef} type="file" accept="image/*" onChange={onFoto} hidden />
+            <button type="button" className="btn btn-secondary" onClick={() => fotoRef.current?.click()} disabled={cargando}>
+              <IconDocument width={16} height={16} />
+              {cargando ? 'Leyendo imagen…' : 'Elegir foto del pedido'}
+            </button>
+            <p className="hint">La IA lee la tabla de la foto (marca, modelo, cantidad).</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="alerta alerta-error">
+            <IconAlert />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {items.length > 0 && (
+          <>
+            <div className="importar-resumen">
+              <span><strong>{items.length}</strong> renglones · <strong>{totalPiezas}</strong> piezas</span>
+              {conRevisar > 0 && <span className="importar-revisar">{conRevisar} por revisar</span>}
+            </div>
+            <div className="importar-preview">
+              <table>
+                <thead>
+                  <tr><th>Marca</th><th>SKU</th><th>Pulg.</th><th>Cant.</th></tr>
+                </thead>
+                <tbody>
+                  {items.map((it, i) => (
+                    <tr key={i}>
+                      <td className={it._flags.marcaOk ? '' : 'celda-revisar'}>
+                        {it.marca || '—'} {it._flags.marcaOk ? <IconCheck width={12} height={12} /> : null}
+                      </td>
+                      <td className={it._flags.skuOk ? '' : 'celda-revisar'}>{it.modelo || '—'}</td>
+                      <td className={it._flags.pulgadasOk ? '' : 'celda-revisar'}>
+                        {it._flags.pulgadasOk ? `${it.pulgadas}"` : '?'}
+                      </td>
+                      <td>{it.cantidad}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button type="button" className="btn btn-primary" onClick={confirmar}>
+              <IconCheck width={16} height={16} />
+              Importar {items.length} {items.length === 1 ? 'TV' : 'TVs'}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
