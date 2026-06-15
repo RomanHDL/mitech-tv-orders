@@ -14,7 +14,7 @@ export const metadata = {
   title: 'MiTech — Pedidos TV',
   description: 'Captura e impresión de pedidos de televisiones',
   icons: {
-    icon: '/mitech-logo.png',
+    icon: '/mitech-icon.png',
   },
 }
 
