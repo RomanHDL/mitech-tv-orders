@@ -88,6 +88,6 @@ function verificarAcceso(pathname, method, rol) {
 export const config = {
   matcher: [
     // Match all routes except static files
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|mitech-icon.png).*)',
   ],
 }
