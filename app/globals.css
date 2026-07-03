@@ -653,6 +653,11 @@ select.select-dueno {
 }
 .tv-card-grid > input,
 .tv-card-grid > select { min-width: 0; }
+.tv-alt-hint {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-muted, #666);
+}
 
 /* ─── Add TV button (sticky) ──────────────────────────── */
 
@@ -835,6 +840,11 @@ select.select-dueno {
   background: var(--warning-light);
   color: var(--warning-dark);
   font-weight: 700;
+}
+.importar-alt-hint {
+  color: var(--text-muted, #666);
+  font-weight: 400;
+  font-size: 0.75em;
 }
 
 /* ─── Resumen del pedido ──────────────────────────────── */

@@ -178,10 +178,20 @@ export async function PUT(req, { params }) {
       ? (tvSinLimite ? (matching.cantidadSurtida || 0) : Math.min(cantidadFinal, matching.cantidadSurtida || 0))
       : 0
 
+    // SKUs alternativos (cualquiera de ellos sirve para este mismo renglón).
+    // Campo opcional/aditivo: se limpia igual que el SKU principal y se
+    // descartan silenciosamente los que no sean válidos.
+    const modelosAlternativos = Array.isArray(tv.modelosAlternativos)
+      ? tv.modelosAlternativos
+          .map((m) => (typeof m === 'string' ? m.trim().toUpperCase() : ''))
+          .filter((m) => SKU_REGEX.test(m) && m !== modelo)
+      : []
+
     tvsLimpias.push({
       marca: tv.marca,
       pulgadas,
       modelo,
+      modelosAlternativos,
       cantidad: cantidadFinal,
       unidad,
       sinLimite: tvSinLimite,

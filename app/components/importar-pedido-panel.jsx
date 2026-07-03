@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect } from 'react'
 import * as XLSX from 'xlsx'
-import { parsearTexto, filasAItems, aplicarCatalogo } from '@/lib/importar-pedido'
+import { parsearTexto, filasAItems, aplicarCatalogo, parsearBloqueAlternativas } from '@/lib/importar-pedido'
 import { IconAlert, IconClipboard, IconExcel, IconDocument, IconCheck, IconClose, IconPlus } from './icons'
 
 const TABS = [
@@ -56,20 +56,26 @@ export default function ImportarPedidoPanel({ onImportar }) {
     setError('')
   }
 
-  const cargarFilas = (filas) => {
-    const nuevos = aplicarCatalogo(filasAItems(filas), catalogoRef.current)
-    if (!nuevos.length) {
+  const cargarFilas = (filas, crudo) => {
+    if (!filas.length) {
+      const bloque = parsearBloqueAlternativas(crudo || '')
+      if (bloque) {
+        setError('')
+        setItems(aplicarCatalogo(bloque, catalogoRef.current))
+        return
+      }
       setError('No se encontraron renglones. Revisa que sean columnas Marca / Modelo / Cantidad.')
       setItems([])
       return
     }
+    const nuevos = aplicarCatalogo(filasAItems(filas), catalogoRef.current)
     setError('')
     setItems(nuevos)
   }
 
   const onPegar = (valor) => {
     setTexto(valor)
-    if (valor.trim()) cargarFilas(parsearTexto(valor))
+    if (valor.trim()) cargarFilas(parsearTexto(valor), valor)
     else setItems([])
   }
 
@@ -85,7 +91,7 @@ export default function ImportarPedidoPanel({ onImportar }) {
       const lineas = aoa
         .map((fila) => (Array.isArray(fila) ? fila.map((c) => (c == null ? '' : String(c))).join('\t') : ''))
         .join('\n')
-      cargarFilas(parsearTexto(lineas))
+      cargarFilas(parsearTexto(lineas), lineas)
     } catch {
       setError('No se pudo leer el archivo de Excel.')
     } finally {
@@ -107,12 +113,13 @@ export default function ImportarPedidoPanel({ onImportar }) {
           if (m.status === 'recognizing text') setProgreso(Math.round(m.progress * 100))
         },
       })
-      const filas = parsearTexto(data.text || '')
-      if (!filas.length) {
+      const crudo = data.text || ''
+      const filas = parsearTexto(crudo)
+      if (!filas.length && !parsearBloqueAlternativas(crudo)) {
         setError('No se pudo leer la tabla de la foto. Prueba con una imagen más nítida, o usa Pegar/Excel.')
         setItems([])
       } else {
-        cargarFilas(filas)
+        cargarFilas(filas, crudo)
       }
     } catch (err) {
       setError(err?.message || 'No se pudo procesar la imagen')
@@ -222,7 +229,12 @@ export default function ImportarPedidoPanel({ onImportar }) {
                       <td className={it._flags.marcaOk ? '' : 'celda-revisar'}>
                         {it.marca || '—'} {it._flags.marcaOk ? <IconCheck width={12} height={12} /> : null}
                       </td>
-                      <td className={it._flags.skuOk ? '' : 'celda-revisar'}>{it.modelo || '—'}</td>
+                      <td className={it._flags.skuOk ? '' : 'celda-revisar'}>
+                        {it.modelo || '—'}
+                        {it.modelosAlternativos?.length > 0 && (
+                          <span className="importar-alt-hint"> (+{it.modelosAlternativos.length} alt.)</span>
+                        )}
+                      </td>
                       <td className={it._flags.pulgadasOk ? '' : 'celda-revisar'}>
                         {it._flags.pulgadasOk ? `${it.pulgadas}"` : '?'}
                       </td>

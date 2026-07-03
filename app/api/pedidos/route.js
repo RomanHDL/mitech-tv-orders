@@ -63,12 +63,21 @@ export async function POST(req) {
       return NextResponse.json({ error: `TV #${i + 1}: cantidad inválida` }, { status: 400 })
     }
     const unidad = UNIDADES.includes(tv.unidad) ? tv.unidad : 'pieza'
+    // SKUs alternativos (cualquiera de ellos sirve para este mismo renglón).
+    // Campo opcional/aditivo: se limpia igual que el SKU principal y se
+    // descartan silenciosamente los que no sean válidos.
+    const modelosAlternativos = Array.isArray(tv.modelosAlternativos)
+      ? tv.modelosAlternativos
+          .map((m) => (typeof m === 'string' ? m.trim().toUpperCase() : ''))
+          .filter((m) => SKU_REGEX.test(m) && m !== sku)
+      : []
     // Las TVs "Sin límite" se guardan con cantidad: 0. El total del pedido
     // lo lleva cantidadTotal (a nivel pedido), no la suma de cantidades.
     tvsLimpias.push({
       marca: tv.marca,
       pulgadas,
       modelo: sku,
+      modelosAlternativos,
       cantidad: tvSinLimite ? 0 : cantidad,
       unidad,
       sinLimite: tvSinLimite,

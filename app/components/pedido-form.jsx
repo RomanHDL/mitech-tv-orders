@@ -6,7 +6,7 @@ import { MARCAS, PULGADAS, CONDICIONES, SKU_REGEX } from '@/lib/catalogos'
 import { IconAlert, IconArrowRight, IconBox, IconClose, IconPlus } from './icons'
 import ImportarPedidoPanel from './importar-pedido-panel'
 
-const tvVacia = () => ({ marca: '', pulgadas: '', modelo: '', cantidad: 1, unidad: 'pieza', sinLimite: false })
+const tvVacia = () => ({ marca: '', pulgadas: '', modelo: '', cantidad: 1, unidad: 'pieza', sinLimite: false, modelosAlternativos: [] })
 
 export default function PedidoForm({
   initialData,
@@ -34,6 +34,7 @@ export default function PedidoForm({
           cantidad: tv.cantidad || 1,
           unidad: tv.unidad || 'pieza',
           sinLimite: Boolean(tv.sinLimite),
+          modelosAlternativos: Array.isArray(tv.modelosAlternativos) ? tv.modelosAlternativos : [],
         }))
       : [tvVacia()]
   )
@@ -157,6 +158,7 @@ export default function PedidoForm({
       cantidad: it.cantidad || 1,
       unidad: it.unidad || 'pieza',
       sinLimite: false,
+      modelosAlternativos: it.modelosAlternativos || [],
     }))
     setTvs((prev) => {
       const soloVacia = prev.length === 1 && !prev[0].marca && !prev[0].modelo
@@ -213,6 +215,7 @@ export default function PedidoForm({
           cantidad: tv.sinLimite ? (limite > 0 ? limite : 0) : Number(tv.cantidad),
           unidad: tv.unidad === 'pallet' ? 'pallet' : 'pieza',
           sinLimite: !!tv.sinLimite,
+          modelosAlternativos: tv.modelosAlternativos || [],
         })),
       })
     } catch (err) {
@@ -447,6 +450,11 @@ export default function PedidoForm({
                       />
                     )}
                   </div>
+                  {tv.modelosAlternativos?.length > 0 && (
+                    <div className="tv-alt-hint">
+                      También válido: {tv.modelosAlternativos.join(', ')}
+                    </div>
+                  )}
                 </div>
               )
             })}
