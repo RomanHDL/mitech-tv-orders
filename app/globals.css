@@ -1209,6 +1209,65 @@ select.select-dueno {
   text-transform: uppercase;
 }
 
+/* ─── Pedidos en vivo (WMS) ────────────────────────────── */
+
+.badge-estatus {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border: 1.5px solid var(--black);
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: #fff;
+  color: var(--text-muted);
+}
+.badge-estatus.recibido { background: var(--primary-light); color: var(--primary-hover); }
+.badge-estatus.proceso { background: var(--yellow); color: var(--black); }
+.badge-estatus.listo { background: var(--primary); color: #fff; }
+.badge-estatus.enviado { background: var(--green); color: #fff; }
+.badge-estatus.cancelado,
+.badge-estatus.problema { background: var(--red); color: #fff; }
+
+.fila-detalle td {
+  background: var(--yellow-soft);
+  padding: 1rem 1.25rem !important;
+}
+.detalle-cargando,
+.detalle-error,
+.detalle-vacio {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+.detalle-error { color: var(--red-dark); font-weight: 600; }
+
+.tabla-detalle-items {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.tabla-detalle-items th {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-subtle);
+  border-bottom: 1.5px solid var(--black);
+}
+.tabla-detalle-items td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--yellow-light);
+}
+.tabla-detalle-items tr:last-child td { border-bottom: none; }
+
 /* ─── Historial ────────────────────────────────────────── */
 
 .historial-grupos {

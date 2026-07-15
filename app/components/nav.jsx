@@ -17,6 +17,7 @@ const LINKS_POR_ROL = {
   admin: [
     { href: '/', label: 'Nuevo' },
     { href: '/pedidos', label: 'Pedidos' },
+    { href: '/pedidos-live', label: 'Pedidos en vivo' },
     { href: '/historial', label: 'Historial' },
     { href: '/surtir', label: 'Surtir' },
     { href: '/admin/catalogo-onn', label: 'Catálogo ONN' },
