@@ -5,6 +5,7 @@
 // /api/admin/catalogo-onn — ver Fase 5: se abrió lectura a capturista).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
+import { useTranslation } from 'react-i18next'
 import { AlertCircle, Check, Clipboard, FileSpreadsheet, FileImage, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,12 +17,13 @@ import {
 } from '@shared/import-pedido'
 
 const TABS = [
-  { id: 'pegar', label: 'Pegar', Icon: Clipboard },
-  { id: 'excel', label: 'Excel', Icon: FileSpreadsheet },
-  { id: 'foto', label: 'Foto', Icon: FileImage },
+  { id: 'pegar', key: 'importar.tabPegar', Icon: Clipboard },
+  { id: 'excel', key: 'importar.tabExcel', Icon: FileSpreadsheet },
+  { id: 'foto', key: 'importar.tabFoto', Icon: FileImage },
 ] as const
 
 export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items: ItemImportado[]) => void }) {
+  const { t } = useTranslation()
   const [abierto, setAbierto] = useState(false)
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('pegar')
   const [texto, setTexto] = useState('')
@@ -70,7 +72,7 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
         setItems(aplicarCatalogo(bloque, catalogoRef.current))
         return
       }
-      setError('No se encontraron renglones. Revisa que sean columnas Marca / Modelo / Cantidad.')
+      setError(t('importar.errSinRenglones'))
       setItems([])
       return
     }
@@ -96,7 +98,7 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
       const lineas = aoa.map((fila) => (Array.isArray(fila) ? fila.map((c) => (c == null ? '' : String(c))).join('\t') : '')).join('\n')
       cargarFilas(parsearTexto(lineas), lineas)
     } catch {
-      setError('No se pudo leer el archivo de Excel.')
+      setError(t('importar.errExcel'))
     } finally {
       if (excelRef.current) excelRef.current.value = ''
     }
@@ -119,13 +121,13 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
       const crudo = data.text || ''
       const filas = parsearTexto(crudo)
       if (!filas.length && !parsearBloqueAlternativas(crudo)) {
-        setError('No se pudo leer la tabla de la foto. Prueba con una imagen más nítida, o usa Pegar/Excel.')
+        setError(t('importar.errFoto'))
         setItems([])
       } else {
         cargarFilas(filas, crudo)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo procesar la imagen')
+      setError(err instanceof Error ? err.message : t('importar.errProcesarImagen'))
       setItems([])
     } finally {
       setCargando(false)
@@ -145,8 +147,8 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
     return (
       <Button type="button" variant="secondary" className="w-full" onClick={() => setAbierto(true)}>
         <Plus className="h-4 w-4" />
-        Importar pedido en lote
-        <span className="text-xs text-muted-foreground">pegar · Excel · foto</span>
+        {t('importar.importarEnLote')}
+        <span className="text-xs text-muted-foreground">{t('importar.metodos')}</span>
       </Button>
     )
   }
@@ -154,7 +156,7 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
   return (
     <div className="rounded-md border p-3">
       <div className="mb-2 flex items-center justify-between">
-        <strong className="text-sm">Importar pedido</strong>
+        <strong className="text-sm">{t('importar.importarPedido')}</strong>
         <button
           type="button"
           className="flex items-center gap-1 text-xs text-muted-foreground"
@@ -163,12 +165,12 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
             setAbierto(false)
           }}
         >
-          <X className="h-3.5 w-3.5" /> Cerrar
+          <X className="h-3.5 w-3.5" /> {t('common.cerrar')}
         </button>
       </div>
 
       <div className="mb-2 flex gap-1 rounded-md bg-secondary p-1">
-        {TABS.map(({ id, label, Icon }) => (
+        {TABS.map(({ id, key, Icon }) => (
           <button
             key={id}
             type="button"
@@ -176,7 +178,7 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
             onClick={() => setTab(id)}
           >
             <Icon className="h-4 w-4" />
-            {label}
+            {t(key)}
           </button>
         ))}
       </div>
@@ -186,7 +188,7 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
           className="w-full rounded-md border border-input bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           value={texto}
           onChange={(e) => onPegar(e.target.value)}
-          placeholder={'Pega aquí (copiado de Excel o WhatsApp). Una TV por renglón:\nHISENSE\t32H40G\t66\nONN\t100012585\t194'}
+          placeholder={t('importar.pegarPlaceholder')}
           rows={6}
         />
       )}
@@ -195,9 +197,9 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
         <div className="rounded-md border border-dashed p-4 text-center">
           <input ref={excelRef} type="file" accept=".xlsx,.xls,.csv" onChange={onExcel} hidden />
           <Button type="button" variant="secondary" onClick={() => excelRef.current?.click()}>
-            <FileSpreadsheet className="h-4 w-4" /> Elegir archivo .xlsx / .csv
+            <FileSpreadsheet className="h-4 w-4" /> {t('importar.elegirExcel')}
           </Button>
-          <p className="mt-1 text-xs text-muted-foreground">Columnas: Marca · Modelo · Cantidad</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('importar.columnasExcel')}</p>
         </div>
       )}
 
@@ -206,9 +208,9 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
           <input ref={fotoRef} type="file" accept="image/*" onChange={onFoto} hidden />
           <Button type="button" variant="secondary" onClick={() => fotoRef.current?.click()} disabled={cargando}>
             <FileImage className="h-4 w-4" />
-            {cargando ? `Leyendo foto… ${progreso}%` : 'Elegir foto del pedido'}
+            {cargando ? t('importar.leyendoFoto', { pct: progreso }) : t('importar.elegirFoto')}
           </Button>
-          <p className="mt-1 text-xs text-muted-foreground">Lee la tabla de la foto gratis. Revisa los renglones marcados antes de importar.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('importar.hintFoto')}</p>
         </div>
       )}
 
@@ -222,19 +224,17 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
       {items.length > 0 && (
         <>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>
-              <strong>{items.length}</strong> renglones · <strong>{totalPiezas}</strong> piezas
-            </span>
-            {conRevisar > 0 && <span className="font-semibold text-destructive">{conRevisar} por revisar</span>}
+            <span>{t('importar.resumen', { renglones: items.length, piezas: totalPiezas })}</span>
+            {conRevisar > 0 && <span className="font-semibold text-destructive">{t('importar.porRevisar', { count: conRevisar })}</span>}
           </div>
           <div className="mt-2 max-h-64 overflow-auto rounded-md border">
             <table className="w-full text-xs">
               <thead className="sticky top-0 bg-secondary">
                 <tr>
-                  <th className="p-1.5 text-left">Marca</th>
+                  <th className="p-1.5 text-left">{t('pedidoForm.marca')}</th>
                   <th className="p-1.5 text-left">SKU</th>
-                  <th className="p-1.5 text-left">Pulg.</th>
-                  <th className="p-1.5 text-left">Cant.</th>
+                  <th className="p-1.5 text-left">{t('importar.pulgAbrev')}</th>
+                  <th className="p-1.5 text-left">{t('importar.cantAbrev')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -245,7 +245,7 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
                     </td>
                     <td className={`p-1.5 ${it._flags.skuOk ? '' : 'bg-destructive/10'}`}>
                       {it.modelo || '—'}
-                      {it.modelosAlternativos?.length > 0 && <span className="text-muted-foreground"> (+{it.modelosAlternativos.length} alt.)</span>}
+                      {it.modelosAlternativos?.length > 0 && <span className="text-muted-foreground"> {t('importar.masAlternativos', { count: it.modelosAlternativos.length })}</span>}
                     </td>
                     <td className={`p-1.5 ${it._flags.pulgadasOk ? '' : 'bg-destructive/10'}`}>{it._flags.pulgadasOk ? `${it.pulgadas}"` : '?'}</td>
                     <td className="p-1.5">{it.cantidad}</td>
@@ -256,7 +256,7 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
           </div>
           <Button type="button" className="mt-2 w-full" onClick={confirmar}>
             <Check className="h-4 w-4" />
-            Importar {items.length} {items.length === 1 ? 'TV' : 'TVs'}
+            {t('importar.importarBoton', { count: items.length })}
           </Button>
         </>
       )}

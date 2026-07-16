@@ -12,7 +12,5 @@ export default function NuevoPedido() {
     setLocation(`/pedidos/${id}/imprimir`)
   }
 
-  return (
-    <PedidoForm titulo="Nuevo pedido" subtitulo="Captura las TVs que se incluyen en este pedido." submitLabel="Crear pedido" onSubmit={enviar} />
-  )
+  return <PedidoForm onSubmit={enviar} />
 }

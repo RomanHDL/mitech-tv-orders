@@ -3,12 +3,14 @@
 // (filtrado server-side en GET /api/surtir).
 import { useMemo, useState } from 'react'
 import { Link } from 'wouter'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Box, Check, Clipboard } from 'lucide-react'
 import { progresoPct, totalRequerido, totalSurtido, formatearFechaLimite } from '@/lib/pedido-stats'
 import type { PedidoConTvs } from '@shared/schema'
 
 export default function Surtir() {
+  const { t } = useTranslation()
   const { data: pedidos = [], isLoading } = useQuery<PedidoConTvs[]>({
     queryKey: ['/api/surtir'],
     refetchInterval: 5000,
@@ -34,9 +36,9 @@ export default function Surtir() {
   return (
     <main className="mx-auto max-w-5xl p-4 sm:p-6">
       <div className="mb-4">
-        <h1 className="font-display text-3xl text-primary">Surtir pedidos</h1>
+        <h1 className="font-display text-3xl text-primary">{t('surtir.titulo')}</h1>
         <p className="text-muted-foreground">
-          {pendientes.length === 0 ? 'No hay pedidos pendientes por surtir.' : `${pendientes.length} ${pendientes.length === 1 ? 'pedido pendiente' : 'pedidos pendientes'}`}
+          {pendientes.length === 0 ? t('surtir.sinPendientes') : t('surtir.pedidosPendientes', { count: pendientes.length })}
         </p>
       </div>
 
@@ -47,7 +49,7 @@ export default function Surtir() {
             className="rounded-md border bg-secondary px-3 py-1.5 text-sm font-medium"
             onClick={() => setVerCompletados((v) => !v)}
           >
-            {verCompletados ? 'Ocultar' : 'Mostrar'} completados ({completados.length})
+            {verCompletados ? t('surtir.ocultarCompletados', { count: completados.length }) : t('surtir.mostrarCompletados', { count: completados.length })}
           </button>
         </div>
       )}
@@ -55,8 +57,8 @@ export default function Surtir() {
       {lista.length === 0 ? (
         <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
           <Clipboard className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-2 text-lg font-semibold">No hay pedidos pendientes</h3>
-          <p className="text-muted-foreground">Todos los pedidos ya fueron surtidos.</p>
+          <h3 className="mt-2 text-lg font-semibold">{t('surtir.sinPendientesTitulo')}</h3>
+          <p className="text-muted-foreground">{t('surtir.todoSurtido')}</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -65,7 +67,7 @@ export default function Surtir() {
             const surt = totalSurtido(p.televisiones)
             const pct = progresoPct(p)
             const completado = req > 0 && surt >= req
-            const marcas = new Set(p.televisiones.map((t) => t.marca).filter(Boolean)).size
+            const marcas = new Set(p.televisiones.map((tv) => tv.marca).filter(Boolean)).size
             const totalPallets = p.televisiones.reduce((s, tv) => s + (tv.unidad === 'pallet' ? tv.cantidad || 0 : 0), 0)
             const totalPiezas = p.televisiones.reduce((s, tv) => s + (tv.unidad !== 'pallet' ? tv.cantidad || 0 : 0), 0)
             return (
@@ -93,12 +95,10 @@ export default function Surtir() {
                     <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="mt-1 flex items-center justify-between text-sm">
-                    <span>
-                      <strong>{surt}</strong> de <strong>{req}</strong> surtidas
-                    </span>
+                    <span>{t('surtir.deSurtidas', { surt, req })}</span>
                     {completado ? (
                       <span className="flex items-center gap-1 font-semibold text-success">
-                        <Check className="h-3.5 w-3.5" /> Listo
+                        <Check className="h-3.5 w-3.5" /> {t('surtir.listo')}
                       </span>
                     ) : (
                       <span className="font-semibold">{pct}%</span>
@@ -106,16 +106,14 @@ export default function Surtir() {
                   </div>
 
                   <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span>
-                      {marcas} {marcas === 1 ? 'marca' : 'marcas'}
-                    </span>
+                    <span>{t('surtir.marcasCount', { count: marcas })}</span>
                     {totalPallets > 0 && (
                       <span className="flex items-center gap-1">
-                        <Box className="h-3 w-3" /> {totalPallets} {totalPallets === 1 ? 'pallet' : 'pallets'}
+                        <Box className="h-3 w-3" /> {t('surtir.palletsCount', { count: totalPallets })}
                       </span>
                     )}
-                    {totalPiezas > 0 && <span>{totalPiezas} {totalPiezas === 1 ? 'pieza' : 'piezas'}</span>}
-                    {p.fechaLimite && <span>Límite: {formatearFechaLimite(p.fechaLimite)}</span>}
+                    {totalPiezas > 0 && <span>{t('surtir.piezasCount', { count: totalPiezas })}</span>}
+                    {p.fechaLimite && <span>{t('surtir.limite', { fecha: formatearFechaLimite(p.fechaLimite) })}</span>}
                   </div>
                 </a>
               </Link>

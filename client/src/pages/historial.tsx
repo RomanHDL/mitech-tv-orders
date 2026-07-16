@@ -3,6 +3,7 @@
 // Reusa GET /api/surtir (mismo filtro de dueño que la cola de surtido).
 import { useMemo, useState } from 'react'
 import { Link } from 'wouter'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Box, Check, ChevronDown, Printer, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -29,6 +30,7 @@ type Grupo = {
 }
 
 export default function Historial() {
+  const { t } = useTranslation()
   const { data: pedidos = [], isLoading } = useQuery<PedidoConTvs[]>({ queryKey: ['/api/surtir'] })
   const [busqueda, setBusqueda] = useState('')
   const [expandido, setExpandido] = useState<Set<string>>(new Set())
@@ -84,35 +86,35 @@ export default function Historial() {
   return (
     <main className="mx-auto max-w-6xl p-4 sm:p-6">
       <div className="mb-4">
-        <h1 className="font-display text-3xl text-primary">Historial</h1>
+        <h1 className="font-display text-3xl text-primary">{t('nav.historial')}</h1>
         <p className="text-muted-foreground">
-          {grupos.length === 0 ? 'Aún no hay pedidos registrados.' : `${grupos.length} ${grupos.length === 1 ? 'nombre de pedido' : 'nombres de pedido'} · ${pedidos.length} ${pedidos.length === 1 ? 'pedido' : 'pedidos'} en total`}
+          {grupos.length === 0 ? t('historial.sinRegistros') : t('historial.resumen', { grupos: grupos.length, pedidos: pedidos.length })}
         </p>
       </div>
 
       {grupos.length === 0 ? (
         <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
-          <p className="text-muted-foreground">Todavía no hay pedidos en el historial.</p>
+          <p className="text-muted-foreground">{t('historial.sinRegistrosCard')}</p>
         </div>
       ) : (
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar por nombre, número o condición…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="pl-9" />
+              <Input placeholder={t('historial.buscarPlaceholder')} value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="pl-9" />
             </div>
             <button type="button" className="rounded-md border bg-secondary px-3 py-2 text-sm font-medium" onClick={toggleTodos} disabled={gruposFiltrados.length === 0}>
-              {todoAbierto ? 'Colapsar todo' : 'Expandir todo'}
+              {todoAbierto ? t('historial.colapsarTodo') : t('historial.expandirTodo')}
             </button>
           </div>
 
           {gruposFiltrados.length === 0 ? (
-            <p className="p-6 text-center text-muted-foreground">No se encontró nada con &quot;{busqueda}&quot;.</p>
+            <p className="p-6 text-center text-muted-foreground">{t('historial.sinResultados', { busqueda })}</p>
           ) : (
             <div className="space-y-2">
               {gruposFiltrados.map((g) => {
                 const abierto = expandido.has(g.nombre)
-                const badge = badgeProgreso(g.progresoPct)
+                const badge = badgeProgreso(g.progresoPct, t)
                 return (
                   <div key={g.nombre} className="rounded-md border">
                     <button type="button" className="flex w-full items-center gap-3 p-3 text-left" onClick={() => toggle(g.nombre)} aria-expanded={abierto}>
@@ -120,9 +122,9 @@ export default function Historial() {
                       <div className="flex-1">
                         <h3 className="font-semibold">{g.nombre}</h3>
                         <span className="text-xs text-muted-foreground">
-                          {g.pedidos.length} {g.pedidos.length === 1 ? 'pedido' : 'pedidos'}
-                          {g.completados > 0 && ` · ${g.completados} completado${g.completados === 1 ? '' : 's'}`}
-                          {g.ultimaFecha && ` · último ${formatearFechaHora(g.ultimaFecha)}`}
+                          {t('historial.pedidosCount', { count: g.pedidos.length })}
+                          {g.completados > 0 && ` · ${t('historial.completadosCount', { count: g.completados })}`}
+                          {g.ultimaFecha && ` · ${t('historial.ultimo', { fecha: formatearFechaHora(g.ultimaFecha) })}`}
                         </span>
                       </div>
                       <span className="font-semibold">
@@ -138,25 +140,25 @@ export default function Historial() {
                         <table className="w-full min-w-[800px] text-sm">
                           <thead>
                             <tr className="text-left text-xs uppercase text-muted-foreground">
-                              <th className="p-2">N° Pedido</th>
-                              <th className="p-2">Fecha creación</th>
-                              <th className="p-2">Fecha límite</th>
-                              <th className="p-2">Tiempo restante</th>
-                              <th className="p-2">Dueño</th>
-                              <th className="p-2">Condiciones</th>
-                              <th className="p-2">Modelos</th>
-                              <th className="p-2">Total</th>
+                              <th className="p-2">{t('pedidos.colNumero')}</th>
+                              <th className="p-2">{t('pedidos.colFechaCreacion')}</th>
+                              <th className="p-2">{t('pedidos.colFechaLimite')}</th>
+                              <th className="p-2">{t('pedidos.colTiempoRestante')}</th>
+                              <th className="p-2">{t('pedidos.colDueno')}</th>
+                              <th className="p-2">{t('pedidoForm.condiciones')}</th>
+                              <th className="p-2">{t('pedidoForm.modelos')}</th>
+                              <th className="p-2">{t('pedidos.colTotal')}</th>
                               <th className="p-2" />
                             </tr>
                           </thead>
                           <tbody>
                             {g.pedidos.map((p) => {
                               const dias = diasHastaLimite(p.fechaLimite)
-                              const tiempo = tiempoRestanteTexto(dias)
+                              const tiempo = tiempoRestanteTexto(dias, t)
                               const req = totalRequerido(p)
                               const surt = totalSurtido(p.televisiones)
                               const pct = req > 0 ? Math.round((surt / req) * 100) : 0
-                              const badgeP = badgeProgreso(pct)
+                              const badgeP = badgeProgreso(pct, t)
                               return (
                                 <tr key={p.id} className="border-t">
                                   <td className="p-2 font-mono text-xs">{p.numeroPedido || '—'}</td>
@@ -187,7 +189,7 @@ export default function Historial() {
                                   <td className="p-2">
                                     <Link href={`/pedidos/${p.id}/imprimir`}>
                                       <a className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">
-                                        <Printer className="h-3 w-3" /> Imprimir
+                                        <Printer className="h-3 w-3" /> {t('common.imprimir')}
                                       </a>
                                     </Link>
                                   </td>

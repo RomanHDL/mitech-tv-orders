@@ -2,6 +2,7 @@
 // export Excel, reasignar dueño (admin) y print/editar/eliminar.
 import { useMemo, useState } from 'react'
 import { Link } from 'wouter'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, FileSpreadsheet, FileText, Package, Plus, Printer, Search, Trash2 } from 'lucide-react'
 import { apiRequest } from '@/lib/queryClient'
@@ -27,6 +28,7 @@ type UsuarioAsignable = { id: string; nombre: string; rol: string }
 export default function Pedidos() {
   const { usuario } = useAuth()
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
   const esAdmin = usuario?.rol === 'admin'
 
   const { data: pedidos = [], isLoading } = useQuery<PedidoConTvs[]>({ queryKey: ['/api/pedidos'] })
@@ -63,13 +65,13 @@ export default function Pedidos() {
   })
 
   async function eliminar(id: string, nombre: string) {
-    if (!confirm(`¿Eliminar el pedido "${nombre}"? Esta acción no se puede deshacer.`)) return
+    if (!confirm(t('pedidos.confirmarEliminar', { nombre }))) return
     setError('')
     setEliminandoId(id)
     try {
       await eliminarMutation.mutateAsync(id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar')
+      setError(err instanceof Error ? err.message : t('pedidos.errEliminar'))
     } finally {
       setEliminandoId(null)
     }
@@ -81,7 +83,7 @@ export default function Pedidos() {
     try {
       await duenoMutation.mutateAsync({ id: pedidoId, userId: userId || null })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo asignar dueño')
+      setError(err instanceof Error ? err.message : t('pedidos.errAsignarDueno'))
     } finally {
       setAsignandoId(null)
     }
@@ -92,20 +94,18 @@ export default function Pedidos() {
   return (
     <main className="mx-auto max-w-6xl p-4 sm:p-6">
       <div className="mb-4">
-        <h1 className="font-display text-3xl text-primary">Pedidos</h1>
-        <p className="text-muted-foreground">
-          {pedidos.length === 0 ? 'Aún no hay pedidos guardados.' : `${pedidos.length} ${pedidos.length === 1 ? 'pedido' : 'pedidos'} en total`}
-        </p>
+        <h1 className="font-display text-3xl text-primary">{t('nav.pedidos')}</h1>
+        <p className="text-muted-foreground">{pedidos.length === 0 ? t('pedidos.sinPedidos') : t('pedidos.totalPedidos', { count: pedidos.length })}</p>
       </div>
 
       {pedidos.length === 0 ? (
         <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
           <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-2 text-lg font-semibold">No hay pedidos aún</h3>
-          <p className="text-muted-foreground">Crea tu primer pedido para comenzar.</p>
+          <h3 className="mt-2 text-lg font-semibold">{t('pedidos.noHayPedidos')}</h3>
+          <p className="text-muted-foreground">{t('pedidos.creaPrimero')}</p>
           <Link href="/">
             <Button className="mt-4">
-              <Plus className="h-4 w-4" /> Nuevo pedido
+              <Plus className="h-4 w-4" /> {t('pedidoForm.nuevoPedido')}
             </Button>
           </Link>
         </div>
@@ -114,14 +114,14 @@ export default function Pedidos() {
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar por número, nombre o condición…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="pl-9" />
+              <Input placeholder={t('pedidos.buscarPlaceholder')} value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="pl-9" />
             </div>
             <Button variant="secondary" onClick={() => descargarPedidosXLSX(pedidosFiltrados)} disabled={pedidosFiltrados.length === 0}>
               <FileSpreadsheet className="h-4 w-4" /> Excel
             </Button>
             <Link href="/">
               <Button>
-                <Plus className="h-4 w-4" /> Nuevo pedido
+                <Plus className="h-4 w-4" /> {t('pedidoForm.nuevoPedido')}
               </Button>
             </Link>
           </div>
@@ -134,29 +134,29 @@ export default function Pedidos() {
           )}
 
           {pedidosFiltrados.length === 0 ? (
-            <p className="p-6 text-center text-muted-foreground">No se encontraron pedidos con &quot;{busqueda}&quot;.</p>
+            <p className="p-6 text-center text-muted-foreground">{t('pedidos.sinResultados', { busqueda })}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase text-muted-foreground">
-                    <th className="p-2">N° Pedido</th>
-                    <th className="p-2">Pedido</th>
-                    <th className="p-2">Fecha creación</th>
-                    <th className="p-2">Fecha límite</th>
-                    <th className="p-2">Tiempo restante</th>
-                    {esAdmin && <th className="p-2">Dueño</th>}
-                    <th className="p-2">Condiciones</th>
-                    <th className="p-2">Total</th>
+                    <th className="p-2">{t('pedidos.colNumero')}</th>
+                    <th className="p-2">{t('pedidos.colPedido')}</th>
+                    <th className="p-2">{t('pedidos.colFechaCreacion')}</th>
+                    <th className="p-2">{t('pedidos.colFechaLimite')}</th>
+                    <th className="p-2">{t('pedidos.colTiempoRestante')}</th>
+                    {esAdmin && <th className="p-2">{t('pedidos.colDueno')}</th>}
+                    <th className="p-2">{t('pedidoForm.condiciones')}</th>
+                    <th className="p-2">{t('pedidos.colTotal')}</th>
                     <th className="p-2" />
                   </tr>
                 </thead>
                 <tbody>
                   {pedidosFiltrados.map((p) => {
                     const pct = progresoPct(p)
-                    const badge = badgeProgreso(pct)
+                    const badge = badgeProgreso(pct, t)
                     const dias = diasHastaLimite(p.fechaLimite)
-                    const tiempo = tiempoRestanteTexto(dias)
+                    const tiempo = tiempoRestanteTexto(dias, t)
                     const surtido = totalSurtido(p.televisiones)
                     const requerido = totalRequerido(p)
                     return (
@@ -177,8 +177,8 @@ export default function Pedidos() {
                               {badge.label}
                             </span>
                             {tienePallets(p.televisiones) && (
-                              <span className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs" title="Incluye pallets">
-                                <Package className="h-3 w-3" /> Pallets
+                              <span className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs" title={t('pedidoForm.pallets')}>
+                                <Package className="h-3 w-3" /> {t('pedidoForm.pallets')}
                               </span>
                             )}
                           </div>
@@ -208,7 +208,7 @@ export default function Pedidos() {
                               disabled={asignandoId === p.id}
                               onChange={(e) => cambiarDueno(p.id, e.target.value)}
                             >
-                              <option value="">— sin dueño —</option>
+                              <option value="">{t('pedidos.sinDueno')}</option>
                               {usuarios.map((u) => (
                                 <option key={u.id} value={u.id}>
                                   {u.nombre} ({u.rol})
@@ -237,18 +237,18 @@ export default function Pedidos() {
                           <div className="flex flex-wrap gap-1">
                             <Link href={`/pedidos/${p.id}/imprimir`}>
                               <Button size="sm">
-                                <Printer className="h-3.5 w-3.5" /> Imprimir
+                                <Printer className="h-3.5 w-3.5" /> {t('common.imprimir')}
                               </Button>
                             </Link>
                             {esAdmin && (
                               <>
                                 <Link href={`/pedidos/${p.id}/editar`}>
                                   <Button size="sm" variant="secondary">
-                                    Editar
+                                    {t('common.editar')}
                                   </Button>
                                 </Link>
                                 <Button size="sm" variant="destructive" disabled={eliminandoId === p.id} onClick={() => eliminar(p.id, p.pedidoNombre)}>
-                                  <Trash2 className="h-3.5 w-3.5" /> {eliminandoId === p.id ? '…' : 'Eliminar'}
+                                  <Trash2 className="h-3.5 w-3.5" /> {eliminandoId === p.id ? '…' : t('common.eliminar')}
                                 </Button>
                               </>
                             )}

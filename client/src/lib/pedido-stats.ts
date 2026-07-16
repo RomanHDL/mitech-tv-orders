@@ -3,6 +3,11 @@
 // manda filas crudas y el cliente calcula (consistente con el resto de la SPA).
 import type { PedidoConTvs, TelevisionRow } from '@shared/schema'
 
+// `t` es opcional: si no se pasa (p. ej. en exportar-pedidos.ts, que corre
+// fuera de un componente React), cae al texto en español tal cual estaba
+// antes de la Fase 8 — no rompe llamadas existentes.
+type TFunc = (key: string, opts?: Record<string, unknown>) => string
+
 export function totalRequerido(pedido: PedidoConTvs) {
   const sumaCantidades = pedido.televisiones.reduce((s, tv) => s + (tv.cantidad || 0), 0)
   return typeof pedido.cantidadTotal === 'number' && pedido.cantidadTotal > 0 ? pedido.cantidadTotal : sumaCantidades
@@ -36,17 +41,17 @@ export function diasHastaLimite(fechaLimite: string | null): number | null {
   return Math.round((limite.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
 }
 
-export function tiempoRestanteTexto(dias: number | null): { texto: string; clase: string } {
-  if (dias === null) return { texto: '—', clase: 'sin-fecha' }
+export function tiempoRestanteTexto(dias: number | null, t?: TFunc): { texto: string; clase: string } {
+  if (dias === null) return { texto: t ? t('stats.sinFecha') : '—', clase: 'sin-fecha' }
   if (dias < 0) {
     const abs = Math.abs(dias)
-    return { texto: `Vencido (${abs} ${abs === 1 ? 'día' : 'días'})`, clase: 'vencido' }
+    return { texto: t ? t('stats.vencido', { count: abs }) : `Vencido (${abs} ${abs === 1 ? 'día' : 'días'})`, clase: 'vencido' }
   }
-  if (dias === 0) return { texto: 'Hoy', clase: 'urgente' }
-  if (dias === 1) return { texto: 'Mañana', clase: 'urgente' }
-  if (dias <= 3) return { texto: `${dias} días`, clase: 'urgente' }
-  if (dias <= 7) return { texto: `${dias} días`, clase: 'cercano' }
-  return { texto: `${dias} días`, clase: 'normal' }
+  if (dias === 0) return { texto: t ? t('stats.hoy') : 'Hoy', clase: 'urgente' }
+  if (dias === 1) return { texto: t ? t('stats.manana') : 'Mañana', clase: 'urgente' }
+  if (dias <= 3) return { texto: t ? t('stats.dias', { count: dias }) : `${dias} días`, clase: 'urgente' }
+  if (dias <= 7) return { texto: t ? t('stats.dias', { count: dias }) : `${dias} días`, clase: 'cercano' }
+  return { texto: t ? t('stats.dias', { count: dias }) : `${dias} días`, clase: 'normal' }
 }
 
 export function formatearFechaLimite(iso: string | null): string {
@@ -69,8 +74,8 @@ export function formatearFechaHora(fecha: string | Date): string {
   }).format(f)
 }
 
-export function badgeProgreso(pct: number): { label: string; clase: string } {
-  if (pct >= 100) return { label: 'Completado', clase: 'completo' }
+export function badgeProgreso(pct: number, t?: TFunc): { label: string; clase: string } {
+  if (pct >= 100) return { label: t ? t('stats.completado') : 'Completado', clase: 'completo' }
   if (pct > 0) return { label: `${pct}%`, clase: 'parcial' }
-  return { label: 'Pendiente', clase: 'pendiente' }
+  return { label: t ? t('stats.pendiente') : 'Pendiente', clase: 'pendiente' }
 }

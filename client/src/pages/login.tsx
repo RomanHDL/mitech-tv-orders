@@ -3,6 +3,7 @@
 // app/login/login-cliente.jsx del app original.
 import { useEffect, useState } from 'react'
 import { useLocation } from 'wouter'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/use-auth'
 import { homeDelRol } from '@/lib/roles'
 import { Button } from '@/components/ui/button'
@@ -10,11 +11,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import LanguageSwitcher from '@/components/language-switcher'
 import { ApiError } from '@/lib/queryClient'
 
 export default function Login() {
   const { usuario, cargando, loginOidc, loginNfc, loginPin } = useAuth()
   const [, setLocation] = useLocation()
+  const { t } = useTranslation()
 
   const [email, setEmail] = useState('')
   const [pin, setPin] = useState('')
@@ -37,14 +40,14 @@ export default function Login() {
     e.preventDefault()
     setError('')
     if (!/^\d{6,}$/.test(pin.trim())) {
-      setError('El PIN debe ser mínimo 6 dígitos numéricos')
+      setError(t('login.pinInvalido'))
       return
     }
     setEnviando(true)
     try {
       await loginPin({ email: email.trim() || undefined, pin: pin.trim() })
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al iniciar sesión')
+      setError(err instanceof ApiError ? err.message : t('login.errorSesion'))
     } finally {
       setEnviando(false)
     }
@@ -67,66 +70,63 @@ export default function Login() {
           // serial a la cuenta una vez.
           const uid = event.serialNumber || ''
           if (!uid) {
-            setError('Este tag no expone un serial de hardware legible. Pide a un admin que lo vincule desde /admin/usuarios.')
+            setError(t('login.nfcSinSerial'))
             return
           }
           await loginNfc(uid)
         } catch (err) {
-          setError(err instanceof ApiError ? err.message : 'Error al iniciar sesión con NFC')
+          setError(err instanceof ApiError ? err.message : t('login.errorNfc'))
         } finally {
           setEscaneando(false)
         }
       }
     } catch {
-      setError('No se pudo activar el lector NFC (¿permiso denegado?)')
+      setError(t('login.nfcSinPermiso'))
       setEscaneando(false)
     }
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/10 via-background to-background p-4">
+      <div className="mb-3 flex justify-center">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle>MiTech Pedidos</CardTitle>
-          <CardDescription>Captura y surtido de pedidos de televisiones</CardDescription>
+          <CardTitle>{t('app.nombre')}</CardTitle>
+          <CardDescription>{t('app.descripcion')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="piso">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="oficina">Oficina</TabsTrigger>
-              <TabsTrigger value="piso">Piso</TabsTrigger>
+              <TabsTrigger value="oficina">{t('login.oficina')}</TabsTrigger>
+              <TabsTrigger value="piso">{t('login.piso')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="oficina" className="space-y-4 pt-4">
-              <p className="text-sm text-muted-foreground">
-                Admin y capturista entran con su cuenta de Nextcloud.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('login.oficinaDescripcion')}</p>
               <Button className="w-full" onClick={loginOidc}>
-                Entrar con Nextcloud
+                {t('login.entrarNextcloud')}
               </Button>
             </TabsContent>
 
             <TabsContent value="piso" className="space-y-4 pt-4">
-              <p className="text-sm text-muted-foreground">Surtidor: toca tu tag NFC o captura tu PIN.</p>
+              <p className="text-sm text-muted-foreground">{t('login.pisoDescripcion')}</p>
 
               {nfcDisponible && (
                 <Button className="w-full" variant="secondary" onClick={handleNfcScan} disabled={escaneando}>
-                  {escaneando ? 'Acerca tu tag…' : 'Tocar tag NFC'}
+                  {escaneando ? t('login.acercaTag') : t('login.tocarTagNfc')}
                 </Button>
               )}
-              {!nfcDisponible && (
-                <p className="text-xs text-muted-foreground">
-                  NFC no disponible en este navegador — usa tu PIN.
-                </p>
-              )}
+              {!nfcDisponible && <p className="text-xs text-muted-foreground">{t('login.nfcNoDisponible')}</p>}
 
               <form onSubmit={handlePinSubmit} className="space-y-3">
                 <div className="space-y-1">
-                  <Label htmlFor="email">Email (opcional si tu PIN es único)</Label>
+                  <Label htmlFor="email">{t('login.emailOpcional')}</Label>
                   <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="pin">PIN</Label>
+                  <Label htmlFor="pin">{t('login.pin')}</Label>
                   <Input
                     id="pin"
                     type="password"
@@ -137,7 +137,7 @@ export default function Login() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={enviando}>
-                  {enviando ? 'Entrando…' : 'Entrar con PIN'}
+                  {enviando ? t('login.entrando') : t('login.entrarConPin')}
                 </Button>
               </form>
             </TabsContent>

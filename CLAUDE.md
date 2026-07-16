@@ -46,6 +46,16 @@ drizzle/                migraciones SQL generadas (committeadas)
 - **API de pallets** (`server/integrations/palletApi.ts`): `appsc.mitechnologiesinc.com`.
   `Movimientos` y `ProductosMovidos` vienen como JSON string escapado — doble `JSON.parse`.
 
+## i18n (en / es-MX / zh-CN)
+
+Infraestructura completa (`client/src/i18n/`, selector persistido en localStorage vía
+`i18next-browser-languagedetector`, namespace `common` en `client/public/locales/{lng}/common.json`).
+Traducción real aplicada al flujo diario completo: login, nav, formulario de pedido + import en
+lote, lista de pedidos, surtir (cola + detalle), historial, comentarios. **Pendiente de traducir**
+(quedan en español, decisión de alcance por tiempo): las 3 pantallas de `/admin/*` (usuarios,
+catálogo ONN, tags), `/pedidos-live` (WMS) y la vista de impresión (`imprimir.tsx` — esta última
+intencionalmente: es para surtidores en piso en México, no para el switcher de idioma).
+
 ## Gotchas de esta máquina
 
 - No hay Docker, pero sí un **PostgreSQL 18 real** corriendo como servicio de Windows en

@@ -3,6 +3,7 @@
 // la fila por id (pedido_televisiones.id), no por índice de array.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'wouter'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { AlertCircle, ArrowLeft, Box, Check, Minus, Plus, Printer, RefreshCw } from 'lucide-react'
 import { apiRequest, ApiError } from '@/lib/queryClient'
@@ -26,6 +27,7 @@ type UltimaAccion = { tvId: string; valorAnterior: number; label: string } | nul
 export default function SurtirDetalle() {
   const { id } = useParams<{ id: string }>()
   const { usuario } = useAuth()
+  const { t } = useTranslation()
   const { data: pedido, isLoading } = useQuery<PedidoConTvs>({ queryKey: [`/api/pedidos/${id}`] })
 
   const [tvs, setTvs] = useState<TelevisionRow[]>([])
@@ -79,20 +81,20 @@ export default function SurtirDetalle() {
   }
 
   async function actualizar(tvId: string, valorBruto: number, opciones: { esUndo?: boolean; descripcion?: string } = {}) {
-    const tv = tvs.find((t) => t.id === tvId)
+    const tv = tvs.find((x) => x.id === tvId)
     if (!tv) return
     const limiteTv = tv.sinLimite ? Infinity : tv.cantidad
     const valor = Math.max(0, Math.min(limiteTv, Number(valorBruto) || 0))
     const valorAnterior = tv.cantidadSurtida || 0
     if (valor === valorAnterior) return
 
-    setTvs((prev) => prev.map((t) => (t.id === tvId ? { ...t, cantidadSurtida: valor } : t)))
+    setTvs((prev) => prev.map((x) => (x.id === tvId ? { ...x, cantidadSurtida: valor } : x)))
 
     if (!opciones.esUndo) {
       const delta = valor - valorAnterior
       const signo = delta > 0 ? '+' : ''
-      const desc = opciones.descripcion || 'esta TV'
-      registrarUndo({ tvId, valorAnterior, label: `${signo}${delta} en ${desc} (ahora ${valor}/${tv.cantidad})` })
+      const desc = opciones.descripcion || t('surtirDetalle.estaTv')
+      registrarUndo({ tvId, valorAnterior, label: t('surtirDetalle.undoLabel', { signo, delta, desc, valor, cantidad: tv.cantidad }) })
     }
 
     enVuelo.current += 1
@@ -111,19 +113,19 @@ export default function SurtirDetalle() {
     } catch (err) {
       enVuelo.current -= 1
       const valorPrevio = valoresServidor.current[tvId] ?? 0
-      setTvs((prev) => prev.map((t) => (t.id === tvId ? { ...t, cantidadSurtida: valorPrevio } : t)))
-      setError(err instanceof ApiError ? err.message : 'No se pudo guardar')
+      setTvs((prev) => prev.map((x) => (x.id === tvId ? { ...x, cantidadSurtida: valorPrevio } : x)))
+      setError(err instanceof ApiError ? err.message : t('common.errGuardar'))
       setEstadoGuardado('error')
     }
   }
 
   if (isLoading) return null
-  if (!pedido) return <main className="p-6">Pedido no encontrado.</main>
+  if (!pedido) return <main className="p-6">{t('surtirDetalle.noEncontrado')}</main>
 
   // Guardia de UX: capturista solo debe abrir lo suyo (la restricción real,
   // que importa, es server-side en el PATCH de surtido).
   if (usuario?.rol === 'capturista' && pedido.creadoPor !== usuario.id) {
-    return <main className="p-6">No autorizado para ver este pedido.</main>
+    return <main className="p-6">{t('surtirDetalle.noAutorizado')}</main>
   }
 
   return (
@@ -132,19 +134,19 @@ export default function SurtirDetalle() {
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/surtir">
             <a className="inline-flex min-h-9 items-center gap-1 rounded-md border bg-secondary px-3 py-1.5 text-sm">
-              <ArrowLeft className="h-3.5 w-3.5" /> Volver
+              <ArrowLeft className="h-3.5 w-3.5" /> {t('common.volver')}
             </a>
           </Link>
           <Link href={`/pedidos/${pedido.id}/imprimir`}>
             <a className="inline-flex min-h-9 items-center gap-1 rounded-md border bg-secondary px-3 py-1.5 text-sm">
-              <Printer className="h-3.5 w-3.5" /> Imprimir
+              <Printer className="h-3.5 w-3.5" /> {t('common.imprimir')}
             </a>
           </Link>
           {estadoGuardado !== 'idle' && (
             <span className="text-xs text-muted-foreground">
-              {estadoGuardado === 'guardando' && 'Guardando…'}
-              {estadoGuardado === 'guardado' && '✓ Guardado'}
-              {estadoGuardado === 'error' && '⚠ Error al guardar'}
+              {estadoGuardado === 'guardando' && t('common.guardando')}
+              {estadoGuardado === 'guardado' && t('common.guardadoCheck')}
+              {estadoGuardado === 'error' && t('common.errorGuardadoIcono')}
             </span>
           )}
         </div>
@@ -166,9 +168,7 @@ export default function SurtirDetalle() {
 
         <div className={`rounded-md border p-3 ${completado ? 'border-success bg-success/10' : ''}`}>
           <div className="flex items-center justify-between text-sm font-semibold">
-            <span>
-              {totalSurtido} <span className="font-normal text-muted-foreground">de</span> {totalRequerido} surtidas
-            </span>
+            <span>{t('surtirDetalle.deSurtidas', { surt: totalSurtido, req: totalRequerido })}</span>
             <span>{progreso}%</span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
@@ -176,7 +176,7 @@ export default function SurtirDetalle() {
           </div>
           {completado && (
             <div className="mt-1 flex items-center gap-1 text-sm font-semibold text-success">
-              <Check className="h-4 w-4" /> Pedido completo
+              <Check className="h-4 w-4" /> {t('surtirDetalle.pedidoCompleto')}
             </div>
           )}
         </div>
@@ -222,13 +222,13 @@ export default function SurtirDetalle() {
                         <span className="text-lg font-bold">{tv.pulgadas}&quot;</span>
                         {esPallet && (
                           <span className="flex items-center gap-1 rounded bg-accent/30 px-1.5 py-0.5 text-xs font-semibold">
-                            <Box className="h-3 w-3" /> Pallet
+                            <Box className="h-3 w-3" /> {t('pedidoForm.pallet')}
                           </span>
                         )}
                         {tv.modelo && <span className="font-mono text-sm">{tv.modelo}</span>}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {esSinLimite ? <strong>Sin límite</strong> : <><strong>{tv.cantidad}</strong> {unidadLabel(tv.cantidad, tv.unidad)}</>}
+                        {esSinLimite ? <strong>{t('pedidoForm.sinLimite')}</strong> : <><strong>{tv.cantidad}</strong> {unidadLabel(tv.cantidad, tv.unidad)}</>}
                       </div>
                     </div>
 
@@ -240,7 +240,7 @@ export default function SurtirDetalle() {
                           max={esSinLimite ? undefined : tv.cantidad}
                           value={surtida}
                           onChange={(e) => actualizar(tv.id, Number(e.target.value), { descripcion: descTv })}
-                          aria-label="Cantidad surtida"
+                          aria-label={t('surtirDetalle.cantidadSurtida')}
                           className="h-10 w-16 rounded-md border border-input bg-background px-2 text-center"
                         />
                         <span className="text-sm text-muted-foreground">{esSinLimite ? '/ ∞' : `/ ${tv.cantidad}`}</span>
@@ -250,22 +250,24 @@ export default function SurtirDetalle() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm(`¿Restar 1 ${unidadTxt} de ${descTv}?\n\nQuedará en ${surtida - 1}/${tv.cantidad}.`)) actualizar(tv.id, surtida - 1, { descripcion: descTv })
+                            if (confirm(t('surtirDetalle.confirmarRestar', { unidad: unidadTxt, desc: descTv, resultado: surtida - 1, cantidad: tv.cantidad })))
+                              actualizar(tv.id, surtida - 1, { descripcion: descTv })
                           }}
                           disabled={surtida === 0}
                           className="flex h-9 w-9 items-center justify-center rounded-md border disabled:opacity-40"
-                          aria-label="Restar uno"
+                          aria-label={t('surtirDetalle.restarUno')}
                         >
                           <Minus className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm(`¿Agregar 1 ${unidadTxt} a ${descTv}?\n\nQuedará en ${surtida + 1}/${tv.cantidad}.`)) actualizar(tv.id, surtida + 1, { descripcion: descTv })
+                            if (confirm(t('surtirDetalle.confirmarSumar', { unidad: unidadTxt, desc: descTv, resultado: surtida + 1, cantidad: tv.cantidad })))
+                              actualizar(tv.id, surtida + 1, { descripcion: descTv })
                           }}
                           disabled={completo}
                           className="flex h-9 w-9 items-center justify-center rounded-md border disabled:opacity-40"
-                          aria-label="Sumar uno"
+                          aria-label={t('surtirDetalle.sumarUno')}
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -274,23 +276,24 @@ export default function SurtirDetalle() {
                           onClick={() => {
                             if (esSinLimite) return
                             const restantes = tv.cantidad - surtida
-                            if (confirm(`¿Marcar como surtidas las ${restantes} ${unidadTxt} restantes de ${descTv}?\n\nQuedará en ${tv.cantidad}/${tv.cantidad}.`)) actualizar(tv.id, tv.cantidad, { descripcion: descTv })
+                            if (confirm(t('surtirDetalle.confirmarMarcarTodas', { restantes, unidad: unidadTxt, desc: descTv, cantidad: tv.cantidad })))
+                              actualizar(tv.id, tv.cantidad, { descripcion: descTv })
                           }}
                           disabled={completo || esSinLimite}
                           className="flex h-9 w-9 items-center justify-center rounded-md border bg-success/10 text-success disabled:opacity-40"
-                          aria-label="Marcar todas"
-                          title={esSinLimite ? 'No aplica (sin límite)' : 'Marcar todas'}
+                          aria-label={t('surtirDetalle.marcarTodas')}
+                          title={esSinLimite ? t('surtirDetalle.noAplicaSinLimite') : t('surtirDetalle.marcarTodas')}
                         >
                           <Check className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm(`¿Reiniciar el conteo de ${descTv}?\n\nSe borrarán las ${surtida} ${unidadTxt} ya marcadas.`)) actualizar(tv.id, 0, { descripcion: descTv })
+                            if (confirm(t('surtirDetalle.confirmarReiniciar', { desc: descTv, surtida, unidad: unidadTxt }))) actualizar(tv.id, 0, { descripcion: descTv })
                           }}
                           disabled={surtida === 0}
                           className="flex h-9 w-9 items-center justify-center rounded-md border disabled:opacity-40"
-                          aria-label="Reiniciar"
+                          aria-label={t('surtirDetalle.reiniciar')}
                         >
                           <RefreshCw className="h-4 w-4" />
                         </button>
@@ -311,7 +314,7 @@ export default function SurtirDetalle() {
             <span>{ultimaAccion.label}</span>
           </div>
           <button type="button" onClick={deshacer} className="shrink-0 rounded-md border px-2 py-1 text-sm font-semibold">
-            Deshacer
+            {t('common.deshacer')}
           </button>
         </div>
       )}

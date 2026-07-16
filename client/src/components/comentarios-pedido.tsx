@@ -1,6 +1,7 @@
 // Puerto de app/components/comentarios-pedido.jsx — textarea autoguardado
 // (debounce 800ms + guardar en blur) con estado idle/guardando/guardado/error.
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MessageSquare, Check, AlertCircle } from 'lucide-react'
 import { apiRequest, ApiError } from '@/lib/queryClient'
 
@@ -33,6 +34,7 @@ export default function ComentariosPedido({
   actualizadoIso?: string | null
   actualizadoPorNombre?: string | null
 }) {
+  const { t } = useTranslation()
   const [valor, setValor] = useState(comentariosIniciales)
   const [estado, setEstado] = useState<'idle' | 'guardando' | 'guardado' | 'error'>('idle')
   const [error, setError] = useState('')
@@ -63,7 +65,7 @@ export default function ComentariosPedido({
       clearTimeout(idleTimer.current)
       idleTimer.current = setTimeout(() => setEstado('idle'), 2500)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudo guardar')
+      setError(err instanceof ApiError ? err.message : t('common.errGuardar'))
       setEstado('error')
     }
   }
@@ -86,19 +88,19 @@ export default function ComentariosPedido({
     <section className="rounded-md border p-3">
       <div className="mb-2 flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-sm font-semibold">
-          <MessageSquare className="h-4 w-4" /> Comentarios del envío
+          <MessageSquare className="h-4 w-4" /> {t('comentarios.titulo')}
         </span>
         {estado !== 'idle' && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            {estado === 'guardando' && <>Guardando…</>}
+            {estado === 'guardando' && <>{t('common.guardando')}</>}
             {estado === 'guardado' && (
               <>
-                <Check className="h-3.5 w-3.5 text-success" /> Guardado
+                <Check className="h-3.5 w-3.5 text-success" /> {t('common.guardado')}
               </>
             )}
             {estado === 'error' && (
               <>
-                <AlertCircle className="h-3.5 w-3.5 text-destructive" /> Error
+                <AlertCircle className="h-3.5 w-3.5 text-destructive" /> {t('common.error')}
               </>
             )}
           </span>
@@ -109,7 +111,7 @@ export default function ComentariosPedido({
         value={valor}
         onChange={onChange}
         onBlur={onBlur}
-        placeholder="Escribe notas, instrucciones o avisos sobre este envío. Se guarda automáticamente."
+        placeholder={t('comentarios.placeholder')}
         rows={3}
         maxLength={MAX}
       />
@@ -117,12 +119,7 @@ export default function ComentariosPedido({
         <span>
           {valor.length}/{MAX}
         </span>
-        {fechaTxt && (
-          <span>
-            Última edición: {fechaTxt}
-            {metaPor ? ` · ${metaPor}` : ''}
-          </span>
-        )}
+        {fechaTxt && <span>{t('comentarios.ultimaEdicion', { fecha: fechaTxt, por: metaPor ? ` · ${metaPor}` : '' })}</span>}
       </div>
       {error && (
         <div className="mt-2 flex items-center gap-2 rounded-md border border-destructive bg-destructive/10 p-2 text-xs text-destructive">

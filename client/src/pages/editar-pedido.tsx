@@ -3,6 +3,7 @@
 // server (misma regla que el PUT original).
 import { useParams, useLocation } from 'wouter'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import PedidoForm, { type PedidoFormData } from '@/components/pedido-form'
 import { apiRequest } from '@/lib/queryClient'
 import type { PedidoConTvs } from '@shared/schema'
@@ -11,6 +12,7 @@ export default function EditarPedido() {
   const { id } = useParams<{ id: string }>()
   const [, setLocation] = useLocation()
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
 
   const { data: pedido, isLoading } = useQuery<PedidoConTvs>({ queryKey: [`/api/pedidos/${id}`] })
 
@@ -21,13 +23,13 @@ export default function EditarPedido() {
   }
 
   if (isLoading) return null
-  if (!pedido) return <main className="p-6">Pedido no encontrado.</main>
+  if (!pedido) return <main className="p-6">{t('editarPedido.noEncontrado')}</main>
 
   return (
     <PedidoForm
-      titulo={`Editar pedido: ${pedido.pedidoNombre}`}
-      subtitulo="Las cantidades surtidas se preservan donde el TV (marca, pulgadas, modelo, unidad) coincida."
-      submitLabel="Guardar cambios"
+      titulo={t('editarPedido.titulo', { nombre: pedido.pedidoNombre })}
+      subtitulo={t('editarPedido.subtitulo')}
+      submitLabel={t('editarPedido.guardarCambios')}
       cancelHref="/pedidos"
       initialData={{
         numeroPedido: pedido.numeroPedido,
