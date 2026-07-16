@@ -64,9 +64,13 @@ export const unidadEnum = pgEnum('unidad', UNIDADES)
 // como en lib/auth.js). Los dos dominios de correo de Nextcloud
 // (@miglobal.com.mx / @mitechnologiesinc.com) se canonicalizan en
 // server/auth antes de comparar contra `email` — no aquí.
+// `email` es nullable (a diferencia de la Fase 1): un surtidor puede
+// entrar solo con NFC/PIN sin tener email registrado — igual que en
+// lib/auth.js del app original. Un índice único en Postgres permite
+// múltiples NULL sin choque.
 export const usuarios = pgTable('usuarios', {
   id: uuid('id').primaryKey().defaultRandom(),
-  email: text('email').notNull(),
+  email: text('email'),
   nombre: text('nombre').notNull(),
   rol: rolEnum('rol').notNull(),
   oidcSub: text('oidc_sub'),

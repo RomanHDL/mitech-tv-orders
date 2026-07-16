@@ -63,9 +63,10 @@ router.get('/api/surtir', requireRole('admin', 'capturista', 'surtidor'), async 
 })
 
 // Usuarios asignables como dueño de un pedido (admin/capturista) — usado
-// por el <select> de dueño en la lista. GET /api/usuarios completo
-// (con más campos y CRUD) llega en la Fase 7; este endpoint es intencional-
-// mente angosto (solo id/nombre/rol).
+// por el <select> de dueño en la lista. El CRUD completo de usuarios vive
+// en server/routes/usuarios.ts (Fase 7); este endpoint es intencionalmente
+// angosto (solo id/nombre/rol) y se queda aquí porque es pedidos quien lo
+// consume.
 router.get('/api/usuarios/asignables', requireRole('admin'), async (_req, res) => {
   const filas = await db
     .select({ id: usuarios.id, nombre: usuarios.nombre, rol: usuarios.rol })

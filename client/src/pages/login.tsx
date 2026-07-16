@@ -59,18 +59,15 @@ export default function Login() {
       await reader.scan()
       reader.onreading = async (event: any) => {
         try {
-          let uid = ''
-          for (const record of event.message.records) {
-            if (record.recordType === 'text') {
-              const decoder = new TextDecoder(record.encoding || 'utf-8')
-              const texto = decoder.decode(record.data)
-              uid = texto.split('|')[0]?.trim() || texto.trim()
-              break
-            }
-          }
-          if (!uid) uid = event.serialNumber || ''
+          // El UID es el serial de hardware del tag (event.serialNumber) —
+          // el mismo valor que /admin/usuarios captura con "Escanear tag" y
+          // guarda en usuarios.nfcUid. A diferencia del app original (que
+          // codificaba "email|pin" como contenido NDEF del tag), aquí no
+          // hace falta escribir nada en el tag: basta con vincular su
+          // serial a la cuenta una vez.
+          const uid = event.serialNumber || ''
           if (!uid) {
-            setError('No se pudo leer el tag NFC')
+            setError('Este tag no expone un serial de hardware legible. Pide a un admin que lo vincule desde /admin/usuarios.')
             return
           }
           await loginNfc(uid)

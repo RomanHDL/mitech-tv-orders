@@ -5,6 +5,7 @@ import { registerAuthRoutes } from './auth'
 import { registerPedidosRoutes } from './pedidos'
 import { registerCatalogoOnnRoutes } from './catalogo-onn'
 import { registerPedidosLiveRoutes } from './pedidos-live'
+import { registerUsuariosRoutes } from './usuarios'
 import pkg from '../../package.json' with { type: 'json' }
 
 // Registra todos los routers de la app. Cada fase añade su propio
@@ -14,13 +15,14 @@ import pkg from '../../package.json' with { type: 'json' }
 //   Fase 4 -> /api/surtir (cola filtrada por dueño)               ✓
 //   Fase 5 -> GET /api/catalogo-onn (lectura, autofill de import)  ✓
 //   Fase 6 -> /api/pedidos-live (WMS: SQL Server + API de pallets) ✓
-//   Fase 7 -> /api/usuarios (CRUD completo), /api/admin/*, resto de catalogo-onn (CRUD)
+//   Fase 7 -> /api/usuarios (CRUD completo) + resto de catalogo-onn (CRUD) ✓
 //   Fase 9 -> /api/documentation/*, /api/changelog/*
 export async function registerRoutes(app: Express) {
   registerAuthRoutes(app)
   registerPedidosRoutes(app)
   registerCatalogoOnnRoutes(app)
   registerPedidosLiveRoutes(app)
+  registerUsuariosRoutes(app)
 
   // ── Discovery público (sin auth) ─────────────────────────────────────
   app.get('/api/public/health', async (_req, res) => {
