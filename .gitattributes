@@ -1,0 +1,3 @@
+# El shebang de docker-entrypoint.sh se rompe con CRLF dentro del contenedor
+# Linux — forzar LF sin importar el autocrlf de git en Windows.
+*.sh text eol=lf

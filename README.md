@@ -30,11 +30,14 @@ grande para surtidores.
 - Pedidos en vivo del WMS (`/pedidos-live`, solo admin): SQL Server de solo lectura + API de
   movimientos de pallets.
 - Administración: usuarios, catálogo ONN (autollenado de pulgadas al importar), tags NFC.
+- Manual de usuario (`/manual`): categorías/páginas bilingües ES/EN, buscable, con permisos por rol.
+- Changelog (`/changelog` + modal "novedades" al login): historial de versiones, descartable por usuario.
+- Trilingüe: en / es-MX / zh-CN (selector persistido).
 
 ## Correr en local
 
-Requiere una instancia de PostgreSQL 16 accesible (no hay Docker/`psql` en esta máquina —
-usar una remota, p. ej. la de Coolify dev).
+Requiere una instancia de PostgreSQL 16 accesible. En esta máquina no hay Docker, pero sí un
+Postgres 16+ real corriendo como servicio de Windows (ver `CLAUDE.md` para el detalle).
 
 ```bash
 npm install
@@ -49,8 +52,10 @@ Abrir http://localhost:3000
 
 ## Modelo de datos
 
-Ver `shared/schema.ts` (fuente única de verdad, con Drizzle + Zod). Tablas: `usuarios`,
-`pedidos`, `pedido_televisiones`, `catalogo_onn`, `session`.
+Ver `shared/schema.ts` (fuente única de verdad, con Drizzle + Zod) y el Developer Manual en
+`/developer-manual.md` (o `server/developer-manual.ts`) para el diccionario completo. Tablas:
+`usuarios`, `pedidos`, `pedido_televisiones`, `catalogo_onn`, `documentation_categories`,
+`documentation_pages`, `changelog_entries`, `changelog_items`, `changelog_dismissals`, `session`.
 
 ## Catálogos
 
@@ -60,5 +65,13 @@ código, igual que en el app original).
 
 ## Deploy
 
-Coolify (dev + dos apps: `mitech-tv-orders-dev` y prod), release vía `/approved`.
-Ver `CLAUDE.md` para el detalle de infraestructura.
+`Dockerfile` multi-stage + `docker-entrypoint.sh` (migra y arranca con `pm2-runtime`) +
+`ecosystem.config.cjs`. Coolify (dev + dos apps: `mitech-tv-orders-dev` y prod), release vía
+`/approved`. Checklist de infraestructura pendiente (SSO, apps de Coolify, variables de entorno)
+en `CLAUDE.md`.
+
+### Verificar el gate 12/12 del stack
+
+```bash
+npm run check:gate
+```

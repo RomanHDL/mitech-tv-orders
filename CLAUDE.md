@@ -56,6 +56,34 @@ lote, lista de pedidos, surtir (cola + detalle), historial, comentarios. **Pendi
 catálogo ONN, tags), `/pedidos-live` (WMS) y la vista de impresión (`imprimir.tsx` — esta última
 intencionalmente: es para surtidores en piso en México, no para el switcher de idioma).
 
+## Deploy — checklist de infraestructura (pendiente, requiere acceso que este
+## agente no tiene: Coolify, Nextcloud admin, DNS)
+
+Código y artefactos de deploy ya están listos y verificados (`Dockerfile`, `docker-entrypoint.sh`,
+`ecosystem.config.cjs`, `.dockerignore`). Se simuló el stage de runtime completo a mano en esta
+máquina (sin Docker instalado): `npm ci --omit=dev` + `node dist/migrate.js` + `pm2-runtime
+ecosystem.config.cjs` contra el Postgres real → healthcheck y SPA responden 200. Lo que falta es
+estrictamente infraestructura, no código:
+
+1. **SSO**: correr `provision-app-sso mitech-tv-orders` (inyecta `OIDC_ISSUER_URL/CLIENT_ID/
+   CLIENT_SECRET/REDIRECT_URI`). Gotcha ya documentado en el código: `skipUserProfile:false`.
+2. **Coolify**: crear las dos apps (`mitech-tv-orders-dev`, `mitech-tv-orders`) apuntando a este
+   repo — dev a la rama `rewrite-mi-stack`, prod a `main` (aún sin el cutover). Build con el
+   `Dockerfile` de la raíz. Postgres 16 por app (Coolify lo provisiona).
+3. **Variables de entorno** por app (vía status-dashboard, nunca por chat/email): `DATABASE_URL`
+   (la de Coolify, no la local), `SESSION_SECRET` (nueva, no reusar la de `.env.local`),
+   `OIDC_*` (del paso 1), `SQLSERVER_*` y `PALLET_API_URL` (mismos valores que hoy, WMS no cambia).
+4. **Opcional**: `provision-app-sentry mitech-tv-orders` (el `TODO` en `server/index.ts` ya
+   marca dónde va `Sentry.init()`). `provision-app-mattermost` si se quiere el canal `app-mitech-tv-orders`.
+5. **Primer release**: `/approved minor "Migración al MI Stack"` una vez que dev esté verificado.
+6. **Cutover**: solo después de que prod en Coolify esté verificado con datos reales, hacer merge
+   de `rewrite-mi-stack` → `main` y apagar el auto-deploy de Vercel (o simplemente dejar de usarlo).
+
+Se intentó autenticar el MCP "MI Global - MI Cloud" (agents.miglobal.com.mx) para hacer estos pasos
+en automático, pero la autorización no se propagó a las herramientas en esta sesión — Roman decidió
+seguir sin él por ahora. Si en una sesión futura ese MCP expone herramientas reales de Coolify, usarlas
+en vez de pedirle a un humano que corra estos pasos a mano.
+
 ## Gotchas de esta máquina
 
 - No hay Docker, pero sí un **PostgreSQL 18 real** corriendo como servicio de Windows en
