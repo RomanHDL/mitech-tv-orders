@@ -2,19 +2,21 @@ import type { Express } from 'express'
 import { pool } from '../db'
 import { STACK, toMarkdown } from '../stack'
 import { registerAuthRoutes } from './auth'
+import { registerPedidosRoutes } from './pedidos'
 import pkg from '../../package.json' with { type: 'json' }
 
 // Registra todos los routers de la app. Cada fase añade su propio
 // app.use('/api/...', router) aquí a medida que se construye:
 //   Fase 2 -> /auth + /api/auth/me (OIDC + NFC/PIN)              ✓
-//   Fase 3 -> /api/pedidos
-//   Fase 4 -> (mismo router de pedidos, PATCH de surtido)
+//   Fase 3 -> /api/pedidos (CRUD + surtido + comentarios + dueño) ✓
+//   Fase 4 -> UI de surtido/historial (mismos endpoints de arriba)
 //   Fase 5 -> import/export (sin endpoint propio; corre en cliente)
 //   Fase 6 -> /api/pedidos-live
-//   Fase 7 -> /api/usuarios, /api/admin/*
+//   Fase 7 -> /api/usuarios (CRUD completo), /api/admin/*
 //   Fase 9 -> /api/documentation/*, /api/changelog/*
 export async function registerRoutes(app: Express) {
   registerAuthRoutes(app)
+  registerPedidosRoutes(app)
 
   // ── Discovery público (sin auth) ─────────────────────────────────────
   app.get('/api/public/health', async (_req, res) => {

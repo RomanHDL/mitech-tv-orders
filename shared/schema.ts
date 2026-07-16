@@ -174,13 +174,21 @@ export const catalogoOnnInputSchema = z.object({
   pulgadas: z.coerce.number().refine((n) => (PULGADAS as readonly number[]).includes(n)),
 })
 
+export const duenoInputSchema = z.object({
+  userId: z.string().uuid().nullable(),
+})
+
 // ── Tipos ───────────────────────────────────────────────────────────────
 export type Usuario = z.infer<typeof selectUsuarioSchema>
 export type Rol = (typeof rolEnum.enumValues)[number]
-export type Pedido = z.infer<typeof selectPedidoSchema>
 export type TelevisionInput = z.infer<typeof televisionInputSchema>
 export type PedidoInput = z.infer<typeof pedidoInputSchema>
+export type TelevisionRow = typeof pedidoTelevisiones.$inferSelect
+// $inferSelect (no el Zod derivado de selectPedidoSchema) porque drizzle-zod
+// tipa las columnas `text().array()` como string simple, no string[] — ver
+// `condiciones`/`modelosAlternativos`.
+export type Pedido = typeof pedidos.$inferSelect
 
 // Forma "pedido + televisiones" tal como la consume el cliente (equivalente
 // al documento Mongo original, para minimizar cambios en la UI portada).
-export type PedidoConTvs = Pedido & { televisiones: (typeof pedidoTelevisiones.$inferSelect)[] }
+export type PedidoConTvs = Pedido & { televisiones: TelevisionRow[] }
