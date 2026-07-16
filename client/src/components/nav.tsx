@@ -17,13 +17,18 @@ const LINKS: Record<Rol, { href: string; key: string }[]> = {
     { href: '/pedidos-live', key: 'nav.pedidosEnVivo' },
     { href: '/admin/usuarios', key: 'nav.usuarios' },
     { href: '/admin/catalogo-onn', key: 'nav.catalogoOnn' },
+    { href: '/manual', key: 'nav.manual' },
   ],
   capturista: [
     { href: '/', key: 'nav.nuevoPedido' },
     { href: '/pedidos', key: 'nav.pedidos' },
     { href: '/surtir', key: 'nav.surtir' },
+    { href: '/manual', key: 'nav.manual' },
   ],
-  surtidor: [{ href: '/surtir', key: 'nav.surtir' }],
+  surtidor: [
+    { href: '/surtir', key: 'nav.surtir' },
+    { href: '/manual', key: 'nav.manual' },
+  ],
 }
 
 export default function Nav() {

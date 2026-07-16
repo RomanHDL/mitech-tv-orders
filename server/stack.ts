@@ -23,7 +23,12 @@ export const STACK = {
   database: {
     type: 'PostgreSQL 16',
     orm: 'Drizzle ORM + drizzle-zod',
-    tablas: ['usuarios', 'pedidos', 'pedido_televisiones', 'catalogo_onn', 'session'],
+    tablas: [
+      'usuarios', 'pedidos', 'pedido_televisiones', 'catalogo_onn',
+      'documentation_categories', 'documentation_pages',
+      'changelog_entries', 'changelog_items', 'changelog_dismissals',
+      'session',
+    ],
     notas: 'Normalizado desde el MongoDB original (arranque limpio, sin migración de datos).',
   },
 
@@ -54,6 +59,14 @@ export const STACK = {
     release: '/approved',
   },
 
+  gate12: {
+    modulos: [
+      'Developer Manual: /developer-manual.md, /api/developer-manual.json',
+      'User Manual: /manual (categorías + páginas bilingües ES/EN, búsqueda, rol-gated)',
+      'Changelog: /changelog, modal "novedades" al login, dismiss por usuario',
+    ],
+  },
+
   discovery: {
     HTML: '/stack',
     JSON: '/stack.json',
@@ -61,6 +74,9 @@ export const STACK = {
     Markdown: '/stack.md',
     'llms.txt': '/llms.txt',
     health: '/api/public/health',
+    'Developer Manual': '/developer-manual.md',
+    'User Manual': '/manual',
+    Changelog: '/changelog',
   },
 } as const
 
@@ -89,6 +105,9 @@ Idiomas: ${s.i18n.idiomas.join(', ')} — ${s.i18n.libreria}
 
 ## Deploy
 ${Object.entries(s.deploy).map(([k, v]) => `- **${k}**: ${v}`).join('\n')}
+
+## Gate 12/12
+${s.gate12.modulos.map((m) => `- ${m}`).join('\n')}
 
 ## Descubrimiento
 ${Object.entries(s.discovery).map(([k, v]) => `- **${k}**: \`${v}\``).join('\n')}

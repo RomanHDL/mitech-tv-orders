@@ -11,6 +11,7 @@
     "pedidosEnVivo": "Live orders",
     "usuarios": "Users",
     "catalogoOnn": "ONN catalog",
+    "manual": "Manual",
     "salir": "Log out"
   },
   "roles": {
@@ -223,5 +224,16 @@
     "titulo": "Shipment comments",
     "placeholder": "Write notes, instructions, or alerts about this shipment. Saved automatically.",
     "ultimaEdicion": "Last edited: {{fecha}}{{por}}"
+  },
+  "manual": {
+    "titulo": "User manual",
+    "buscar": "Search the manual…",
+    "sinResultados": "No results.",
+    "sinPaginas": "There are no pages in the manual yet."
+  },
+  "changelog": {
+    "titulo": "What's new",
+    "novedades": "What's new",
+    "entendido": "Got it"
   }
 }

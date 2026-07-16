@@ -182,6 +182,99 @@ export const duenoInputSchema = z.object({
   userId: z.string().uuid().nullable(),
 })
 
+// ── User Manual (gate check #11) ─────────────────────────────────────────
+// Versión deliberadamente angosta del modelo de 7 tablas que describe
+// apps.mi2.com.mx/stack (categories/pages/images/videos/history/views/links):
+// aquí solo van categorías + páginas — cubre "categorizado, jerárquico,
+// bilingüe, buscable, con permisos por rol" sin adjuntos multimedia ni
+// historial de revisiones (fuera de alcance de esta fase). Contenido
+// bilingüe con columnas *Es/*En en vez de filas separadas por idioma —
+// más simple de mantener sincronizado.
+export const documentationCategories = pgTable('documentation_categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  slug: text('slug').notNull(),
+  nombreEs: text('nombre_es').notNull(),
+  nombreEn: text('nombre_en').notNull(),
+  orden: integer('orden').notNull().default(0),
+  rolMinimo: rolEnum('rol_minimo'), // null = pública para cualquier rol logueado
+}, (t) => ({
+  slugUnique: uniqueIndex('documentation_categories_slug_unique').on(t.slug),
+}))
+
+export const documentationPages = pgTable('documentation_pages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  categoriaId: uuid('categoria_id').notNull().references(() => documentationCategories.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  tituloEs: text('titulo_es').notNull(),
+  tituloEn: text('titulo_en').notNull(),
+  contenidoEs: text('contenido_es').notNull(),
+  contenidoEn: text('contenido_en').notNull(),
+  orden: integer('orden').notNull().default(0),
+  actualizado: timestamp('actualizado', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  categoriaSlugUnique: uniqueIndex('documentation_pages_categoria_slug_unique').on(t.categoriaId, t.slug),
+}))
+
+export const documentationPageInputSchema = z.object({
+  categoriaId: z.string().uuid(),
+  slug: z.string().trim().toLowerCase().regex(/^[a-z0-9-]+$/, 'slug: solo minúsculas, números y guiones'),
+  tituloEs: z.string().trim().min(1),
+  tituloEn: z.string().trim().min(1),
+  contenidoEs: z.string().default(''),
+  contenidoEn: z.string().default(''),
+  orden: z.coerce.number().int().default(0),
+})
+
+export const documentationCategoryInputSchema = z.object({
+  slug: z.string().trim().toLowerCase().regex(/^[a-z0-9-]+$/, 'slug: solo minúsculas, números y guiones'),
+  nombreEs: z.string().trim().min(1),
+  nombreEn: z.string().trim().min(1),
+  orden: z.coerce.number().int().default(0),
+  rolMinimo: z.enum(['admin', 'capturista', 'surtidor']).nullable().optional(),
+})
+
+// ── Changelog (gate check #12) ────────────────────────────────────────────
+export const changelogCategoriaEnum = pgEnum('changelog_categoria', ['feature', 'improvement', 'bugfix', 'security'])
+export const changelogPrioridadEnum = pgEnum('changelog_prioridad', ['critical', 'high', 'normal', 'low'])
+
+export const changelogEntries = pgTable('changelog_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  version: text('version').notNull(),
+  tituloEs: text('titulo_es').notNull(),
+  tituloEn: text('titulo_en').notNull(),
+  categoria: changelogCategoriaEnum('categoria').notNull().default('feature'),
+  prioridad: changelogPrioridadEnum('prioridad').notNull().default('normal'),
+  publicadoEn: timestamp('publicado_en', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  versionUnique: uniqueIndex('changelog_entries_version_unique').on(t.version),
+}))
+
+export const changelogItems = pgTable('changelog_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  entryId: uuid('entry_id').notNull().references(() => changelogEntries.id, { onDelete: 'cascade' }),
+  orden: integer('orden').notNull().default(0),
+  textoEs: text('texto_es').notNull(),
+  textoEn: text('texto_en').notNull(),
+})
+
+export const changelogDismissals = pgTable('changelog_dismissals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  entryId: uuid('entry_id').notNull().references(() => changelogEntries.id, { onDelete: 'cascade' }),
+  usuarioId: uuid('usuario_id').notNull().references(() => usuarios.id, { onDelete: 'cascade' }),
+  descartadoEn: timestamp('descartado_en', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  entryUsuarioUnique: uniqueIndex('changelog_dismissals_entry_usuario_unique').on(t.entryId, t.usuarioId),
+}))
+
+export const changelogEntryInputSchema = z.object({
+  version: z.string().trim().regex(/^\d+\.\d+\.\d+$/, 'usa semver: x.y.z'),
+  tituloEs: z.string().trim().min(1),
+  tituloEn: z.string().trim().min(1),
+  categoria: z.enum(['feature', 'improvement', 'bugfix', 'security']),
+  prioridad: z.enum(['critical', 'high', 'normal', 'low']),
+  items: z.array(z.object({ textoEs: z.string().trim().min(1), textoEn: z.string().trim().min(1) })).default([]),
+})
+
 // ── Tipos ───────────────────────────────────────────────────────────────
 export type Usuario = z.infer<typeof selectUsuarioSchema>
 export type Rol = (typeof rolEnum.enumValues)[number]
@@ -196,3 +289,8 @@ export type Pedido = typeof pedidos.$inferSelect
 // Forma "pedido + televisiones" tal como la consume el cliente (equivalente
 // al documento Mongo original, para minimizar cambios en la UI portada).
 export type PedidoConTvs = Pedido & { televisiones: TelevisionRow[] }
+
+export type DocumentationCategory = typeof documentationCategories.$inferSelect
+export type DocumentationPage = typeof documentationPages.$inferSelect
+export type ChangelogEntry = typeof changelogEntries.$inferSelect
+export type ChangelogItem = typeof changelogItems.$inferSelect

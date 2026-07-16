@@ -11,6 +11,7 @@
     "pedidosEnVivo": "Pedidos en vivo",
     "usuarios": "Usuarios",
     "catalogoOnn": "Catálogo ONN",
+    "manual": "Manual",
     "salir": "Salir"
   },
   "roles": {
@@ -223,5 +224,16 @@
     "titulo": "Comentarios del envío",
     "placeholder": "Escribe notas, instrucciones o avisos sobre este envío. Se guarda automáticamente.",
     "ultimaEdicion": "Última edición: {{fecha}}{{por}}"
+  },
+  "manual": {
+    "titulo": "Manual de usuario",
+    "buscar": "Buscar en el manual…",
+    "sinResultados": "Sin resultados.",
+    "sinPaginas": "Todavía no hay páginas en el manual."
+  },
+  "changelog": {
+    "titulo": "Novedades",
+    "novedades": "Novedades",
+    "entendido": "Entendido"
   }
 }

@@ -11,6 +11,7 @@
     "pedidosEnVivo": "实时订单",
     "usuarios": "用户",
     "catalogoOnn": "ONN 目录",
+    "manual": "手册",
     "salir": "退出登录"
   },
   "roles": {
@@ -208,5 +209,16 @@
     "titulo": "发货备注",
     "placeholder": "填写关于此次发货的说明、指示或提醒。自动保存。",
     "ultimaEdicion": "上次编辑：{{fecha}}{{por}}"
+  },
+  "manual": {
+    "titulo": "用户手册",
+    "buscar": "搜索手册…",
+    "sinResultados": "没有结果。",
+    "sinPaginas": "手册中还没有页面。"
+  },
+  "changelog": {
+    "titulo": "更新内容",
+    "novedades": "更新内容",
+    "entendido": "知道了"
   }
 }
