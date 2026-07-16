@@ -67,9 +67,15 @@ estrictamente infraestructura, no código:
 
 1. **SSO**: correr `provision-app-sso mitech-tv-orders` (inyecta `OIDC_ISSUER_URL/CLIENT_ID/
    CLIENT_SECRET/REDIRECT_URI`). Gotcha ya documentado en el código: `skipUserProfile:false`.
-2. **Coolify**: crear las dos apps (`mitech-tv-orders-dev`, `mitech-tv-orders`) apuntando a este
-   repo — dev a la rama `rewrite-mi-stack`, prod a `main` (aún sin el cutover). Build con el
-   `Dockerfile` de la raíz. Postgres 16 por app (Coolify lo provisiona).
+2. **Coolify**: panel confirmado en **https://coolify.mi2.com.mx**. Crear las dos apps
+   (`mitech-tv-orders-dev`, `mitech-tv-orders`) apuntando a este repo — dev a la rama
+   `rewrite-mi-stack`, prod a `main` (aún sin el cutover). Build con el `Dockerfile` de la raíz.
+   Postgres 16 por app (Coolify lo provisiona).
+   - Flujo ya usado por otras apps de MiTech (visto en cubicaje): existe un canal de Mattermost
+     `app: <slug>` por app, con un bot supervisado **`coolify-manager`** al que se le puede pedir
+     por DM que haga redeploy/restart/etc. — es más rápido que ir a la UI directo. Para
+     `mitech-tv-orders` habría que pedirle a ops que cree el canal `app: mitech-tv-orders`
+     primero (aún no existe).
 3. **Variables de entorno** por app (vía status-dashboard, nunca por chat/email): `DATABASE_URL`
    (la de Coolify, no la local), `SESSION_SECRET` (nueva, no reusar la de `.env.local`),
    `OIDC_*` (del paso 1), `SQLSERVER_*` y `PALLET_API_URL` (mismos valores que hoy, WMS no cambia).
