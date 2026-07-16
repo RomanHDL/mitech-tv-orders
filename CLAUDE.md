@@ -48,8 +48,18 @@ drizzle/                migraciones SQL generadas (committeadas)
 
 ## Gotchas de esta máquina
 
-- No hay Docker ni `psql` local instalados — para levantar Postgres en dev, usar una
-  instancia remota (Coolify dev, o una temporal) y apuntar `DATABASE_URL` en `.env.local`.
+- No hay Docker, pero sí un **PostgreSQL 18 real** corriendo como servicio de Windows en
+  `localhost:5432` (`Get-Service postgresql-x64-18`). `psql` no está en el PATH — el binario
+  vive en `C:\Program Files\PostgreSQL\18\bin\psql.exe`. Rol/DB dedicados de este proyecto:
+  `mitech_tv_orders` / `mitech_tv_orders` (credenciales en `.env.local`, gitignored).
+- `vite.config.ts` debe usar `import.meta.dirname`, nunca `__dirname` (no existe en ESM;
+  Vite bundlea el config a un temp y `__dirname` ahí apunta al lugar equivocado).
+- En `server/vite.ts`, NO pasar `root` inline a `createServer()` en modo middleware —
+  hace que Vite no encuentre bien el `resolve.alias` del `vite.config.ts` real (aunque
+  `vite build` sí funciona sin el override). Dejar que tome `root` del config vía cwd.
+- No importar un `.d.ts` (`server/types.d.ts`) como `import '../types'` — esbuild no lo
+  resuelve como módulo en runtime y rompe `npm run build`. La aumentación de tipos globales
+  se aplica sola por estar en el `include` de `tsconfig.json`.
 
 ## Daily sync (obligatorio — leer al inicio de cada sesión)
 

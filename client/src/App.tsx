@@ -14,24 +14,71 @@ import AdminCatalogoOnn from '@/pages/admin-catalogo-onn'
 import AdminTags from '@/pages/admin-tags'
 import Nav from '@/components/nav'
 import { AuthProvider } from '@/hooks/use-auth'
+import { ProtectedRoute } from '@/components/protected-route'
 
+// Matriz de roles por ruta — equivalente a verificarAcceso() en el
+// middleware.js original. La imprimir queda abierta a cualquier rol logueado.
 export default function App() {
   return (
     <AuthProvider>
       <Nav />
       <Switch>
         <Route path="/login" component={Login} />
-        <Route path="/" component={NuevoPedido} />
-        <Route path="/pedidos" component={Pedidos} />
-        <Route path="/pedidos/:id/editar" component={EditarPedido} />
-        <Route path="/pedidos/:id/imprimir" component={Imprimir} />
-        <Route path="/surtir" component={Surtir} />
-        <Route path="/surtir/:id" component={SurtirDetalle} />
-        <Route path="/historial" component={Historial} />
-        <Route path="/pedidos-live" component={PedidosLive} />
-        <Route path="/admin/usuarios" component={AdminUsuarios} />
-        <Route path="/admin/catalogo-onn" component={AdminCatalogoOnn} />
-        <Route path="/admin/tags" component={AdminTags} />
+        <Route path="/">
+          <ProtectedRoute roles={['admin', 'capturista']}>
+            <NuevoPedido />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/pedidos">
+          <ProtectedRoute roles={['admin', 'capturista']}>
+            <Pedidos />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/pedidos/:id/editar">
+          <ProtectedRoute roles={['admin']}>
+            <EditarPedido />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/pedidos/:id/imprimir">
+          <ProtectedRoute>
+            <Imprimir />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/surtir">
+          <ProtectedRoute roles={['admin', 'capturista', 'surtidor']}>
+            <Surtir />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/surtir/:id">
+          <ProtectedRoute roles={['admin', 'capturista', 'surtidor']}>
+            <SurtirDetalle />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/historial">
+          <ProtectedRoute roles={['admin']}>
+            <Historial />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/pedidos-live">
+          <ProtectedRoute roles={['admin']}>
+            <PedidosLive />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/usuarios">
+          <ProtectedRoute roles={['admin']}>
+            <AdminUsuarios />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/catalogo-onn">
+          <ProtectedRoute roles={['admin']}>
+            <AdminCatalogoOnn />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/tags">
+          <ProtectedRoute roles={['admin']}>
+            <AdminTags />
+          </ProtectedRoute>
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </AuthProvider>

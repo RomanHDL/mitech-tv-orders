@@ -1,11 +1,12 @@
 import type { Express } from 'express'
 import { pool } from '../db'
 import { STACK, toMarkdown } from '../stack'
+import { registerAuthRoutes } from './auth'
 import pkg from '../../package.json' with { type: 'json' }
 
 // Registra todos los routers de la app. Cada fase añade su propio
 // app.use('/api/...', router) aquí a medida que se construye:
-//   Fase 2 -> /auth (OIDC + NFC/PIN)
+//   Fase 2 -> /auth + /api/auth/me (OIDC + NFC/PIN)              ✓
 //   Fase 3 -> /api/pedidos
 //   Fase 4 -> (mismo router de pedidos, PATCH de surtido)
 //   Fase 5 -> import/export (sin endpoint propio; corre en cliente)
@@ -13,6 +14,8 @@ import pkg from '../../package.json' with { type: 'json' }
 //   Fase 7 -> /api/usuarios, /api/admin/*
 //   Fase 9 -> /api/documentation/*, /api/changelog/*
 export async function registerRoutes(app: Express) {
+  registerAuthRoutes(app)
+
   // ── Discovery público (sin auth) ─────────────────────────────────────
   app.get('/api/public/health', async (_req, res) => {
     const start = Date.now()

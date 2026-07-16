@@ -5,6 +5,8 @@ import passport from 'passport'
 import http from 'node:http'
 import { pool } from './db'
 import { registerRoutes } from './routes'
+import { configurePassport } from './auth/passport'
+import { apiAuthGate } from './middleware/auth'
 import { setupVite } from './vite'
 import { serveStatic } from './static'
 
@@ -62,9 +64,12 @@ app.use((req, res, next) => {
   next()
 })
 
+app.use(apiAuthGate)
+
 async function main() {
   const server = http.createServer(app)
 
+  await configurePassport()
   await registerRoutes(app)
 
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
