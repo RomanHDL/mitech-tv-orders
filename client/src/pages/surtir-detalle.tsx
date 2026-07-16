@@ -1,3 +1,320 @@
+// Puerto de app/surtir/[id]/surtir-cliente.jsx — captura de avance por TV
+// con autosave, rollback en error y undo toast. El PATCH ahora referencia
+// la fila por id (pedido_televisiones.id), no por índice de array.
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useParams, Link } from 'wouter'
+import { useQuery } from '@tanstack/react-query'
+import { AlertCircle, ArrowLeft, Box, Check, Minus, Plus, Printer, RefreshCw } from 'lucide-react'
+import { apiRequest, ApiError } from '@/lib/queryClient'
+import { useAuth } from '@/hooks/use-auth'
+import ComentariosPedido from '@/components/comentarios-pedido'
+import { unidadLabel, type PedidoConTvs, type TelevisionRow } from '@shared/schema'
+
+function agruparPorMarca(televisiones: TelevisionRow[]) {
+  const grupos: Record<string, TelevisionRow[]> = {}
+  for (const tv of televisiones) {
+    if (!grupos[tv.marca]) grupos[tv.marca] = []
+    grupos[tv.marca].push(tv)
+  }
+  return Object.keys(grupos)
+    .sort()
+    .map((marca) => ({ marca, items: [...grupos[marca]].sort((a, b) => a.pulgadas - b.pulgadas) }))
+}
+
+type UltimaAccion = { tvId: string; valorAnterior: number; label: string } | null
+
 export default function SurtirDetalle() {
-  return <main className="p-6">SurtirDetalle — en construcción (fase siguiente)</main>
+  const { id } = useParams<{ id: string }>()
+  const { usuario } = useAuth()
+  const { data: pedido, isLoading } = useQuery<PedidoConTvs>({ queryKey: [`/api/pedidos/${id}`] })
+
+  const [tvs, setTvs] = useState<TelevisionRow[]>([])
+  const [error, setError] = useState('')
+  const [estadoGuardado, setEstadoGuardado] = useState<'idle' | 'guardando' | 'guardado' | 'error'>('idle')
+  const [ultimaAccion, setUltimaAccion] = useState<UltimaAccion>(null)
+  const guardadoTimeout = useRef<ReturnType<typeof setTimeout>>()
+  const undoTimeout = useRef<ReturnType<typeof setTimeout>>()
+  const enVuelo = useRef(0)
+  const valoresServidor = useRef<Record<string, number>>({})
+
+  useEffect(() => {
+    if (pedido) {
+      setTvs(pedido.televisiones)
+      valoresServidor.current = Object.fromEntries(pedido.televisiones.map((tv) => [tv.id, tv.cantidadSurtida]))
+    }
+  }, [pedido])
+
+  useEffect(
+    () => () => {
+      clearTimeout(guardadoTimeout.current)
+      clearTimeout(undoTimeout.current)
+    },
+    []
+  )
+
+  const grupos = useMemo(() => agruparPorMarca(tvs), [tvs])
+
+  const sumaCantidades = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
+  const totalRequerido = typeof pedido?.cantidadTotal === 'number' && pedido.cantidadTotal > 0 ? pedido.cantidadTotal : sumaCantidades
+  const totalSurtido = tvs.reduce((s, tv) => {
+    const surt = tv.cantidadSurtida || 0
+    if (tv.sinLimite || (tv.cantidad || 0) === 0) return s + surt
+    return s + Math.min(tv.cantidad || 0, surt)
+  }, 0)
+  const progreso = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
+  const completado = totalRequerido > 0 && totalSurtido >= totalRequerido
+
+  const registrarUndo = (accion: UltimaAccion) => {
+    clearTimeout(undoTimeout.current)
+    setUltimaAccion(accion)
+    undoTimeout.current = setTimeout(() => setUltimaAccion(null), 6000)
+  }
+
+  const deshacer = () => {
+    if (!ultimaAccion) return
+    clearTimeout(undoTimeout.current)
+    const accion = ultimaAccion
+    setUltimaAccion(null)
+    actualizar(accion.tvId, accion.valorAnterior, { esUndo: true })
+  }
+
+  async function actualizar(tvId: string, valorBruto: number, opciones: { esUndo?: boolean; descripcion?: string } = {}) {
+    const tv = tvs.find((t) => t.id === tvId)
+    if (!tv) return
+    const limiteTv = tv.sinLimite ? Infinity : tv.cantidad
+    const valor = Math.max(0, Math.min(limiteTv, Number(valorBruto) || 0))
+    const valorAnterior = tv.cantidadSurtida || 0
+    if (valor === valorAnterior) return
+
+    setTvs((prev) => prev.map((t) => (t.id === tvId ? { ...t, cantidadSurtida: valor } : t)))
+
+    if (!opciones.esUndo) {
+      const delta = valor - valorAnterior
+      const signo = delta > 0 ? '+' : ''
+      const desc = opciones.descripcion || 'esta TV'
+      registrarUndo({ tvId, valorAnterior, label: `${signo}${delta} en ${desc} (ahora ${valor}/${tv.cantidad})` })
+    }
+
+    enVuelo.current += 1
+    setEstadoGuardado('guardando')
+    clearTimeout(guardadoTimeout.current)
+
+    try {
+      await apiRequest('PATCH', `/api/pedidos/${id}/televisiones/${tvId}`, { cantidadSurtida: valor })
+      valoresServidor.current[tvId] = valor
+      setError('')
+      enVuelo.current -= 1
+      if (enVuelo.current === 0) {
+        setEstadoGuardado('guardado')
+        guardadoTimeout.current = setTimeout(() => setEstadoGuardado('idle'), 2200)
+      }
+    } catch (err) {
+      enVuelo.current -= 1
+      const valorPrevio = valoresServidor.current[tvId] ?? 0
+      setTvs((prev) => prev.map((t) => (t.id === tvId ? { ...t, cantidadSurtida: valorPrevio } : t)))
+      setError(err instanceof ApiError ? err.message : 'No se pudo guardar')
+      setEstadoGuardado('error')
+    }
+  }
+
+  if (isLoading) return null
+  if (!pedido) return <main className="p-6">Pedido no encontrado.</main>
+
+  // Guardia de UX: capturista solo debe abrir lo suyo (la restricción real,
+  // que importa, es server-side en el PATCH de surtido).
+  if (usuario?.rol === 'capturista' && pedido.creadoPor !== usuario.id) {
+    return <main className="p-6">No autorizado para ver este pedido.</main>
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl p-4 sm:p-6">
+      <header className="mb-4 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/surtir">
+            <a className="inline-flex min-h-9 items-center gap-1 rounded-md border bg-secondary px-3 py-1.5 text-sm">
+              <ArrowLeft className="h-3.5 w-3.5" /> Volver
+            </a>
+          </Link>
+          <Link href={`/pedidos/${pedido.id}/imprimir`}>
+            <a className="inline-flex min-h-9 items-center gap-1 rounded-md border bg-secondary px-3 py-1.5 text-sm">
+              <Printer className="h-3.5 w-3.5" /> Imprimir
+            </a>
+          </Link>
+          {estadoGuardado !== 'idle' && (
+            <span className="text-xs text-muted-foreground">
+              {estadoGuardado === 'guardando' && 'Guardando…'}
+              {estadoGuardado === 'guardado' && '✓ Guardado'}
+              {estadoGuardado === 'error' && '⚠ Error al guardar'}
+            </span>
+          )}
+        </div>
+
+        <h1 className="font-display text-2xl text-primary">
+          {pedido.numeroPedido ? `#${pedido.numeroPedido} — ` : ''}
+          {pedido.pedidoNombre}
+        </h1>
+
+        {pedido.condiciones.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {pedido.condiciones.map((c) => (
+              <span key={c} className="rounded bg-secondary px-1.5 py-0.5 text-xs font-semibold">
+                {c}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className={`rounded-md border p-3 ${completado ? 'border-success bg-success/10' : ''}`}>
+          <div className="flex items-center justify-between text-sm font-semibold">
+            <span>
+              {totalSurtido} <span className="font-normal text-muted-foreground">de</span> {totalRequerido} surtidas
+            </span>
+            <span>{progreso}%</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-primary transition-all" style={{ width: `${progreso}%` }} />
+          </div>
+          {completado && (
+            <div className="mt-1 flex items-center gap-1 text-sm font-semibold text-success">
+              <Check className="h-4 w-4" /> Pedido completo
+            </div>
+          )}
+        </div>
+      </header>
+
+      {error && (
+        <div className="mb-3 flex items-center gap-2 rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <ComentariosPedido
+        pedidoId={pedido.id}
+        comentariosIniciales={pedido.comentarios || ''}
+        actualizadoIso={pedido.comentariosActualizado ? new Date(pedido.comentariosActualizado).toISOString() : null}
+        actualizadoPorNombre={pedido.comentariosActualizadoPorNombre}
+      />
+
+      <div className="mt-4 space-y-4">
+        {grupos.map(({ marca, items }) => (
+          <section key={marca}>
+            <h2 className="mb-1 border-b-2 border-foreground pb-1 text-lg font-bold">{marca.toUpperCase()}</h2>
+            <div className="space-y-2">
+              {items.map((tv) => {
+                const esSinLimite = tv.sinLimite
+                const surtida = esSinLimite ? tv.cantidadSurtida || 0 : Math.min(tv.cantidad, tv.cantidadSurtida || 0)
+                const completo = !esSinLimite && surtida >= tv.cantidad
+                const enProgreso = surtida > 0 && !completo
+                const esPallet = tv.unidad === 'pallet'
+                const descTv = `${marca} ${tv.pulgadas}"${tv.modelo ? ' ' + tv.modelo : ''}`
+                const unidadTxt = unidadLabel(tv.cantidad || 1, tv.unidad)
+
+                return (
+                  <div
+                    key={tv.id}
+                    className={`flex flex-wrap items-center justify-between gap-3 rounded-md border p-3 ${
+                      completo ? 'border-success bg-success/5' : enProgreso ? 'border-accent bg-accent/5' : ''
+                    }`}
+                  >
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-lg font-bold">{tv.pulgadas}&quot;</span>
+                        {esPallet && (
+                          <span className="flex items-center gap-1 rounded bg-accent/30 px-1.5 py-0.5 text-xs font-semibold">
+                            <Box className="h-3 w-3" /> Pallet
+                          </span>
+                        )}
+                        {tv.modelo && <span className="font-mono text-sm">{tv.modelo}</span>}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {esSinLimite ? <strong>Sin límite</strong> : <><strong>{tv.cantidad}</strong> {unidadLabel(tv.cantidad, tv.unidad)}</>}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          max={esSinLimite ? undefined : tv.cantidad}
+                          value={surtida}
+                          onChange={(e) => actualizar(tv.id, Number(e.target.value), { descripcion: descTv })}
+                          aria-label="Cantidad surtida"
+                          className="h-10 w-16 rounded-md border border-input bg-background px-2 text-center"
+                        />
+                        <span className="text-sm text-muted-foreground">{esSinLimite ? '/ ∞' : `/ ${tv.cantidad}`}</span>
+                      </div>
+
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`¿Restar 1 ${unidadTxt} de ${descTv}?\n\nQuedará en ${surtida - 1}/${tv.cantidad}.`)) actualizar(tv.id, surtida - 1, { descripcion: descTv })
+                          }}
+                          disabled={surtida === 0}
+                          className="flex h-9 w-9 items-center justify-center rounded-md border disabled:opacity-40"
+                          aria-label="Restar uno"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`¿Agregar 1 ${unidadTxt} a ${descTv}?\n\nQuedará en ${surtida + 1}/${tv.cantidad}.`)) actualizar(tv.id, surtida + 1, { descripcion: descTv })
+                          }}
+                          disabled={completo}
+                          className="flex h-9 w-9 items-center justify-center rounded-md border disabled:opacity-40"
+                          aria-label="Sumar uno"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (esSinLimite) return
+                            const restantes = tv.cantidad - surtida
+                            if (confirm(`¿Marcar como surtidas las ${restantes} ${unidadTxt} restantes de ${descTv}?\n\nQuedará en ${tv.cantidad}/${tv.cantidad}.`)) actualizar(tv.id, tv.cantidad, { descripcion: descTv })
+                          }}
+                          disabled={completo || esSinLimite}
+                          className="flex h-9 w-9 items-center justify-center rounded-md border bg-success/10 text-success disabled:opacity-40"
+                          aria-label="Marcar todas"
+                          title={esSinLimite ? 'No aplica (sin límite)' : 'Marcar todas'}
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`¿Reiniciar el conteo de ${descTv}?\n\nSe borrarán las ${surtida} ${unidadTxt} ya marcadas.`)) actualizar(tv.id, 0, { descripcion: descTv })
+                          }}
+                          disabled={surtida === 0}
+                          className="flex h-9 w-9 items-center justify-center rounded-md border disabled:opacity-40"
+                          aria-label="Reiniciar"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {ultimaAccion && (
+        <div className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-between gap-3 rounded-md border bg-card p-3 shadow-lg sm:inset-x-auto sm:right-4 sm:w-96" role="status">
+          <div className="flex items-center gap-2 text-sm">
+            <Check className="h-4 w-4 text-success" />
+            <span>{ultimaAccion.label}</span>
+          </div>
+          <button type="button" onClick={deshacer} className="shrink-0 rounded-md border px-2 py-1 text-sm font-semibold">
+            Deshacer
+          </button>
+        </div>
+      )}
+    </main>
+  )
 }

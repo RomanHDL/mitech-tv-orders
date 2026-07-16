@@ -21,11 +21,11 @@ async function obtenerPedidoConTvs(id: string): Promise<PedidoConTvs | null> {
   return { ...pedido, televisiones }
 }
 
-// ── GET /api/pedidos — lista (admin/capturista) ──────────────────────────
-router.get('/api/pedidos', requireRole('admin', 'capturista'), async (_req, res) => {
-  const filas = await db.select().from(pedidos).orderBy(desc(pedidos.fecha)).limit(100)
-  if (filas.length === 0) return res.json([])
-
+// Junta pedidos + sus televisiones en una sola pasada (evita N+1). `filas`
+// ya viene ordenada/filtrada por el caller (lista completa vs. cola de
+// surtir con ownership).
+async function juntarConTvs(filas: (typeof pedidos.$inferSelect)[]): Promise<PedidoConTvs[]> {
+  if (filas.length === 0) return []
   const ids = filas.map((p) => p.id)
   const tvs = await db.select().from(pedidoTelevisiones).where(inArray(pedidoTelevisiones.pedidoId, ids))
   const tvsPorPedido = new Map<string, typeof tvs>()
@@ -34,12 +34,32 @@ router.get('/api/pedidos', requireRole('admin', 'capturista'), async (_req, res)
     lista.push(tv)
     tvsPorPedido.set(tv.pedidoId, lista)
   }
-
-  const resultado: PedidoConTvs[] = filas.map((p) => ({
+  return filas.map((p) => ({
     ...p,
     televisiones: (tvsPorPedido.get(p.id) || []).sort((a, b) => a.orden - b.orden),
   }))
-  res.json(resultado)
+}
+
+// ── GET /api/pedidos — lista completa (admin/capturista) ─────────────────
+// Sin filtro de dueño: en /pedidos ambos roles ven todos los pedidos (el
+// <select> de dueño es justamente para reasignar). Distinto del filtro de
+// /api/surtir (ver abajo), que sí acota a capturista a lo suyo.
+router.get('/api/pedidos', requireRole('admin', 'capturista'), async (_req, res) => {
+  const filas = await db.select().from(pedidos).orderBy(desc(pedidos.fecha)).limit(100)
+  res.json(await juntarConTvs(filas))
+})
+
+// ── GET /api/surtir — cola de surtido + historial (admin/capturista/surtidor) ──
+// admin y surtidor ven todo; capturista solo lo suyo — mismo filtro que
+// app/surtir/page.jsx y app/historial/page.jsx del original (ambas páginas
+// leían de esta misma regla, por eso comparten un único endpoint aquí).
+router.get('/api/surtir', requireRole('admin', 'capturista', 'surtidor'), async (req, res) => {
+  const usuario = getUsuario(req)!
+  const filas =
+    usuario.rol === 'capturista'
+      ? await db.select().from(pedidos).where(eq(pedidos.creadoPor, usuario.id)).orderBy(desc(pedidos.fecha)).limit(200)
+      : await db.select().from(pedidos).orderBy(desc(pedidos.fecha)).limit(200)
+  res.json(await juntarConTvs(filas))
 })
 
 // Usuarios asignables como dueño de un pedido (admin/capturista) — usado
