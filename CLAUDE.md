@@ -73,10 +73,20 @@ estrictamente infraestructura, no código:
 3. **Variables de entorno** por app (vía status-dashboard, nunca por chat/email): `DATABASE_URL`
    (la de Coolify, no la local), `SESSION_SECRET` (nueva, no reusar la de `.env.local`),
    `OIDC_*` (del paso 1), `SQLSERVER_*` y `PALLET_API_URL` (mismos valores que hoy, WMS no cambia).
-4. **Opcional**: `provision-app-sentry mitech-tv-orders` (el `TODO` en `server/index.ts` ya
-   marca dónde va `Sentry.init()`). `provision-app-mattermost` si se quiere el canal `app-mitech-tv-orders`.
-5. **Primer release**: `/approved minor "Migración al MI Stack"` una vez que dev esté verificado.
-6. **Cutover**: solo después de que prod en Coolify esté verificado con datos reales, hacer merge
+4. **Opcional — Sentry**: `provision-app-sentry mitech-tv-orders` (el `TODO` en
+   `server/index.ts` ya marca dónde va `Sentry.init()`).
+5. **Opcional — Correo (AWS SES)**: no es autoservicio. Mandar email a
+   **coolify01@mi2.com.mx**, asunto `SES request: mitech-tv-orders`, indicando el
+   from-address deseado. Inyecta `SES_AWS_REGION/ACCESS_KEY_ID/SECRET_ACCESS_KEY`,
+   `SES_FROM_EMAIL`, `SES_FROM_NAME`, `SES_CONFIGURATION_SET`, `SES_SNS_TOPIC_ARN`. Sin esto no
+   se puede mandar correo desde la app — hoy no hay ninguna funcionalidad que lo use (ej. avisar
+   por correo de un pedido vencido), habría que construirla si se pide.
+6. **Opcional — Mattermost**: `provision-app-mattermost mitech-tv-orders` crea un canal privado
+   `app-mitech-tv-orders` con bot real (`mitech-tv-orders-agent`) e inyecta `MM_BOT_TOKEN`. Igual
+   que el correo: hoy no hay lógica que publique ahí, es solo la credencial disponible si se
+   quiere agregar notificaciones (ej. "pedido surtido al 100%") más adelante.
+7. **Primer release**: `/approved minor "Migración al MI Stack"` una vez que dev esté verificado.
+8. **Cutover**: solo después de que prod en Coolify esté verificado con datos reales, hacer merge
    de `rewrite-mi-stack` → `main` y apagar el auto-deploy de Vercel (o simplemente dejar de usarlo).
 
 Se intentó autenticar el MCP "MI Global - MI Cloud" (agents.miglobal.com.mx) para hacer estos pasos
