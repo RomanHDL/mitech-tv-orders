@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens portados del design system "Comic-Empresa" original
+   (app/globals.css) a variables HSL estilo shadcn/ui. */
+@layer base {
+  :root {
+    --background: 60 23% 97%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 16% 40%;
+
+    --accent: 43 96% 63%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 84% 33%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.5rem;
+  }
+
+  :root[data-theme='dark'] {
+    --background: 224 71% 4%;
+    --foreground: 210 20% 96%;
+
+    --card: 222 47% 8%;
+    --card-foreground: 210 20% 96%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 224 71% 4%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 20% 96%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 16% 65%;
+
+    --accent: 43 96% 63%;
+    --accent-foreground: 224 71% 4%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 20% 96%;
+
+    --success: 160 70% 45%;
+    --success-foreground: 224 71% 4%;
+
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 217 91% 60%;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --background: 224 71% 4%;
+      --foreground: 210 20% 96%;
+      --card: 222 47% 8%;
+      --card-foreground: 210 20% 96%;
+      --primary: 217 91% 60%;
+      --primary-foreground: 224 71% 4%;
+      --secondary: 217 33% 17%;
+      --secondary-foreground: 210 20% 96%;
+      --muted: 217 33% 17%;
+      --muted-foreground: 215 16% 65%;
+      --accent: 43 96% 63%;
+      --accent-foreground: 224 71% 4%;
+      --destructive: 0 72% 51%;
+      --destructive-foreground: 210 20% 96%;
+      --success: 160 70% 45%;
+      --success-foreground: 224 71% 4%;
+      --border: 217 33% 20%;
+      --input: 217 33% 20%;
+      --ring: 217 91% 60%;
+    }
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
