@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconAlert, IconCheck, IconMessage } from './icons'
 
 const MAX = 2000
@@ -24,6 +25,7 @@ export default function ComentariosPedido({
   actualizadoIso = null,
   actualizadoPorNombre = null,
 }) {
+  const { t } = useTranslation()
   const [valor, setValor] = useState(comentariosIniciales || '')
   const [estado, setEstado] = useState('idle') // idle | guardando | guardado | error
   const [error, setError] = useState('')
@@ -86,14 +88,14 @@ export default function ComentariosPedido({
       <div className="comentarios-header">
         <span className="comentarios-titulo">
           <IconMessage />
-          Comentarios del envío
+          {t('comentarios.titulo')}
         </span>
         {estado !== 'idle' && (
           <span className={`save-status save-status-${estado}`}>
             {estado === 'guardando' && (
               <>
                 <span className="save-dot" />
-                Guardando…
+                {t('common.guardando')}
               </>
             )}
             {estado === 'guardado' && (
@@ -116,7 +118,7 @@ export default function ComentariosPedido({
         value={valor}
         onChange={onChange}
         onBlur={onBlur}
-        placeholder="Escribe notas, instrucciones o avisos sobre este envío. Se guarda automáticamente."
+        placeholder={t('comentarios.placeholder')}
         rows={3}
         maxLength={MAX}
       />
@@ -126,7 +128,7 @@ export default function ComentariosPedido({
         </span>
         {fechaTxt && (
           <span className="comentarios-meta">
-            Última edición: {fechaTxt}
+            {t('comentarios.ultimaEdicion', { fecha: fechaTxt })}
             {metaPor ? ` · ${metaPor}` : ''}
           </span>
         )}

@@ -54,6 +54,7 @@ async function obtenerPedidos() {
       numeroPedido: p.numeroPedido || '',
       pedidoNombre: p.pedidoNombre,
       condiciones: p.condiciones || [],
+      fecha: p.fecha ? p.fecha.toISOString() : null,
       fechaFmt: p.fecha ? fmt.format(p.fecha) : '',
       fechaLimite: p.fechaLimite || '',
       cantidadTotal:

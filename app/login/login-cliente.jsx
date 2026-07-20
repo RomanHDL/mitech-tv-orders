@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { IconAlert } from '../components/icons'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
+import LanguageSwitcher from '../components/language-switcher'
 
 export default function LoginCliente() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
@@ -121,23 +124,21 @@ export default function LoginCliente() {
           <div className="login-hero-logo">
             <img src={LOGO_MITECH} alt="MiTechnologies" width="240" height="76" />
           </div>
-          <h1 className="login-hero-titulo">MiTech Pedidos</h1>
-          <p className="login-hero-tagline">
-            Sistema interno de captura, surtido e impresión de pedidos
-            para MiTechnologies, Inc.
-          </p>
+          <h1 className="login-hero-titulo">{t('login.heroTitulo')}</h1>
+          <p className="login-hero-tagline">{t('login.heroTagline')}</p>
           <ul className="login-hero-features">
-            <li>Captura rápida con buscador de marcas</li>
-            <li>Módulo de surtido con autoguardado</li>
-            <li>Impresión optimizada en una sola hoja</li>
+            <li>{t('login.heroFeature1')}</li>
+            <li>{t('login.heroFeature2')}</li>
+            <li>{t('login.heroFeature3')}</li>
           </ul>
         </div>
       </aside>
 
       <section className="login-form-panel">
         <div className="login-card">
-          <h2 className="login-titulo">Iniciar sesión</h2>
-          <p className="login-subtitulo">Accede con tu tag NFC o tu PIN</p>
+          <LanguageSwitcher />
+          <h2 className="login-titulo">{t('login.titulo')}</h2>
+          <p className="login-subtitulo">{t('login.subtitulo')}</p>
 
           {nfcSoportado && (
             <button
@@ -146,19 +147,19 @@ export default function LoginCliente() {
               disabled={scanning || loading}
               className={`btn btn-primary btn-large login-btn-nfc ${scanning ? 'escaneando' : ''}`}
             >
-              {scanning ? 'Acerca tu tag NFC…' : 'Escanear tag NFC'}
+              {scanning ? t('login.escaneando') : t('login.escanear')}
             </button>
           )}
 
           {nfcSoportado && (
             <div className="login-divider">
-              <span>o</span>
+              <span>{t('login.o')}</span>
             </div>
           )}
 
           <form onSubmit={submit} className="login-form">
             <div className="login-field">
-              <label htmlFor="login-email">Email</label>
+              <label htmlFor="login-email">{t('login.email')}</label>
               <input
                 id="login-email"
                 type="email"
@@ -171,7 +172,7 @@ export default function LoginCliente() {
             </div>
 
             <div className="login-field">
-              <label htmlFor="login-pin">PIN</label>
+              <label htmlFor="login-pin">{t('login.pin')}</label>
               <input
                 id="login-pin"
                 type="password"
@@ -191,7 +192,7 @@ export default function LoginCliente() {
               className="btn btn-primary btn-large"
               disabled={loading || scanning || !pin.trim()}
             >
-              {loading ? 'Verificando…' : 'Entrar'}
+              {loading ? t('login.verificando') : t('login.entrar')}
             </button>
           </form>
 
@@ -203,9 +204,7 @@ export default function LoginCliente() {
           )}
 
           {!nfcSoportado && (
-            <p className="login-hint">
-              NFC solo disponible en Android Chrome. Usa email + PIN.
-            </p>
+            <p className="login-hint">{t('login.hintNfc')}</p>
           )}
         </div>
       </section>

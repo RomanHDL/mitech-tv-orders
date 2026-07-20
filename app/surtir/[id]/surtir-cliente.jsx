@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { unidadLabel } from '@/lib/catalogos'
 import ComentariosPedido from '../../components/comentarios-pedido'
 import {
@@ -28,6 +29,7 @@ function agruparPorMarca(televisiones) {
 }
 
 export default function SurtirCliente({ pedido }) {
+  const { t } = useTranslation()
   const [tvs, setTvs] = useState(pedido.televisiones)
   const [error, setError] = useState('')
   // Estado del autoguardado: 'idle' | 'guardando' | 'guardado' | 'error'
@@ -136,18 +138,18 @@ export default function SurtirCliente({ pedido }) {
         <div className="surtir-nav">
           <Link href="/surtir" className="btn btn-secondary btn-sm">
             <IconArrowLeft />
-            Volver
+            {t('common.volver')}
           </Link>
           <Link href={`/pedidos/${pedido.id}/imprimir`} className="btn btn-secondary btn-sm">
             <IconPrinter />
-            Imprimir
+            {t('common.imprimir')}
           </Link>
           {estadoGuardado !== 'idle' && (
             <span className={`save-status save-status-${estadoGuardado}`}>
               {estadoGuardado === 'guardando' && (
                 <>
                   <span className="save-dot" />
-                  Guardando…
+                  {t('common.guardando')}
                 </>
               )}
               {estadoGuardado === 'guardado' && (
@@ -181,7 +183,7 @@ export default function SurtirCliente({ pedido }) {
         <div className={`progreso-resumen ${completado ? 'completado' : ''}`}>
           <div className="progreso-info">
             <span className="progreso-numero">
-              {totalSurtido} <span className="progreso-de">de</span> {totalRequerido} surtidas
+              {t('surtir.deSurtidas', { surt: totalSurtido, req: totalRequerido })}
             </span>
             <span className="progreso-pct">{progreso}%</span>
           </div>
@@ -190,7 +192,7 @@ export default function SurtirCliente({ pedido }) {
           </div>
           {completado && (
             <div className="progreso-completado">
-              <IconCheck /> Pedido completo
+              <IconCheck /> {t('surtir.pedidoCompleto')}
             </div>
           )}
         </div>
@@ -296,8 +298,8 @@ export default function SurtirCliente({ pedido }) {
                         }}
                         disabled={surtida === 0}
                         className="btn-mini-action"
-                        aria-label="Restar uno"
-                        title="Restar uno"
+                        aria-label={t('surtir.restarUno')}
+                        title={t('surtir.restarUno')}
                       >
                         <IconMinus />
                       </button>
@@ -311,8 +313,8 @@ export default function SurtirCliente({ pedido }) {
                         }}
                         disabled={completo}
                         className="btn-mini-action"
-                        aria-label="Sumar uno"
-                        title="Sumar uno"
+                        aria-label={t('surtir.sumarUno')}
+                        title={t('surtir.sumarUno')}
                       >
                         <IconPlus />
                       </button>
@@ -321,8 +323,8 @@ export default function SurtirCliente({ pedido }) {
                         onClick={marcarTodas}
                         disabled={completo || esSinLimite}
                         className="btn-mini-action btn-listo"
-                        aria-label="Marcar todas"
-                        title={esSinLimite ? 'No aplica (sin límite)' : 'Marcar todas'}
+                        aria-label={t('surtir.marcarTodas')}
+                        title={esSinLimite ? 'No aplica (sin límite)' : t('surtir.marcarTodas')}
                       >
                         <IconCheck />
                       </button>
@@ -331,8 +333,8 @@ export default function SurtirCliente({ pedido }) {
                         onClick={reiniciar}
                         disabled={surtida === 0}
                         className="btn-mini-action btn-reset"
-                        aria-label="Reiniciar"
-                        title="Reiniciar a 0"
+                        aria-label={t('surtir.reiniciar')}
+                        title={t('surtir.reiniciar')}
                       >
                         <IconRefresh />
                       </button>

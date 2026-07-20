@@ -57,6 +57,17 @@ function verificarAcceso(pathname, method, rol) {
   // Imprimir HTML: cualquier rol logueado puede ver e imprimir
   if (/^\/pedidos\/[^/]+\/imprimir$/.test(pathname)) return true
 
+  // Changelog: la página HTML y el "descartar" son para cualquier rol logueado
+  if (pathname === '/changelog') return true
+  if (method === 'POST' && /^\/api\/changelog\/[^/]+\/dismiss$/.test(pathname)) return true
+
+  // Manual de usuario: lectura para cualquier rol logueado (GET de su API ya
+  // queda cubierto por la regla general de abajo)
+  if (pathname === '/manual' || pathname.startsWith('/manual/')) return true
+
+  // Developer Manual (documentación técnica del esquema): cualquier rol logueado
+  if (pathname === '/developer-manual.md') return true
+
   // GET de cualquier API: cualquier rol logueado
   if (method === 'GET' && pathname.startsWith('/api/')) return true
 

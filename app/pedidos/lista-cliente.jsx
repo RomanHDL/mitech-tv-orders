@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import {
   IconAlert,
@@ -183,25 +184,89 @@ function badgeProgreso(pct) {
   return { label: 'Pendiente', clase: 'pendiente' }
 }
 
+const POR_PAGINA = 10
+
 export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
   const router = useRouter()
+  const { t } = useTranslation()
   const [eliminandoId, setEliminandoId] = useState(null)
   const [asignandoId, setAsignandoId] = useState(null)
   const [error, setError] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [estadoFiltro, setEstadoFiltro] = useState('todos')
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
+  const [ordenarPor, setOrdenarPor] = useState('recientes')
+  const [pagina, setPagina] = useState(1)
   const [, startTransition] = useTransition()
 
   const esAdmin = rol === 'admin'
 
+  // Stats sobre el TOTAL de pedidos, no sobre los filtrados — igual que en
+  // el MI Stack: el dashboard siempre resume "todo", los filtros son solo
+  // para la tabla de abajo.
+  const stats = useMemo(() => {
+    let pendientes = 0, enProceso = 0, completados = 0
+    for (const p of pedidos) {
+      const badge = badgeProgreso(p.progresoPct)
+      if (badge.clase === 'completo') completados++
+      else if (badge.clase === 'parcial') enProceso++
+      else pendientes++
+    }
+    return { total: pedidos.length, pendientes, enProceso, completados }
+  }, [pedidos])
+
   const pedidosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
-    if (!q) return pedidos
-    return pedidos.filter((p) =>
-      p.pedidoNombre.toLowerCase().includes(q) ||
-      (p.numeroPedido || '').toLowerCase().includes(q) ||
-      p.condiciones.some((c) => c.toLowerCase().includes(q))
-    )
-  }, [pedidos, busqueda])
+
+    const filtrados = pedidos.filter((p) => {
+      if (q) {
+        const coincide =
+          p.pedidoNombre.toLowerCase().includes(q) ||
+          (p.numeroPedido || '').toLowerCase().includes(q) ||
+          p.condiciones.some((c) => c.toLowerCase().includes(q)) ||
+          (p.televisiones || []).some((tv) => (tv.modelo || '').toLowerCase().includes(q))
+        if (!coincide) return false
+      }
+      if (estadoFiltro !== 'todos' && badgeProgreso(p.progresoPct).clase !== estadoFiltro) return false
+      if (fechaDesde && p.fecha && new Date(p.fecha) < new Date(fechaDesde)) return false
+      if (fechaHasta && p.fecha) {
+        const hasta = new Date(fechaHasta)
+        hasta.setHours(23, 59, 59, 999)
+        if (new Date(p.fecha) > hasta) return false
+      }
+      return true
+    })
+
+    return [...filtrados].sort((a, b) => {
+      switch (ordenarPor) {
+        case 'antiguos':
+          return new Date(a.fecha || 0).getTime() - new Date(b.fecha || 0).getTime()
+        case 'fechaLimite':
+          return (a.fechaLimite || '').localeCompare(b.fechaLimite || '')
+        case 'nombre':
+          return a.pedidoNombre.localeCompare(b.pedidoNombre)
+        case 'cantidad':
+          return b.totalTvs - a.totalTvs
+        case 'recientes':
+        default:
+          return new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime()
+      }
+    })
+  }, [pedidos, busqueda, estadoFiltro, fechaDesde, fechaHasta, ordenarPor])
+
+  const totalPaginas = Math.max(1, Math.ceil(pedidosFiltrados.length / POR_PAGINA))
+  const paginaSegura = Math.min(pagina, totalPaginas)
+  const pedidosPagina = pedidosFiltrados.slice((paginaSegura - 1) * POR_PAGINA, paginaSegura * POR_PAGINA)
+
+  function limpiarFiltros() {
+    setBusqueda('')
+    setEstadoFiltro('todos')
+    setFechaDesde('')
+    setFechaHasta('')
+    setOrdenarPor('recientes')
+    setPagina(1)
+  }
 
   const cambiarDueno = async (pedidoId, userId) => {
     setError('')
@@ -244,18 +309,92 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
   }
 
   return (
-    <div className="card">
-      <div className="lista-toolbar">
+    <>
+      <div className="pedidos-stats">
+        <div className="stat-card">
+          <div className="stat-numero">{stats.total}</div>
+          <div className="stat-label">{t('pedidos.total')}</div>
+        </div>
+        <div className="stat-card stat-pendiente">
+          <div className="stat-numero">{stats.pendientes}</div>
+          <div className="stat-label">{t('pedidos.pendientes')}</div>
+        </div>
+        <div className="stat-card stat-parcial">
+          <div className="stat-numero">{stats.enProceso}</div>
+          <div className="stat-label">{t('pedidos.enProceso')}</div>
+        </div>
+        <div className="stat-card stat-completo">
+          <div className="stat-numero">{stats.completados}</div>
+          <div className="stat-label">{t('pedidos.completados')}</div>
+        </div>
+      </div>
+
+      <div className="card">
+      <div className="lista-toolbar lista-toolbar-filtros">
         <div className="search-box">
           <IconSearch className="icon-search" />
           <input
             type="text"
-            placeholder="Buscar por número, nombre o condición…"
+            placeholder={t('pedidos.buscarPlaceholder')}
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => { setBusqueda(e.target.value); setPagina(1) }}
           />
         </div>
+
+        <div className="filtro-campo">
+          <label>{t('pedidos.estado')}</label>
+          <select
+            value={estadoFiltro}
+            onChange={(e) => { setEstadoFiltro(e.target.value); setPagina(1) }}
+          >
+            <option value="todos">{t('pedidos.todos')}</option>
+            <option value="pendiente">{t('pedidos.pendientes')}</option>
+            <option value="parcial">{t('pedidos.enProceso')}</option>
+            <option value="completo">{t('pedidos.completados')}</option>
+          </select>
+        </div>
+
+        <div className="filtro-campo">
+          <label>{t('pedidos.desde')}</label>
+          <input
+            type="date"
+            value={fechaDesde}
+            onChange={(e) => { setFechaDesde(e.target.value); setPagina(1) }}
+          />
+        </div>
+
+        <div className="filtro-campo">
+          <label>{t('pedidos.hasta')}</label>
+          <input
+            type="date"
+            value={fechaHasta}
+            onChange={(e) => { setFechaHasta(e.target.value); setPagina(1) }}
+          />
+        </div>
+
+        <div className="filtro-campo">
+          <label>{t('pedidos.ordenar')}</label>
+          <select
+            value={ordenarPor}
+            onChange={(e) => { setOrdenarPor(e.target.value); setPagina(1) }}
+          >
+            <option value="recientes">{t('pedidos.masRecientes')}</option>
+            <option value="antiguos">{t('pedidos.masAntiguos')}</option>
+            <option value="fechaLimite">{t('pedidos.porFechaLimite')}</option>
+            <option value="nombre">{t('pedidos.porNombre')}</option>
+            <option value="cantidad">{t('pedidos.porCantidad')}</option>
+          </select>
+        </div>
+
         <div className="lista-toolbar-acciones">
+          <button
+            type="button"
+            onClick={limpiarFiltros}
+            className="btn btn-secondary"
+            title={t('pedidos.limpiar')}
+          >
+            {t('pedidos.limpiar')}
+          </button>
           <button
             type="button"
             onClick={() => descargarPedidosXLSX(pedidosFiltrados)}
@@ -268,7 +407,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
           </button>
           <Link href="/" className="btn btn-primary">
             <IconPlus />
-            Nuevo pedido
+            {t('nav.nuevoPedido')}
           </Link>
         </div>
       </div>
@@ -282,9 +421,13 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
 
       {pedidosFiltrados.length === 0 ? (
         <div className="empty">
-          <p>No se encontraron pedidos con "{busqueda}".</p>
+          <p>No se encontraron pedidos con los filtros actuales.</p>
+          <button type="button" onClick={limpiarFiltros} className="btn btn-secondary btn-sm">
+            Limpiar filtros
+          </button>
         </div>
       ) : (
+        <>
         <div className="tabla-wrap">
         <table className="tabla-pedidos">
           <thead>
@@ -301,7 +444,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
             </tr>
           </thead>
           <tbody>
-            {pedidosFiltrados.map((p) => {
+            {pedidosPagina.map((p) => {
               const badge = badgeProgreso(p.progresoPct)
               const dias = diasHastaLimite(p.fechaLimite)
               const tiempo = tiempoRestanteTexto(dias)
@@ -390,7 +533,34 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
           </tbody>
         </table>
         </div>
+
+        <div className="paginacion">
+          <span className="paginacion-info">
+            {(paginaSegura - 1) * POR_PAGINA + 1}–{Math.min(paginaSegura * POR_PAGINA, pedidosFiltrados.length)} de {pedidosFiltrados.length}
+          </span>
+          <div className="paginacion-botones">
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={paginaSegura <= 1}
+            >
+              {t('pedidos.anterior')}
+            </button>
+            <span className="paginacion-actual">{t('pedidos.pagina', { actual: paginaSegura, total: totalPaginas })}</span>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={paginaSegura >= totalPaginas}
+            >
+              {t('pedidos.siguiente')}
+            </button>
+          </div>
+        </div>
+        </>
       )}
     </div>
+    </>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import {
   IconBox,
   IconCheck,
@@ -48,6 +49,7 @@ function badgeProgreso(pct) {
 }
 
 export default function HistorialCliente({ grupos }) {
+  const { t } = useTranslation()
   const [busqueda, setBusqueda] = useState('')
   const [expandido, setExpandido] = useState(() => new Set())
 
@@ -87,7 +89,7 @@ export default function HistorialCliente({ grupos }) {
     return (
       <div className="card">
         <div className="empty">
-          <p>Todavía no hay pedidos en el historial.</p>
+          <p>{t('historial.sinPedidos')}</p>
         </div>
       </div>
     )
@@ -100,7 +102,7 @@ export default function HistorialCliente({ grupos }) {
           <IconSearch className="icon-search" />
           <input
             type="text"
-            placeholder="Buscar por nombre, número o condición…"
+            placeholder={t('historial.buscarPlaceholder')}
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -112,7 +114,7 @@ export default function HistorialCliente({ grupos }) {
             onClick={toggleTodos}
             disabled={gruposFiltrados.length === 0}
           >
-            {todoAbierto ? 'Colapsar todo' : 'Expandir todo'}
+            {todoAbierto ? t('historial.colapsarTodo') : t('historial.expandirTodo')}
           </button>
         </div>
       </div>
@@ -226,7 +228,7 @@ export default function HistorialCliente({ grupos }) {
                                 <div className="acciones">
                                   <Link href={`/pedidos/${p.id}/imprimir`} className="btn btn-primary btn-sm">
                                     <IconPrinter />
-                                    Imprimir
+                                    {t('common.imprimir')}
                                   </Link>
                                 </div>
                               </td>

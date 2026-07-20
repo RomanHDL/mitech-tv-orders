@@ -2,26 +2,35 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
+import LanguageSwitcher from './language-switcher'
 
 const LINKS_POR_ROL = {
   capturista: [
-    { href: '/', label: 'Nuevo pedido' },
-    { href: '/pedidos', label: 'Pedidos' },
-    { href: '/historial', label: 'Historial' },
-    { href: '/surtir', label: 'Validar' },
+    { href: '/', labelKey: 'nav.nuevoPedido' },
+    { href: '/pedidos', labelKey: 'nav.pedidos' },
+    { href: '/historial', labelKey: 'nav.historial' },
+    { href: '/surtir', labelKey: 'nav.validar' },
+    { href: '/manual', labelKey: 'nav.manual' },
+    { href: '/changelog', labelKey: 'nav.novedades' },
   ],
   surtidor: [
-    { href: '/surtir', label: 'Surtir' },
+    { href: '/surtir', labelKey: 'nav.surtir' },
+    { href: '/manual', labelKey: 'nav.manual' },
+    { href: '/changelog', labelKey: 'nav.novedades' },
   ],
   admin: [
-    { href: '/', label: 'Nuevo' },
-    { href: '/pedidos', label: 'Pedidos' },
-    { href: '/pedidos-live', label: 'Pedidos en vivo' },
-    { href: '/historial', label: 'Historial' },
-    { href: '/surtir', label: 'Surtir' },
-    { href: '/admin/catalogo-onn', label: 'Catálogo ONN' },
-    { href: '/admin/usuarios', label: 'Usuarios' },
+    { href: '/', labelKey: 'nav.nuevo' },
+    { href: '/pedidos', labelKey: 'nav.pedidos' },
+    { href: '/pedidos-live', labelKey: 'nav.pedidosLive' },
+    { href: '/historial', labelKey: 'nav.historial' },
+    { href: '/surtir', labelKey: 'nav.surtir' },
+    { href: '/admin/catalogo-onn', labelKey: 'nav.catalogoOnn' },
+    { href: '/admin/usuarios', labelKey: 'nav.usuarios' },
+    { href: '/manual', labelKey: 'nav.manual' },
+    { href: '/admin/manual', labelKey: 'nav.editarManual' },
+    { href: '/admin/changelog', labelKey: 'nav.changelog' },
   ],
 }
 
@@ -34,6 +43,7 @@ const ROL_LABEL = {
 export default function Nav({ rol, email, nombre }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { t } = useTranslation()
 
   if (pathname.includes('/imprimir')) return null
   if (pathname === '/login') return null
@@ -66,13 +76,14 @@ export default function Nav({ rol, email, nombre }) {
         <div className="nav-links">
           {links.map((l) => (
             <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
-              {l.label}
+              {t(l.labelKey)}
             </Link>
           ))}
+          <LanguageSwitcher />
           <span className={`nav-rol-badge rol-${rol}`}>{ROL_LABEL[rol]}</span>
           {displayName && <span className="nav-user-name">{displayName}</span>}
           <button onClick={logout} className="nav-logout" type="button">
-            Salir
+            {t('nav.salir')}
           </button>
         </div>
       </div>

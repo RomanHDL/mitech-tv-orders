@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import { cookies } from 'next/headers'
 import Nav from './components/nav'
 import AutoRefresh from './components/auto-refresh'
+import ChangelogModal from './components/changelog-modal'
+import I18nProvider from './components/i18n-provider'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,9 +29,12 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="es" className={inter.variable}>
       <body>
-        <Nav rol={rol} email={email} nombre={nombre} />
-        <AutoRefresh />
-        {children}
+        <I18nProvider>
+          <Nav rol={rol} email={email} nombre={nombre} />
+          <AutoRefresh />
+          <ChangelogModal rol={rol} />
+          {children}
+        </I18nProvider>
       </body>
     </html>
   )

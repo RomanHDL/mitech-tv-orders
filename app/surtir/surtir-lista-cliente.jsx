@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { IconBox, IconCheck, IconClipboard } from '../components/icons'
 
 function estadoCard(p) {
@@ -19,6 +20,7 @@ function formatearFechaLimite(iso) {
 }
 
 export default function SurtirListaCliente({ pedidos }) {
+  const { t } = useTranslation()
   const [verCompletados, setVerCompletados] = useState(false)
 
   const { pendientes, completados } = useMemo(() => {
@@ -36,10 +38,10 @@ export default function SurtirListaCliente({ pedidos }) {
   return (
     <main className="surtir-lista-page">
       <div className="page-header">
-        <h1>Surtir pedidos</h1>
+        <h1>{t('surtir.titulo')}</h1>
         <p className="subtitle">
           {pendientes.length === 0
-            ? 'No hay pedidos pendientes por surtir.'
+            ? t('surtir.sinPendientes')
             : `${pendientes.length} ${pendientes.length === 1 ? 'pedido pendiente' : 'pedidos pendientes'}`}
         </p>
       </div>
@@ -51,7 +53,9 @@ export default function SurtirListaCliente({ pedidos }) {
             className="btn btn-secondary btn-sm"
             onClick={() => setVerCompletados((v) => !v)}
           >
-            {verCompletados ? 'Ocultar' : 'Mostrar'} completados ({completados.length})
+            {verCompletados
+              ? t('surtir.ocultarCompletados', { n: completados.length })
+              : t('surtir.mostrarCompletados', { n: completados.length })}
           </button>
         </div>
       )}
@@ -93,7 +97,7 @@ export default function SurtirListaCliente({ pedidos }) {
                     <strong>{p.totalSurtido}</strong> de <strong>{p.totalRequerido}</strong> surtidas
                   </span>
                   {p.completado ? (
-                    <span className="check"><IconCheck /> Listo</span>
+                    <span className="check"><IconCheck /> {t('surtir.listo')}</span>
                   ) : (
                     <span className="pct">{p.pct}%</span>
                   )}
@@ -112,7 +116,7 @@ export default function SurtirListaCliente({ pedidos }) {
                 )}
                 {p.fechaLimite && (
                   <span className="surtir-card-fecha-limite">
-                    Límite: {formatearFechaLimite(p.fechaLimite)}
+                    {t('surtir.limite')}: {formatearFechaLimite(p.fechaLimite)}
                   </span>
                 )}
               </div>

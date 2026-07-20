@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_PARTIDA, SKU_REGEX } from '@/lib/catalogos'
 import { IconAlert, IconArrowRight, IconBox, IconClose, IconPlus } from './icons'
 import ImportarPedidoPanel from './importar-pedido-panel'
@@ -11,11 +12,15 @@ const tvVacia = () => ({ marca: '', pulgadas: '', condicion: '', modelo: '', can
 export default function PedidoForm({
   initialData,
   onSubmit,
-  titulo = 'Nuevo pedido',
-  subtitulo = 'Captura las TVs que se incluyen en este pedido.',
-  submitLabel = 'Crear pedido',
+  titulo,
+  subtitulo,
+  submitLabel,
   cancelHref,
 }) {
+  const { t } = useTranslation()
+  const tituloFinal = titulo ?? t('pedidoForm.nuevoPedido')
+  const subtituloFinal = subtitulo ?? t('pedidoForm.subtituloNuevo')
+  const submitLabelFinal = submitLabel ?? t('pedidoForm.crearPedido')
   const [numeroPedido, setNumeroPedido] = useState(initialData?.numeroPedido || '')
   const [pedidoNombre, setPedidoNombre] = useState(initialData?.pedidoNombre || '')
   const [fechaLimite, setFechaLimite] = useState(initialData?.fechaLimite || '')
@@ -234,14 +239,14 @@ export default function PedidoForm({
   return (
     <main className="page">
       <div className="page-header">
-        <h1>{titulo}</h1>
-        <p className="subtitle">{subtitulo}</p>
+        <h1>{tituloFinal}</h1>
+        <p className="subtitle">{subtituloFinal}</p>
       </div>
 
       <div className="card">
         <form onSubmit={enviar}>
           <div className="section">
-            <label className="label" htmlFor="numeroPedido">Número de pedido</label>
+            <label className="label" htmlFor="numeroPedido">{t('pedidoForm.numeroPedido')}</label>
             <input
               id="numeroPedido"
               type="text"
@@ -253,7 +258,7 @@ export default function PedidoForm({
           </div>
 
           <div className="section">
-            <label className="label" htmlFor="pedidoNombre">Nombre del pedido</label>
+            <label className="label" htmlFor="pedidoNombre">{t('pedidoForm.nombrePedido')}</label>
             <input
               id="pedidoNombre"
               type="text"
@@ -265,7 +270,7 @@ export default function PedidoForm({
           </div>
 
           <div className="section">
-            <label className="label" htmlFor="fechaLimite">Fecha límite</label>
+            <label className="label" htmlFor="fechaLimite">{t('pedidoForm.fechaLimite')}</label>
             <input
               id="fechaLimite"
               type="date"
@@ -277,8 +282,8 @@ export default function PedidoForm({
 
           <div className="section">
             <label className="label" htmlFor="cantidadTotal">
-              Cantidad total del pedido
-              <span className="hint"> · déjalo vacío si no hay límite</span>
+              {t('pedidoForm.cantidadTotal')}
+              <span className="hint"> · {t('pedidoForm.cantidadTotalHint')}</span>
             </label>
             <input
               id="cantidadTotal"
@@ -313,7 +318,7 @@ export default function PedidoForm({
           </div>
 
           <div className="section">
-            <div className="label">Condiciones</div>
+            <div className="label">{t('pedidoForm.condiciones')}</div>
             <div className="condiciones">
               {CONDICIONES.map((c) => (
                 <label
@@ -333,10 +338,8 @@ export default function PedidoForm({
 
           <div className="section section-tvs">
             <div className="section-header">
-              <h2>Televisiones</h2>
-              <span className="count">
-                {tvs.length} {tvs.length === 1 ? 'agregada' : 'agregadas'}
-              </span>
+              <h2>{t('pedidoForm.televisiones')}</h2>
+              <span className="count">{tvs.length}</span>
             </div>
 
             {!pedidoCerrado && <ImportarPedidoPanel onImportar={importarTvs} />}
@@ -365,7 +368,7 @@ export default function PedidoForm({
                         onChange={() => togglePallet(i)}
                       />
                       <IconBox />
-                      Pallet
+                      {t('pedidoForm.pallet')}
                     </label>
                     <label className={`tv-sin-limite-toggle ${esSinLimite ? 'activa' : ''}`}>
                       <input
@@ -374,7 +377,7 @@ export default function PedidoForm({
                         onChange={() => toggleSinLimiteTv(i)}
                       />
                       <span aria-hidden="true">∞</span>
-                      Sin límite
+                      {t('pedidoForm.sinLimite')}
                     </label>
                     {tvs.length > 1 && (
                       <button
@@ -384,7 +387,7 @@ export default function PedidoForm({
                         aria-label="Quitar TV"
                       >
                         <IconClose width={14} height={14} />
-                        Quitar
+                        {t('pedidoForm.quitar')}
                       </button>
                     )}
                   </div>
@@ -426,7 +429,7 @@ export default function PedidoForm({
                         aria-label="Condición"
                         required
                       >
-                        <option value="">Condición</option>
+                        <option value="">{t('pedidoForm.condicion')}</option>
                         {CONDICIONES_PARTIDA.map((c) => (
                           <option key={c} value={c}>{c}</option>
                         ))}
@@ -445,12 +448,12 @@ export default function PedidoForm({
                         {limite > 0 ? (
                           <>
                             <span className="cantidad-sin-limite-numero">{limite}</span>
-                            <span className="cantidad-sin-limite-texto">Total del pedido</span>
+                            <span className="cantidad-sin-limite-texto">{t('pedidoForm.cantidadTotal')}</span>
                           </>
                         ) : (
                           <>
                             <span className="cantidad-sin-limite-simbolo">∞</span>
-                            <span className="cantidad-sin-limite-texto">Sin límite</span>
+                            <span className="cantidad-sin-limite-texto">{t('pedidoForm.sinLimite')}</span>
                           </>
                         )}
                       </div>
@@ -489,8 +492,8 @@ export default function PedidoForm({
               title={pedidoCerrado ? 'Pedido completo (límite alcanzado)' : undefined}
             >
               <IconPlus />
-              {pedidoCerrado ? 'Pedido completo' : 'Agregar televisión'}
-              {!pedidoCerrado && <span className="atajo">o presiona Enter</span>}
+              {pedidoCerrado ? t('pedidoForm.pedidoCompleto') : t('pedidoForm.agregarTelevision')}
+              {!pedidoCerrado && <span className="atajo">{t('pedidoForm.atajoEnter')}</span>}
             </button>
           </div>
 
@@ -498,27 +501,27 @@ export default function PedidoForm({
             <div className="resumen-pedido">
               <div className="resumen-item">
                 <div className="resumen-numero">{tvs.length}</div>
-                <div className="resumen-etiqueta">Modelos</div>
+                <div className="resumen-etiqueta">{t('pedidoForm.modelos')}</div>
               </div>
               <div className="resumen-item">
                 <div className="resumen-numero">{marcasUnicas}</div>
-                <div className="resumen-etiqueta">Marcas</div>
+                <div className="resumen-etiqueta">{t('pedidoForm.marcas')}</div>
               </div>
               {hayPallets ? (
                 <>
                   <div className="resumen-item">
                     <div className="resumen-numero">{pallets}</div>
-                    <div className="resumen-etiqueta">Pallets</div>
+                    <div className="resumen-etiqueta">{t('pedidoForm.pallets')}</div>
                   </div>
                   <div className="resumen-item">
                     <div className="resumen-numero">{piezas}</div>
-                    <div className="resumen-etiqueta">Piezas</div>
+                    <div className="resumen-etiqueta">{t('pedidoForm.piezas')}</div>
                   </div>
                 </>
               ) : (
                 <div className="resumen-item">
                   <div className="resumen-numero">{limite > 0 ? limite : piezas}</div>
-                  <div className="resumen-etiqueta">TVs totales</div>
+                  <div className="resumen-etiqueta">{t('pedidoForm.tvsTotal')}</div>
                 </div>
               )}
             </div>
@@ -534,13 +537,13 @@ export default function PedidoForm({
           <div className="form-acciones">
             {cancelHref && (
               <Link href={cancelHref} className="btn btn-secondary btn-large">
-                Cancelar
+                {t('common.cancelar')}
               </Link>
             )}
             <button type="submit" disabled={enviando} className="btn btn-primary btn-large">
-              {enviando ? 'Guardando…' : (
+              {enviando ? t('common.guardando') : (
                 <>
-                  {submitLabel}
+                  {submitLabelFinal}
                   <IconArrowRight />
                 </>
               )}
