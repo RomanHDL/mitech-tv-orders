@@ -2,11 +2,11 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { MARCAS, PULGADAS, CONDICIONES, SKU_REGEX } from '@/lib/catalogos'
+import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_PARTIDA, SKU_REGEX } from '@/lib/catalogos'
 import { IconAlert, IconArrowRight, IconBox, IconClose, IconPlus } from './icons'
 import ImportarPedidoPanel from './importar-pedido-panel'
 
-const tvVacia = () => ({ marca: '', pulgadas: '', modelo: '', cantidad: 1, unidad: 'pieza', sinLimite: false, modelosAlternativos: [] })
+const tvVacia = () => ({ marca: '', pulgadas: '', condicion: '', modelo: '', cantidad: 1, unidad: 'pieza', sinLimite: false, modelosAlternativos: [] })
 
 export default function PedidoForm({
   initialData,
@@ -30,6 +30,7 @@ export default function PedidoForm({
       ? initialData.televisiones.map((tv) => ({
           marca: tv.marca || '',
           pulgadas: tv.pulgadas !== undefined ? String(tv.pulgadas) : '',
+          condicion: tv.condicion || '',
           modelo: tv.modelo || '',
           cantidad: tv.cantidad || 1,
           unidad: tv.unidad || 'pieza',
@@ -154,6 +155,7 @@ export default function PedidoForm({
     const nuevas = items.map((it) => ({
       marca: it.marca,
       pulgadas: it.pulgadas ? String(it.pulgadas) : '',
+      condicion: '',
       modelo: it.modelo,
       cantidad: it.cantidad || 1,
       unidad: it.unidad || 'pieza',
@@ -178,6 +180,7 @@ export default function PedidoForm({
     for (const [i, tv] of tvs.entries()) {
       if (!MARCAS.includes(tv.marca)) return setError(`TV #${i + 1}: marca inválida`)
       if (!PULGADAS.includes(Number(tv.pulgadas))) return setError(`TV #${i + 1}: pulgadas inválidas`)
+      if (!CONDICIONES_PARTIDA.includes(tv.condicion)) return setError(`TV #${i + 1}: falta condición`)
       if (!SKU_REGEX.test(tv.modelo || '')) {
         return setError(`TV #${i + 1}: captura el modelo / SKU (mín. 3 letras o números)`)
       }
@@ -211,6 +214,7 @@ export default function PedidoForm({
         televisiones: tvs.map((tv) => ({
           marca: tv.marca,
           pulgadas: Number(tv.pulgadas),
+          condicion: tv.condicion,
           modelo: tv.modelo.trim(),
           cantidad: tv.sinLimite ? (limite > 0 ? limite : 0) : Number(tv.cantidad),
           unidad: tv.unidad === 'pallet' ? 'pallet' : 'pieza',
@@ -415,6 +419,24 @@ export default function PedidoForm({
                         <option key={p} value={p}>{p}"</option>
                       ))}
                     </select>
+                    <div className="tv-condicion-field">
+                      <select
+                        value={tv.condicion}
+                        onChange={(e) => updateTv(i, 'condicion', e.target.value)}
+                        aria-label="Condición"
+                        required
+                      >
+                        <option value="">Condición</option>
+                        {CONDICIONES_PARTIDA.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                      {tv.condicion && (
+                        <span className={`tag tag-${tv.condicion.toLowerCase()} tv-condicion-preview`}>
+                          {tv.condicion}
+                        </span>
+                      )}
+                    </div>
                     {esSinLimite ? (
                       <div
                         className="cantidad-sin-limite"

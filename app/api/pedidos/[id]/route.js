@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { MARCAS, PULGADAS, CONDICIONES, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
+import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_PARTIDA, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
 import { getUsuario } from '@/lib/auth'
 
 export async function GET(_req, { params }) {
@@ -151,6 +151,9 @@ export async function PUT(req, { params }) {
     if (!PULGADAS.includes(pulgadas)) {
       return NextResponse.json({ error: `TV #${i + 1}: pulgadas inválidas` }, { status: 400 })
     }
+    if (!CONDICIONES_PARTIDA.includes(tv.condicion)) {
+      return NextResponse.json({ error: `TV #${i + 1}: falta condición` }, { status: 400 })
+    }
     const tvSinLimite = !!tv.sinLimite
     const cantidad = Number(tv.cantidad) || 0
     if (!tvSinLimite && (!Number.isInteger(cantidad) || cantidad < 1)) {
@@ -166,13 +169,16 @@ export async function PUT(req, { params }) {
       )
     }
 
-    // Preservar cantidadSurtida si hay match exacto
+    // Preservar cantidadSurtida si hay match exacto de SKU + condición
+    // (marca+pulgadas+modelo+unidad+condicion). Dos partidas del mismo SKU
+    // con condición distinta se tratan como líneas independientes.
     const matching = tvsExistentes.find(
       (v) =>
         v.marca === tv.marca &&
         v.pulgadas === pulgadas &&
         (v.modelo || '') === modelo &&
-        (v.unidad || 'pieza') === unidad
+        (v.unidad || 'pieza') === unidad &&
+        (v.condicion || '') === tv.condicion
     )
     const cantidadSurtida = matching
       ? (tvSinLimite ? (matching.cantidadSurtida || 0) : Math.min(cantidadFinal, matching.cantidadSurtida || 0))
@@ -190,6 +196,7 @@ export async function PUT(req, { params }) {
     tvsLimpias.push({
       marca: tv.marca,
       pulgadas,
+      condicion: tv.condicion,
       modelo,
       modelosAlternativos,
       cantidad: cantidadFinal,

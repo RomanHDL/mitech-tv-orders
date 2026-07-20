@@ -648,11 +648,20 @@ select.select-dueno {
 }
 .tv-card-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 2fr) minmax(0, 0.7fr);
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.7fr);
   gap: 0.5rem;
 }
 .tv-card-grid > input,
 .tv-card-grid > select { min-width: 0; }
+
+.tv-condicion-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.tv-condicion-field select { flex: 1; min-width: 0; }
+.tv-condicion-preview { flex-shrink: 0; }
 .tv-alt-hint {
   margin-top: 0.4rem;
   font-size: 0.78rem;

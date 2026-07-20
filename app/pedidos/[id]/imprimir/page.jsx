@@ -191,6 +191,7 @@ export default async function ImprimirPage({ params }) {
                 {items.map((tv, i) => (
                   <li key={i} className={tv.unidad === 'pallet' ? 'es-pallet' : ''}>
                     <span className="col-pulgadas">{tv.pulgadas}"</span>
+                    {tv.condicion && <span className="col-condicion">{tv.condicion}</span>}
                     <span className="col-cantidad">
                       {tv.sinLimite ? 'S/L' : tv.cantidad}
                     </span>

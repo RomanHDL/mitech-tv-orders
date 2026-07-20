@@ -225,7 +225,7 @@ export default function SurtirCliente({ pedido }) {
               const enProgreso = surtida > 0 && !completo
               const estado = completo ? 'completo' : enProgreso ? 'parcial' : 'pendiente'
               const esPallet = tv.unidad === 'pallet'
-              const descTv = `${marca} ${tv.pulgadas}"${tv.modelo ? ' ' + tv.modelo : ''}`
+              const descTv = `${marca} ${tv.pulgadas}"${tv.condicion ? ' ' + tv.condicion : ''}${tv.modelo ? ' ' + tv.modelo : ''}`
               const unidadTxt = unidadLabel(tv.cantidad || 1, tv.unidad)
 
               const marcarTodas = () => {
@@ -249,6 +249,9 @@ export default function SurtirCliente({ pedido }) {
                   <div className="surtir-item-info">
                     <div className="surtir-item-titulo">
                       <span className="surtir-pulgadas">{tv.pulgadas}"</span>
+                      {tv.condicion && (
+                        <span className={`tag tag-${tv.condicion.toLowerCase()}`}>{tv.condicion}</span>
+                      )}
                       {esPallet && (
                         <span className="surtir-pallet-tag">
                           <IconBox /> Pallet

@@ -252,6 +252,7 @@ body { background: #fff; }
   display: grid;
   grid-template-columns:
     minmax(calc(3.5rem * var(--fs-mult)), auto)
+    minmax(calc(3rem * var(--fs-mult)), auto)
     minmax(calc(2rem * var(--fs-mult)), auto)
     minmax(calc(4rem * var(--fs-mult)), auto)
     1fr;
@@ -275,6 +276,15 @@ body { background: #fff; }
   font-weight: 900;
   white-space: nowrap;
   letter-spacing: 0.02em;
+}
+.col-condicion {
+  justify-self: start;
+  white-space: nowrap;
+  font-weight: 900;
+  padding: 0 calc(0.4rem * var(--fs-mult));
+  border: 2px solid #000;
+  border-radius: 999px;
+  font-size: calc(1rem * var(--fs-mult));
 }
 .col-cantidad {
   font-weight: 900;
