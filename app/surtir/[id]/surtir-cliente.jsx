@@ -168,7 +168,7 @@ export default function SurtirCliente({ pedido }) {
           )}
         </div>
 
-        <h1 className="surtir-titulo">
+        <h1 className="surtir-titulo font-display">
           {pedido.numeroPedido ? `#${pedido.numeroPedido} — ` : ''}{pedido.pedidoNombre}
         </h1>
 

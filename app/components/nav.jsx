@@ -1,10 +1,12 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
 import LanguageSwitcher from './language-switcher'
+import { IconChevronDown, IconClose, IconMenu } from './icons'
 
 const LINKS_POR_ROL = {
   capturista: [
@@ -44,6 +46,37 @@ export default function Nav({ rol, email, nombre }) {
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useTranslation()
+  const [menuMovilAbierto, setMenuMovilAbierto] = useState(false)
+  const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false)
+  const usuarioMenuRef = useRef(null)
+
+  // Cierra ambos menús al navegar a otra ruta.
+  useEffect(() => {
+    setMenuMovilAbierto(false)
+    setMenuUsuarioAbierto(false)
+  }, [pathname])
+
+  // Cierra el menú de usuario al hacer clic fuera, y ambos con Escape —
+  // mismo patrón que ya usa el modal de changelog.
+  useEffect(() => {
+    function onClickFuera(e) {
+      if (usuarioMenuRef.current && !usuarioMenuRef.current.contains(e.target)) {
+        setMenuUsuarioAbierto(false)
+      }
+    }
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        setMenuUsuarioAbierto(false)
+        setMenuMovilAbierto(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickFuera)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onClickFuera)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
 
   if (pathname.includes('/imprimir')) return null
   if (pathname === '/login') return null
@@ -51,6 +84,7 @@ export default function Nav({ rol, email, nombre }) {
 
   const links = LINKS_POR_ROL[rol] || []
   const displayName = nombre || (email ? email.split('@')[0] : '')
+  const inicial = (displayName || rol || '?').charAt(0).toUpperCase()
 
   const logout = async () => {
     try {
@@ -73,20 +107,65 @@ export default function Nav({ rol, email, nombre }) {
             <img src={LOGO_MITECH} alt="MiTechnologies" width="120" height="38" />
           </span>
         </Link>
-        <div className="nav-links">
+
+        <div className="nav-links nav-links-escritorio">
           {links.map((l) => (
             <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
               {t(l.labelKey)}
             </Link>
           ))}
+        </div>
+
+        <div className="nav-right">
           <LanguageSwitcher />
-          <span className={`nav-rol-badge rol-${rol}`}>{ROL_LABEL[rol]}</span>
-          {displayName && <span className="nav-user-name">{displayName}</span>}
-          <button onClick={logout} className="nav-logout" type="button">
-            {t('nav.salir')}
+
+          <div className="nav-usuario" ref={usuarioMenuRef}>
+            <button
+              type="button"
+              className="nav-usuario-btn"
+              onClick={() => setMenuUsuarioAbierto((v) => !v)}
+              aria-haspopup="true"
+              aria-expanded={menuUsuarioAbierto}
+              aria-label="Menú de usuario"
+            >
+              <span className="nav-avatar">{inicial}</span>
+              <IconChevronDown width={14} height={14} />
+            </button>
+
+            {menuUsuarioAbierto && (
+              <div className="nav-usuario-menu" role="menu">
+                <div className="nav-usuario-menu-header">
+                  {displayName && <div className="nav-usuario-menu-nombre">{displayName}</div>}
+                  <span className={`nav-rol-badge rol-${rol}`}>{ROL_LABEL[rol]}</span>
+                </div>
+                <button onClick={logout} className="nav-usuario-menu-salir" type="button" role="menuitem">
+                  {t('nav.salir')}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="nav-hamburguesa"
+            onClick={() => setMenuMovilAbierto((v) => !v)}
+            aria-label="Menú"
+            aria-expanded={menuMovilAbierto}
+          >
+            {menuMovilAbierto ? <IconClose /> : <IconMenu />}
           </button>
         </div>
       </div>
+
+      {menuMovilAbierto && (
+        <div className="nav-links-movil">
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
+              {t(l.labelKey)}
+            </Link>
+          ))}
+        </div>
+      )}
     </nav>
   )
 }

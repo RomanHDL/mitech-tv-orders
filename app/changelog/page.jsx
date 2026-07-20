@@ -25,7 +25,7 @@ export default async function ChangelogPage() {
   return (
     <main className="page">
       <div className="page-header">
-        <h1>Changelog</h1>
+        <h1 className="font-display">Changelog</h1>
         <p className="subtitle">
           {entradas.length === 0
             ? 'Aún no hay entradas publicadas.'

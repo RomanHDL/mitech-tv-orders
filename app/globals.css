@@ -43,16 +43,16 @@
   --warning-dark: #92400e;
   --warning-light: var(--yellow-light);
 
-  /* Sombras hard-edge (más sutiles) */
-  --shadow-xs: 1px 1px 0 var(--black);
-  --shadow-sm: 2px 2px 0 var(--black);
-  --shadow: 3px 3px 0 var(--black);
-  --shadow-md: 4px 4px 0 var(--black);
-  --shadow-lg: 5px 5px 0 var(--black);
+  /* Sombras suaves (difusas, sin offset duro) */
+  --shadow-xs: 0 1px 2px rgba(15, 15, 15, 0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 15, 15, 0.08), 0 1px 2px rgba(15, 15, 15, 0.04);
+  --shadow: 0 4px 6px -1px rgba(15, 15, 15, 0.08), 0 2px 4px -2px rgba(15, 15, 15, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(15, 15, 15, 0.08), 0 4px 6px -4px rgba(15, 15, 15, 0.06);
+  --shadow-lg: 0 20px 25px -5px rgba(15, 15, 15, 0.1), 0 8px 10px -6px rgba(15, 15, 15, 0.06);
 
-  --radius-sm: 6px;
+  --radius-sm: 8px;
   --radius: 10px;
-  --radius-lg: 14px;
+  --radius-lg: 16px;
 
   --tx: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
   --tx-slow: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -83,13 +83,22 @@ a { color: var(--primary); text-decoration: none; font-weight: 600; }
 a:hover { text-decoration: underline; }
 
 h1 {
-  font-family: 'Bangers', cursive;
-  font-size: 2.1rem;
-  font-weight: 400;
-  letter-spacing: 0.03em;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   margin: 0 0 0.4rem;
   color: var(--black);
-  line-height: 1.05;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+/* Título decorativo puntual — igual que el Stack, se aplica solo en
+   surtir/historial/changelog, no en todos los h1 */
+.font-display {
+  font-family: 'Bangers', cursive;
+  font-weight: 400;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -119,7 +128,7 @@ h2 {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 255, 0.95) 100%);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
-  border-bottom: 2px solid var(--black);
+  border-bottom: 1px solid var(--border);
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.04), 0 2px 12px rgba(0, 0, 0, 0.06);
   position: sticky;
   top: 0;
@@ -156,7 +165,7 @@ h2 {
 .nav-logo-icon {
   height: 38px;
   background: #fff;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
@@ -171,7 +180,6 @@ h2 {
 }
 .nav-logo:hover .nav-logo-icon {
   box-shadow: var(--shadow-sm);
-  transform: translate(-1px, -1px);
 }
 
 .nav-links { display: flex; gap: 0.3rem; align-items: center; }
@@ -196,12 +204,131 @@ h2 {
   font-weight: 700;
 }
 
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Menú de usuario (avatar + desplegable) — reemplaza el nombre/rol/salir
+   sueltos de antes; mismo comportamiento que el genérico .modal-overlay:
+   cierra con click fuera o Escape (ver nav.jsx). */
+.nav-usuario { position: relative; }
+.nav-usuario-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all var(--tx);
+}
+.nav-usuario-btn:hover { background: var(--bg); border-color: var(--text-subtle); }
+.nav-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.nav-usuario-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 180px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 0.6rem;
+  z-index: 60;
+  animation: fadeInUp 0.15s ease-out;
+}
+.nav-usuario-menu-header {
+  padding: 0.3rem 0.5rem 0.6rem;
+  margin-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.nav-usuario-menu-nombre {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--black);
+  margin-bottom: 0.35rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-usuario-menu-salir {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--red-dark);
+  cursor: pointer;
+}
+.nav-usuario-menu-salir:hover { background: var(--red-light); }
+
+/* Hamburguesa — oculta en escritorio, visible bajo el breakpoint junto con
+   el panel de links móvil (mismo umbral que oculta .nav-links-escritorio) */
+.nav-hamburguesa {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.nav-links-movil {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .nav-links-escritorio { display: none; }
+  .nav-hamburguesa { display: inline-flex; }
+  .nav-links-movil {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.75rem 1.5rem 1rem;
+    border-top: 1px solid var(--border);
+    background: var(--card);
+    animation: fadeInUp 0.15s ease-out;
+  }
+  .nav-links-movil a {
+    padding: 0.65rem 0.75rem;
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+  .nav-links-movil a:hover { background: var(--bg); color: var(--black); }
+  .nav-links-movil a.activo { color: var(--primary); background: var(--primary-light); }
+}
+
 .language-switcher {
   margin-left: 0.4rem;
   padding: 0.3rem 1.6rem 0.3rem 0.6rem;
   font-size: 0.75rem;
   font-weight: 700;
-  border: 1.5px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 999px;
   background-color: #fff;
   cursor: pointer;
@@ -217,7 +344,7 @@ h2 {
   padding: 0.2rem 0.6rem;
   font-size: 0.65rem;
   font-weight: 800;
-  border: 1.5px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 999px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -251,11 +378,9 @@ h2 {
   transition: all var(--tx);
 }
 .nav-logout:hover {
-  background: var(--red);
-  color: #fff;
-  border-color: var(--black);
-  box-shadow: var(--shadow-xs);
-  transform: translate(-1px, -1px);
+  background: var(--red-light);
+  color: var(--red-dark);
+  border-color: var(--red);
 }
 
 /* ─── Page layouts ─────────────────────────────────────── */
@@ -275,9 +400,9 @@ h2 {
 
 .card {
   background: var(--card);
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
   padding: 2rem;
   min-width: 0;
 }
@@ -299,8 +424,8 @@ h2 {
   gap: 0.5rem;
   padding: 0.6rem 1.1rem;
   font-size: 0.85rem;
-  font-weight: 700;
-  border: 2px solid var(--black);
+  font-weight: 600;
+  border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
   transition: all var(--tx);
@@ -309,20 +434,21 @@ h2 {
   line-height: 1;
   white-space: nowrap;
   letter-spacing: -0.005em;
-  box-shadow: var(--shadow-sm);
-}
-.btn:hover { text-decoration: none; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: var(--shadow-xs); }
-.btn:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow);
-}
-.btn:active:not(:disabled) {
-  transform: translate(1px, 1px);
   box-shadow: var(--shadow-xs);
 }
+.btn:hover { text-decoration: none; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.btn:hover:not(:disabled) {
+  box-shadow: var(--shadow-sm);
+  filter: brightness(0.97);
+}
+.btn:active:not(:disabled) {
+  box-shadow: none;
+  filter: brightness(0.94);
+}
 
-.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: var(--shadow-xs), 0 0 0 3px rgba(37, 99, 235, 0.12); }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); border-color: var(--primary-hover); filter: none; }
 .btn-secondary { background: #fff; color: var(--black); }
 .btn-danger { background: var(--red); color: #fff; }
 .btn-excel { background: #15803d; color: #fff; }
@@ -388,7 +514,7 @@ h2 {
   align-items: center;
   gap: 0.35rem;
   padding: 0.3rem 0.7rem;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 600;
@@ -414,7 +540,7 @@ h2 {
   justify-content: center;
   gap: 0.4rem;
   padding: 0.6rem 0.8rem;
-  border: 2px dashed var(--black);
+  border: 1.5px dashed var(--text-subtle);
   border-radius: var(--radius, 6px);
   background: var(--yellow-soft, #fff8e1);
   font-weight: 700;
@@ -443,7 +569,7 @@ h2 {
 .limite-resumen {
   margin-top: 0.7rem;
   background: var(--yellow-soft);
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.85rem 1rem;
   box-shadow: var(--shadow-xs);
@@ -468,7 +594,6 @@ h2 {
   margin: 0 0.15em;
 }
 .limite-pct {
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
   font-size: 1.2rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
@@ -476,7 +601,7 @@ h2 {
 .limite-resumen .progreso-track {
   height: 10px;
   background: #fff;
-  border: 1.5px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -516,7 +641,7 @@ select {
   width: 100%;
   padding: 0.6rem 0.8rem;
   font-size: 0.92rem;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
   color: var(--black);
@@ -526,8 +651,8 @@ select {
 }
 input:focus, select:focus {
   outline: none;
-  box-shadow: var(--shadow-sm);
-  transform: translate(-1px, -1px);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 input::placeholder { color: var(--text-subtle); font-weight: 400; }
 input:disabled, select:disabled {
@@ -582,7 +707,7 @@ select.select-dueno {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.95rem;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -593,7 +718,6 @@ select.select-dueno {
 }
 .condicion-chip:hover {
   background: var(--yellow-soft);
-  transform: translate(-1px, -1px);
   box-shadow: var(--shadow-xs);
 }
 .condicion-chip input { margin: 0; cursor: pointer; }
@@ -607,7 +731,7 @@ select.select-dueno {
 /* ─── TV cards (form) ─────────────────────────────────── */
 
 .tv-card {
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.05rem;
   background: #fff;
@@ -616,7 +740,7 @@ select.select-dueno {
   transition: all var(--tx);
 }
 .tv-card:focus-within {
-  transform: translate(-1px, -1px);
+  border-color: var(--primary);
   box-shadow: var(--shadow-sm);
 }
 .tv-card.es-pallet {
@@ -691,7 +815,7 @@ select.select-dueno {
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 2px dashed var(--black);
+  border: 1.5px dashed var(--text-subtle);
   border-radius: var(--radius);
   padding: 0.95rem;
   color: var(--black);
@@ -712,8 +836,7 @@ select.select-dueno {
 .btn-agregar-tv:hover {
   background: var(--primary-soft);
   border-style: solid;
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 .btn-agregar-tv .atajo {
   font-size: 0.72rem;
@@ -728,7 +851,7 @@ select.select-dueno {
 .btn-importar-toggle {
   width: 100%;
   background: #fff;
-  border: 2px dashed var(--black);
+  border: 1.5px dashed rgba(37, 99, 235, 0.4);
   border-radius: var(--radius);
   padding: 0.8rem;
   color: var(--black);
@@ -746,8 +869,7 @@ select.select-dueno {
 .btn-importar-toggle:hover {
   background: var(--primary-soft);
   border-style: solid;
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 .btn-importar-toggle .atajo {
   font-size: 0.72rem;
@@ -756,7 +878,7 @@ select.select-dueno {
 }
 
 .importar-panel {
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem;
   background: var(--primary-soft);
@@ -784,7 +906,7 @@ select.select-dueno {
   font-family: inherit;
   background: #fff;
   color: var(--text-muted);
-  border: 1.5px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--tx);
@@ -803,7 +925,7 @@ select.select-dueno {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.82rem;
   padding: 0.7rem;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   resize: vertical;
   background: #fff;
@@ -838,7 +960,7 @@ select.select-dueno {
 .importar-preview {
   max-height: 280px;
   overflow-y: auto;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
 }
@@ -876,7 +998,7 @@ select.select-dueno {
 
 .resumen-pedido {
   background: var(--yellow-soft);
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.4rem 1.25rem;
   display: grid;
@@ -887,11 +1009,10 @@ select.select-dueno {
 }
 .resumen-item { text-align: center; }
 .resumen-numero {
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
   font-size: 1.9rem;
   font-weight: 800;
   color: var(--black);
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
@@ -916,7 +1037,7 @@ select.select-dueno {
   display: flex;
   align-items: flex-start;
   gap: 0.625rem;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-xs);
   animation: pop 0.25s ease-out;
 }
@@ -953,7 +1074,7 @@ select.select-dueno {
   margin-top: 1.25rem;
   padding: 0.85rem 1rem;
   background: var(--yellow-soft);
-  border: 1.5px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: 0.82rem;
   color: var(--black);
@@ -1024,18 +1145,18 @@ select.select-dueno {
 }
 .stat-card {
   background: var(--card);
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   padding: 1.1rem 1.25rem;
   text-align: center;
 }
 .stat-numero {
-  font-family: 'Bangers', cursive, var(--font-inter), sans-serif;
-  font-size: 2rem;
+  font-size: 1.7rem;
   font-weight: 800;
   color: var(--black);
   line-height: 1;
+  letter-spacing: -0.01em;
 }
 .stat-label {
   margin-top: 0.4rem;
@@ -1176,7 +1297,7 @@ select.select-dueno {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-muted);
-  border-bottom: 2px solid var(--black);
+  border-bottom: 1px solid var(--border);
   background: #f5f5f0;
 }
 .tabla-pedidos thead th:first-child { border-top-left-radius: 8px; }
@@ -1211,12 +1332,11 @@ select.select-dueno {
 }
 
 .numero-pedido {
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
-  font-weight: 800;
-  font-size: 0.95rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  font-size: 0.85rem;
   color: var(--black);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
 }
 
 .tiempo-restante {
@@ -1224,22 +1344,21 @@ select.select-dueno {
   align-items: center;
   padding: 0.22rem 0.6rem;
   font-size: 0.72rem;
-  font-weight: 800;
-  border: 1.5px solid var(--black);
+  font-weight: 700;
+  border: none;
   border-radius: 999px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.tiempo-restante.tr-vencido { background: var(--red); color: #fff; }
-.tiempo-restante.tr-urgente { background: var(--yellow); color: var(--black); }
-.tiempo-restante.tr-cercano { background: var(--primary-light); color: var(--black); }
-.tiempo-restante.tr-normal { background: var(--green-light); color: var(--green-dark); }
+.tiempo-restante.tr-vencido { background: rgba(239, 68, 68, 0.12); color: var(--red-dark); }
+.tiempo-restante.tr-urgente { background: #fef3c7; color: #92400e; }
+.tiempo-restante.tr-cercano { background: #fef9c3; color: #854d0e; }
+.tiempo-restante.tr-normal { background: transparent; color: var(--text-muted); }
 .tiempo-restante.tr-sin-fecha {
-  background: #fff;
+  background: transparent;
   color: var(--text-subtle);
-  border-color: var(--text-subtle);
 }
 
 .tags-celda {
@@ -1289,7 +1408,7 @@ select.select-dueno {
 }
 .modal {
   background: var(--card);
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   width: 100%;
@@ -1305,17 +1424,16 @@ select.select-dueno {
   justify-content: space-between;
   gap: 1rem;
   padding: 1.1rem 1.4rem;
-  border-bottom: 2px solid var(--black);
-  background: #f5f5f0;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
 }
 .modal-header h2 {
-  font-family: 'Bangers', cursive;
-  font-size: 1.3rem;
-  font-weight: 400;
-  letter-spacing: 0.02em;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   margin: 0;
-  text-transform: uppercase;
-  line-height: 1;
+  text-transform: none;
+  line-height: 1.3;
 }
 .modal-close {
   display: inline-flex;
@@ -1323,14 +1441,14 @@ select.select-dueno {
   justify-content: center;
   width: 2.1rem;
   height: 2.1rem;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
-  color: var(--black);
+  color: var(--text-muted);
   cursor: pointer;
   flex-shrink: 0;
 }
-.modal-close:hover { background: var(--red); color: #fff; }
+.modal-close:hover { background: var(--red-light); color: var(--red-dark); }
 .modal-body {
   padding: 1.4rem;
   overflow-y: auto;
@@ -1351,8 +1469,9 @@ select.select-dueno {
   margin-bottom: 0.6rem;
 }
 .changelog-version {
-  font-family: 'Bangers', cursive;
-  font-size: 1.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
   color: var(--primary);
 }
 .changelog-fecha {
@@ -1383,14 +1502,14 @@ select.select-dueno {
   line-height: 1.6;
 }
 
-.tag-cat-feature { background: var(--primary); color: #fff; }
-.tag-cat-improvement { background: var(--green); color: #fff; }
-.tag-cat-bugfix { background: var(--yellow); color: var(--black); }
-.tag-cat-security { background: var(--red); color: #fff; }
-.tag-pri-critical { background: var(--red-dark, var(--red)); color: #fff; }
-.tag-pri-high { background: var(--yellow); color: var(--black); }
-.tag-pri-normal { background: #fff; color: var(--text-muted); border-color: var(--text-subtle, var(--black)); }
-.tag-pri-low { background: #fff; color: var(--text-subtle, var(--text-muted)); }
+.tag-cat-feature { background: var(--primary-light); color: var(--primary); }
+.tag-cat-improvement { background: #ecfdf5; color: #047857; }
+.tag-cat-bugfix { background: #fef9c3; color: #854d0e; }
+.tag-cat-security { background: var(--red-light); color: var(--red-dark); }
+.tag-pri-critical { background: var(--red-light); color: var(--red-dark); }
+.tag-pri-high { background: #fef3c7; color: #92400e; }
+.tag-pri-normal { background: var(--bg); color: var(--text-muted); }
+.tag-pri-low { background: var(--bg); color: var(--text-subtle); }
 
 /* ─── Manual de usuario (/manual) ─────────────────────── */
 
@@ -1494,10 +1613,10 @@ select.select-dueno {
 .tag {
   display: inline-block;
   padding: 0.18rem 0.55rem;
-  border: 1.5px solid var(--black);
+  border: none;
   border-radius: 999px;
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1507,11 +1626,9 @@ select.select-dueno {
 .tag-empty { color: var(--text-subtle); font-size: 0.85rem; font-weight: 500; }
 
 .numero-grande {
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
-  font-size: 1.05rem;
-  font-weight: 800;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--black);
-  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
@@ -1525,17 +1642,17 @@ select.select-dueno {
 .badge-progreso {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.55rem;
+  padding: 0.2rem 0.6rem;
   font-size: 0.65rem;
-  font-weight: 800;
-  border: 1.5px solid var(--black);
+  font-weight: 700;
+  border: none;
   border-radius: 999px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.badge-progreso.pendiente { background: #fff; color: var(--text-muted); border-color: var(--text-subtle); }
-.badge-progreso.parcial { background: var(--yellow); color: var(--black); }
-.badge-progreso.completo { background: var(--green); color: #fff; }
+.badge-progreso.pendiente { background: #fffbeb; color: #b45309; }
+.badge-progreso.parcial { background: #faf5ff; color: #7e22ce; }
+.badge-progreso.completo { background: #ecfdf5; color: #047857; }
 
 .badge-pallet {
   display: inline-flex;
@@ -1546,7 +1663,7 @@ select.select-dueno {
   font-weight: 800;
   background: var(--yellow);
   color: var(--black);
-  border: 1.5px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 999px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1560,7 +1677,7 @@ select.select-dueno {
   padding: 0.2rem 0.55rem;
   font-size: 0.65rem;
   font-weight: 800;
-  border: 1.5px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 999px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1603,7 +1720,7 @@ select.select-dueno {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-subtle);
-  border-bottom: 1.5px solid var(--black);
+  border-bottom: 1px solid var(--border);
 }
 .tabla-detalle-items td {
   padding: 0.5rem 0.6rem;
@@ -1620,7 +1737,7 @@ select.select-dueno {
 }
 
 .historial-grupo {
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   background: #fff;
   box-shadow: var(--shadow-xs);
@@ -1646,7 +1763,7 @@ select.select-dueno {
 .historial-grupo-header:hover { background: var(--yellow-soft); }
 .historial-grupo.abierto .historial-grupo-header {
   background: var(--primary-soft);
-  border-bottom: 2px solid var(--black);
+  border-bottom: 1px solid var(--border);
 }
 
 .historial-chevron {
@@ -1726,7 +1843,7 @@ select.select-dueno {
 .surtir-card {
   display: block;
   background: var(--card);
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-left: 5px solid var(--text-subtle);
   border-radius: var(--radius-lg);
   padding: 1.3rem 1.3rem 1.3rem 1.5rem;
@@ -1768,11 +1885,11 @@ select.select-dueno {
   padding: 0.1rem 0.5rem;
   background: var(--primary-light);
   color: var(--primary-hover);
-  border: 1.5px solid var(--black);
+  border: none;
   border-radius: 6px;
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
-  font-size: 0.85rem;
-  letter-spacing: 0.02em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .surtir-card-tags {
@@ -1786,7 +1903,7 @@ select.select-dueno {
 .surtir-card-progreso .progreso-track {
   height: 12px;
   background: #fff;
-  border: 1.5px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 999px;
   overflow: hidden;
   margin-bottom: 0.45rem;
@@ -1821,11 +1938,9 @@ select.select-dueno {
   letter-spacing: 0.06em;
 }
 .surtir-card-numero .pct {
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: var(--black);
-  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
@@ -1894,7 +2009,7 @@ select.select-dueno {
   background: var(--card);
   padding: 3rem 2rem;
   border-radius: var(--radius-lg);
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
   text-align: center;
   animation: fadeInUp 0.3s ease-out;
@@ -1905,7 +2020,7 @@ select.select-dueno {
   margin: 0 auto 1.5rem;
   background: var(--primary);
   color: #fff;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1939,7 +2054,7 @@ select.select-dueno {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border-right: 2px solid var(--black);
+  border-right: 1px solid var(--border);
   color: #fff;
   background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #1e40af 100%);
   background-size: 200% 200%;
@@ -2026,10 +2141,10 @@ select.select-dueno {
   display: inline-flex;
   align-items: center;
   background: #fff;
-  border: 2.5px solid var(--black);
+  border: none;
   border-radius: 12px;
   padding: 1rem 1.4rem;
-  box-shadow: 4px 4px 0 var(--black);
+  box-shadow: var(--shadow-md);
   margin-bottom: 2.25rem;
 }
 .login-hero-logo img {
@@ -2040,13 +2155,12 @@ select.select-dueno {
 }
 
 .login-hero-titulo {
-  font-family: 'Bangers', cursive;
-  font-size: 3rem;
-  font-weight: 400;
+  font-size: 2.5rem;
+  font-weight: 800;
   margin: 0 0 1rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  line-height: 1.1;
   color: #fff;
 }
 
@@ -2081,10 +2195,8 @@ select.select-dueno {
   width: 14px;
   height: 14px;
   background: var(--yellow);
-  border: 2px solid var(--black);
   border-radius: 4px;
   transform: rotate(45deg);
-  box-shadow: 1px 1px 0 var(--black);
 }
 
 /* Lado derecho: form */
@@ -2101,7 +2213,7 @@ select.select-dueno {
 .login-card {
   position: relative;
   background: #fff;
-  border: 2px solid var(--black);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 2.5rem 2.25rem;
   box-shadow: var(--shadow);
@@ -2111,13 +2223,12 @@ select.select-dueno {
 }
 
 .login-titulo {
-  font-family: 'Bangers', cursive;
-  font-size: 1.85rem;
-  font-weight: 400;
+  font-size: 1.6rem;
+  font-weight: 800;
   margin: 0 0 0.4rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  line-height: 1;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  line-height: 1.2;
   text-align: center;
 }
 .login-subtitulo {
@@ -2263,13 +2374,8 @@ select.select-dueno {
 
 @media (max-width: 768px) and (min-width: 601px) {
   .nav-inner { padding: 0 0.85rem; height: 56px; gap: 0.5rem; }
-  .nav-user-name { display: none; }
-  .nav-rol-badge { display: none; }
   .nav-logo-icon { height: 32px; padding: 3px 7px; }
   .nav-logo-icon img { height: 22px; }
-  .nav-links { gap: 0.2rem; }
-  .nav-links a { padding: 0.45rem 0.7rem; font-size: 0.82rem; }
-  .nav-logout { padding: 0.4rem 0.7rem; font-size: 0.75rem; margin-left: 0.25rem; }
 
   .page, .page-wide { margin: 1rem auto; padding: 0 0.75rem; }
   .card { padding: 1.1rem 0.9rem; }
@@ -2302,13 +2408,8 @@ select.select-dueno {
 
 @media (max-width: 600px) {
   .nav-inner { padding: 0 0.85rem; height: 56px; gap: 0.5rem; }
-  .nav-user-name { display: none; }
-  .nav-rol-badge { display: none; }
   .nav-logo-icon { height: 32px; padding: 3px 7px; }
   .nav-logo-icon img { height: 22px; }
-  .nav-links { gap: 0.2rem; }
-  .nav-links a { padding: 0.45rem 0.7rem; font-size: 0.82rem; }
-  .nav-logout { padding: 0.4rem 0.7rem; font-size: 0.75rem; margin-left: 0.25rem; }
 
   .page, .page-wide { margin: 1rem auto; padding: 0 1rem; }
   .card { padding: 1.4rem 1.1rem; }
@@ -2346,7 +2447,7 @@ select.select-dueno {
   .login-hero {
     padding: 2rem 1.5rem;
     border-right: none;
-    border-bottom: 2px solid var(--black);
+    border-bottom: 1px solid var(--border);
   }
   .login-hero-titulo { font-size: 2.2rem; }
   .login-hero-tagline { font-size: 0.95rem; margin-bottom: 1.25rem; }

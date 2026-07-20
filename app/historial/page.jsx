@@ -96,7 +96,7 @@ export default async function HistorialPage() {
   return (
     <main className="page-wide">
       <div className="page-header">
-        <h1>Historial</h1>
+        <h1 className="font-display">Historial</h1>
         <p className="subtitle">
           {grupos.length === 0
             ? 'Aún no hay pedidos registrados.'
