@@ -1324,7 +1324,15 @@ select.select-dueno {
   border-bottom: 1px solid var(--border);
   background: #f5f5f0;
   position: sticky;
-  top: 68px;
+  /* top:0, no 68px. .tabla-wrap tiene overflow-x:auto sin overflow-y
+     explícito; la spec de CSS Overflow obliga a que overflow-y se calcule
+     como 'auto' también (nunca 'visible' si el otro eje no lo es), así que
+     .tabla-wrap —no la ventana— es el contenedor de scroll real contra el
+     que se mide este `top`. Como .tabla-wrap nunca scrollea internamente
+     (crece con su contenido, quien scrollea es la página), un `top` mayor
+     a 0 desplaza el header hacia abajo de forma permanente esa cantidad de
+     píxeles — con 68px eso caía justo entre la primera y la segunda fila. */
+  top: 0;
   z-index: 5;
 }
 .tabla-pedidos thead th:first-child { border-top-left-radius: 8px; }
@@ -2764,7 +2772,7 @@ tr.fila-cancelada .pedido-nombre { text-decoration: line-through; text-decoratio
   /* Tabla: SE MANTIENE HORIZONTAL, solo más compacta — el wrapper .tabla-wrap
      hace scroll horizontal dentro de la card si no cabe */
   .tabla-pedidos { font-size: 0.78rem; }
-  .tabla-pedidos thead th { padding: 0.45rem 0.5rem; font-size: 0.6rem; top: 56px; }
+  .tabla-pedidos thead th { padding: 0.45rem 0.5rem; font-size: 0.6rem; }
   .tabla-pedidos tbody td { padding: 0.6rem 0.5rem; }
   .pedido-nombre { font-size: 0.85rem; }
   .pedido-fecha { font-size: 0.74rem; }
@@ -2805,7 +2813,7 @@ tr.fila-cancelada .pedido-nombre { text-decoration: line-through; text-decoratio
 
   /* Tabla: mantener horizontal incluso en móvil, scroll en .tabla-wrap */
   .tabla-pedidos { font-size: 0.72rem; }
-  .tabla-pedidos thead th { padding: 0.4rem 0.45rem; font-size: 0.55rem; top: 56px; }
+  .tabla-pedidos thead th { padding: 0.4rem 0.45rem; font-size: 0.55rem; }
   .tabla-pedidos tbody td { padding: 0.5rem 0.45rem; }
   .pedido-nombre { font-size: 0.8rem; }
   .pedido-fecha { font-size: 0.7rem; }
