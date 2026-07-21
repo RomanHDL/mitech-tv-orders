@@ -3,7 +3,6 @@ import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
 import { getUsuario } from '@/lib/auth'
 import SurtirCliente from './surtir-cliente'
-import './surtir.css'
 
 export const dynamic = 'force-dynamic'
 
