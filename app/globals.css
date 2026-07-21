@@ -1669,6 +1669,185 @@ select.select-dueno {
   text-transform: uppercase;
 }
 
+/* ─── Pedidos: lista densa + modal de detalle (Order Entry) ───── */
+
+.lista-resumen-filtros {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.filtros-aplicados {
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.filtros-aplicados.activo {
+  background: var(--primary-light);
+  color: var(--primary-hover, var(--primary));
+  border-color: transparent;
+}
+.registros-info { font-weight: 500; }
+
+.tabla-pedidos-densa thead th { padding: 0.55rem 0.75rem; }
+.tabla-pedidos-densa tbody td { padding: 0.6rem 0.75rem; }
+
+.th-icono, .td-icono { width: 2.5rem; text-align: center; }
+
+.btn-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--tx), color var(--tx);
+}
+.btn-icono:hover { background: var(--primary-light); color: var(--primary); }
+.btn-icono:disabled { opacity: 0.4; cursor: not-allowed; background: #fff; color: var(--text-muted); }
+
+.numero-pedido-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.numero-pedido-link.numero-pedido { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.numero-pedido-link:hover { color: var(--primary-hover, var(--primary)); }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.pill-pendiente { background: var(--red-light); color: var(--red-dark); }
+.pill-completo { background: var(--green-light); color: var(--green-dark); }
+
+tr.fila-completa td { background: var(--green-light); }
+tr.fila-completa:hover td { background: var(--green-light); }
+
+/* ─── Modal de detalle de pedido ──────────────────────── */
+
+.modal-pedido-detalle { max-width: 900px; width: 92%; }
+.modal-pedido-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.modal-pedido-titulo h2 { white-space: nowrap; }
+.modal-pedido-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+.modal-pedido-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.modal-pedido-contador {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pedido-datos-generales {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.25rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.pedido-datos-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.dato-linea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.dato-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-subtle);
+}
+.dato-valor {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--black);
+  word-break: break-word;
+}
+.dato-valor-grande {
+  font-size: 1.2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.acordeon { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 0.85rem; overflow: hidden; }
+.acordeon:last-child { margin-bottom: 0; }
+.acordeon-franja {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  background: var(--bg);
+  border-left: 4px solid var(--primary);
+  transition: background var(--tx);
+}
+.acordeon-franja-comentarios { border-left-color: var(--green); }
+.acordeon-franja:hover { background: var(--yellow-soft); }
+.acordeon-franja.abierta { background: #fff; border-bottom: 1px solid var(--border); }
+.acordeon-titulo { font-weight: 700; font-size: 0.9rem; color: var(--black); }
+.acordeon-simbolo { display: inline-flex; color: var(--text-muted); }
+.acordeon-simbolo .rotado { transform: rotate(180deg); }
+.acordeon-contenido { padding: 1rem; }
+.acordeon-vacio { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+
+.sku-celda { font-weight: 600; color: var(--black); }
+.tabla-items-modal { width: 100%; }
+
+@media (max-width: 720px) {
+  .pedido-datos-generales { grid-template-columns: 1fr; }
+  .modal-pedido-detalle { width: 96%; }
+  .modal-pedido-titulo h2 { font-size: 1rem; }
+}
+
 /* ─── Pedidos en vivo (WMS) ────────────────────────────── */
 
 .badge-estatus {

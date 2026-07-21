@@ -60,6 +60,7 @@ async function obtenerPedidos() {
       cantidadTotal:
         typeof p.cantidadTotal === 'number' && p.cantidadTotal > 0 ? p.cantidadTotal : null,
       totalTvs: totalRequerido,
+      pendiente: Math.max(0, totalRequerido - totalSurtido),
       cantidadModelos: tvs.length,
       totalSurtido,
       progresoPct: pct,
@@ -69,6 +70,7 @@ async function obtenerPedidos() {
       televisiones: tvs.map((tv) => ({
         marca: tv.marca || '',
         pulgadas: tv.pulgadas || 0,
+        condicion: tv.condicion || '',
         modelo: tv.modelo || '',
         unidad: tv.unidad || 'pieza',
         cantidad: tv.cantidad || 0,

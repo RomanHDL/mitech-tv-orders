@@ -14,6 +14,7 @@ import {
   IconSearch,
   IconTrash,
 } from '../components/icons'
+import PedidoDetalleModal from './pedido-detalle-modal'
 
 // Excel limita los nombres de pestaña a 31 caracteres y no permite \ / ? * [ ]
 function sanitizarNombrePestana(nombre, usados) {
@@ -198,6 +199,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
   const [fechaHasta, setFechaHasta] = useState('')
   const [ordenarPor, setOrdenarPor] = useState('recientes')
   const [pagina, setPagina] = useState(1)
+  const [detalleIndex, setDetalleIndex] = useState(null)
   const [, startTransition] = useTransition()
 
   const esAdmin = rol === 'admin'
@@ -258,6 +260,13 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
   const totalPaginas = Math.max(1, Math.ceil(pedidosFiltrados.length / POR_PAGINA))
   const paginaSegura = Math.min(pagina, totalPaginas)
   const pedidosPagina = pedidosFiltrados.slice((paginaSegura - 1) * POR_PAGINA, paginaSegura * POR_PAGINA)
+
+  // Contador real de filtros activos (no cuenta el orden, que no filtra nada).
+  const appliedFiltersCount =
+    (busqueda.trim() ? 1 : 0) +
+    (estadoFiltro !== 'todos' ? 1 : 0) +
+    (fechaDesde ? 1 : 0) +
+    (fechaHasta ? 1 : 0)
 
   function limpiarFiltros() {
     setBusqueda('')
@@ -419,6 +428,15 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
         </div>
       )}
 
+      <div className="lista-resumen-filtros">
+        <span className={`filtros-aplicados ${appliedFiltersCount > 0 ? 'activo' : ''}`}>
+          Filtros aplicados ({appliedFiltersCount})
+        </span>
+        <span className="registros-info">
+          {pedidosFiltrados.length} {pedidosFiltrados.length === 1 ? 'registro' : 'registros'}
+        </span>
+      </div>
+
       {pedidosFiltrados.length === 0 ? (
         <div className="empty">
           <p>No se encontraron pedidos con los filtros actuales.</p>
@@ -429,9 +447,10 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
       ) : (
         <>
         <div className="tabla-wrap">
-        <table className="tabla-pedidos">
+        <table className="tabla-pedidos tabla-pedidos-densa">
           <thead>
             <tr>
+              <th className="th-icono"></th>
               <th>N° Pedido</th>
               <th>Pedido</th>
               <th>Fecha creación</th>
@@ -439,7 +458,10 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
               <th>Tiempo restante</th>
               {esAdmin && <th>Dueño</th>}
               <th>Condiciones</th>
-              <th>Total</th>
+              <th>Estado</th>
+              <th>Solicitado</th>
+              <th>Surtido</th>
+              <th>Pendiente</th>
               <th></th>
             </tr>
           </thead>
@@ -448,15 +470,32 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
               const badge = badgeProgreso(p.progresoPct)
               const dias = diasHastaLimite(p.fechaLimite)
               const tiempo = tiempoRestanteTexto(dias)
+              const indiceGlobal = pedidosFiltrados.indexOf(p)
+              const completo = p.progresoPct >= 100
               return (
-                <tr key={p.id}>
+                <tr key={p.id} className={completo ? 'fila-completa' : ''}>
+                  <td className="td-icono">
+                    <Link
+                      href={`/pedidos/${p.id}/imprimir`}
+                      className="btn-icono"
+                      title="Imprimir"
+                      aria-label="Imprimir"
+                    >
+                      <IconPrinter />
+                    </Link>
+                  </td>
                   <td data-label="N° Pedido">
-                    <span className="numero-pedido">{p.numeroPedido || '—'}</span>
+                    <button
+                      type="button"
+                      className="numero-pedido numero-pedido-link"
+                      onClick={() => setDetalleIndex(indiceGlobal)}
+                    >
+                      {p.numeroPedido || '—'}
+                    </button>
                   </td>
                   <td data-label="Pedido">
                     <div className="pedido-nombre">
                       {p.pedidoNombre}
-                      <span className={`badge-progreso ${badge.clase}`}>{badge.label}</span>
                       {p.tienePallets && (
                         <span className="badge-pallet" title="Incluye pallets">
                           <IconBox /> Pallets
@@ -499,17 +538,22 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                         : <span className="tag-empty">—</span>}
                     </div>
                   </td>
-                  <td data-label="Total">
-                    <span className="numero-grande">
-                      {p.totalSurtido}/{p.totalTvs}
-                    </span>
+                  <td data-label="Estado">
+                    <span className={`badge-progreso ${badge.clase}`}>{badge.label}</span>
+                  </td>
+                  <td data-label="Solicitado">
+                    <span className="numero-grande">{p.totalTvs}</span>
+                  </td>
+                  <td data-label="Surtido">
+                    <span className="numero-grande">{p.totalSurtido}</span>
+                  </td>
+                  <td data-label="Pendiente">
+                    {p.pendiente > 0
+                      ? <span className="pill pill-pendiente">{p.pendiente}</span>
+                      : <span className="pill pill-completo">Completo</span>}
                   </td>
                   <td>
                     <div className="acciones">
-                      <Link href={`/pedidos/${p.id}/imprimir`} className="btn btn-primary btn-sm">
-                        <IconPrinter />
-                        Imprimir
-                      </Link>
                       {esAdmin && (
                         <>
                           <Link href={`/pedidos/${p.id}/editar`} className="btn btn-secondary btn-sm">
@@ -561,6 +605,17 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
         </>
       )}
     </div>
+
+    {detalleIndex !== null && pedidosFiltrados[detalleIndex] && (
+      <PedidoDetalleModal
+        resumen={pedidosFiltrados[detalleIndex]}
+        posicion={detalleIndex + 1}
+        total={pedidosFiltrados.length}
+        onClose={() => setDetalleIndex(null)}
+        onAnterior={() => setDetalleIndex((i) => Math.max(0, i - 1))}
+        onSiguiente={() => setDetalleIndex((i) => Math.min(pedidosFiltrados.length - 1, i + 1))}
+      />
+    )}
     </>
   )
 }
