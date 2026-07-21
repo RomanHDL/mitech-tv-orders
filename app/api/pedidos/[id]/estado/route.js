@@ -41,6 +41,13 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ error: 'Estado destino inválido' }, { status: 400 })
   }
 
+  // "Iniciar carga" y "Cancelar pedido" son exclusivas de admin. Se valida
+  // aquí (nunca solo en el frontend) para que ni capturista ni surtidor
+  // puedan lograrlo por URL, consola, Postman o cualquier llamada directa.
+  if ((destino === 'CARGANDO' || destino === 'CANCELADO') && usuario.rol !== 'admin') {
+    return NextResponse.json({ error: 'No tienes permisos para realizar esta acción.' }, { status: 403 })
+  }
+
   const db = await getDb()
   const pedido = await db.collection('pedidos').findOne({ _id: new ObjectId(id) })
   if (!pedido) {

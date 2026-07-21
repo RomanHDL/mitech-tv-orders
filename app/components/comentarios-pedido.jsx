@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconAlert, IconCheck, IconMessage } from './icons'
 
@@ -19,12 +19,14 @@ function fmtFecha(iso) {
   }
 }
 
-export default function ComentariosPedido({
+const ComentariosPedido = forwardRef(function ComentariosPedido({
   pedidoId,
   comentariosIniciales = '',
   actualizadoIso = null,
   actualizadoPorNombre = null,
-}) {
+  titulo = null,
+  placeholder = null,
+}, ref) {
   const { t } = useTranslation()
   const [valor, setValor] = useState(comentariosIniciales || '')
   const [estado, setEstado] = useState('idle') // idle | guardando | guardado | error
@@ -81,6 +83,16 @@ export default function ComentariosPedido({
     guardar(valor)
   }
 
+  // Permite a un padre (p. ej. "Guardar progreso" en Surtir) forzar el
+  // guardado inmediato de cualquier cambio todavía en debounce, sin duplicar
+  // el estado del comentario fuera de este componente.
+  useImperativeHandle(ref, () => ({
+    guardarAhora: () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current)
+      guardar(valor)
+    },
+  }))
+
   const fechaTxt = fmtFecha(metaActualizado)
 
   return (
@@ -88,7 +100,7 @@ export default function ComentariosPedido({
       <div className="comentarios-header">
         <span className="comentarios-titulo">
           <IconMessage />
-          {t('comentarios.titulo')}
+          {titulo || t('comentarios.titulo')}
         </span>
         {estado !== 'idle' && (
           <span className={`save-status save-status-${estado}`}>
@@ -118,7 +130,7 @@ export default function ComentariosPedido({
         value={valor}
         onChange={onChange}
         onBlur={onBlur}
-        placeholder={t('comentarios.placeholder')}
+        placeholder={placeholder || t('comentarios.placeholder')}
         rows={3}
         maxLength={MAX}
       />
@@ -141,4 +153,6 @@ export default function ComentariosPedido({
       )}
     </section>
   )
-}
+})
+
+export default ComentariosPedido

@@ -8,13 +8,11 @@ import { normalizeOrderStatus } from '@/lib/estado-pedido'
 import ComentariosPedido from '../components/comentarios-pedido'
 import StepperEtapas from '../pedidos/stepper-etapas'
 import {
-  IconAlert,
   IconCheck,
   IconMinus,
   IconPlus,
   IconPrinter,
   IconRefresh,
-  IconScan,
 } from '../components/icons'
 
 // Próxima etapa accionable — mismo helper que el modal de detalle de /pedidos
@@ -67,14 +65,11 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
   const [online, setOnline] = useState(true)
   const [cambiandoEstado, setCambiandoEstado] = useState(false)
   const [errorEstado, setErrorEstado] = useState('')
-  const [codigoScan, setCodigoScan] = useState('')
-  const [mensajeScan, setMensajeScan] = useState(null) // { tipo: 'ok'|'error', texto }
   const [finalizando, setFinalizando] = useState(false)
 
   const seqPorIdx = useRef({})
   const debounceRef = useRef({})
-  const scanInputRef = useRef(null)
-  const scanMensajeTimeout = useRef(null)
+  const comentariosRef = useRef(null)
 
   // Reinicia todo el estado local de captura al cambiar de pedido seleccionado.
   useEffect(() => {
@@ -83,7 +78,6 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
     setErroresPorIdx(new Set())
     setUltimoGuardado(null)
     setErrorEstado('')
-    setMensajeScan(null)
     seqPorIdx.current = {}
   }, [pedido.id])
 
@@ -122,7 +116,6 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
   useEffect(() => {
     return () => {
       Object.values(debounceRef.current).forEach((tId) => clearTimeout(tId))
-      clearTimeout(scanMensajeTimeout.current)
     }
   }, [])
 
@@ -152,16 +145,22 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
   const pendienteCantidad = Math.max(0, totalRequerido - totalSurtido)
 
   const estado = normalizeOrderStatus({ progresoPct: progreso, estadoOperativo: pedido.estadoOperativo })
-  const puedeAvanzarEtapa = rol === 'admin' || rol === 'surtidor'
+  const esAdmin = rol === 'admin'
+  const esSurtidor = rol === 'surtidor'
   const siguienteEtapa = proximaEtapa(estado)
-  const puedeCancelar = estado !== 'DESPACHADO' && estado !== 'CANCELADO'
+  // "Iniciar carga" y "Cancelar pedido" son exclusivas de admin (regla de
+  // negocio explícita); el resto de transiciones (listo para salida,
+  // despacho) las sigue pudiendo mover el surtidor, igual que antes.
+  const puedeIniciarSiguienteEtapa =
+    siguienteEtapa && (siguienteEtapa.destino === 'CARGANDO' ? esAdmin : (esAdmin || esSurtidor))
+  const puedeCancelar = esAdmin && estado !== 'DESPACHADO' && estado !== 'CANCELADO'
 
   const hayError = erroresPorIdx.size > 0
   const hayPendiente = pendientesSync.size > 0
   const estadoGlobal = !online ? 'sinconexion' : hayError ? 'error' : hayPendiente ? 'guardando' : 'guardado'
 
   // Guarda el valor de un renglón contra el servidor. Se usa tanto para
-  // acciones inmediatas (+/-/completar/reiniciar/escaneo) como al vencer el
+  // acciones inmediatas (+/-/completar/reiniciar) como al vencer el
   // debounce de una edición manual. Protegido contra condiciones de carrera:
   // si llega una respuesta de una petición vieja (seq desactualizado), se
   // ignora por completo — nunca pisa un valor más nuevo en pantalla.
@@ -213,7 +212,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
   tvsRef.current = tvs
 
   // Actualización optimista: cambia la pantalla de inmediato; el guardado
-  // real es inmediato para botones/escaneo, o con debounce (700-1000ms)
+  // real es inmediato para los botones, o con debounce (700-1000ms)
   // para edición manual de texto, para no disparar una petición por tecla.
   const actualizar = useCallback((idx, valorBruto, opciones = {}) => {
     const tv = tvsRef.current[idx]
@@ -278,43 +277,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
     Object.keys(debounceRef.current).forEach((idx) => clearTimeout(debounceRef.current[idx]))
     const idxsAtender = new Set([...pendientesSync, ...erroresPorIdx])
     idxsAtender.forEach((idx) => guardarIdx(idx, tvsRef.current[idx].cantidadSurtida))
-  }
-
-  function mostrarMensajeScan(tipo, texto) {
-    clearTimeout(scanMensajeTimeout.current)
-    setMensajeScan({ tipo, texto })
-    scanMensajeTimeout.current = setTimeout(() => setMensajeScan(null), 4500)
-  }
-
-  function procesarEscaneo(codigoBruto) {
-    const codigo = codigoBruto.trim()
-    if (!codigo) return
-    const buscado = codigo.toUpperCase()
-    const idx = tvsRef.current.findIndex((tv) => {
-      if ((tv.modelo || '').toUpperCase() === buscado) return true
-      return (tv.modelosAlternativos || []).some((m) => (m || '').toUpperCase() === buscado)
-    })
-
-    if (idx === -1) {
-      mostrarMensajeScan('error', 'Este código no pertenece al pedido seleccionado.')
-    } else {
-      const tv = tvsRef.current[idx]
-      const surtida = tv.cantidadSurtida || 0
-      if (!tv.sinLimite && surtida >= tv.cantidad) {
-        mostrarMensajeScan('error', `Ya se surtió la cantidad solicitada de ${tv.marca} ${tv.pulgadas}" (${tv.modelo}).`)
-      } else {
-        actualizar(idx, surtida + 1, { inmediato: true })
-        mostrarMensajeScan('ok', `${codigo} agregado correctamente`)
-      }
-    }
-
-    setCodigoScan('')
-    scanInputRef.current?.focus()
-  }
-
-  function onSubmitScan(e) {
-    e.preventDefault()
-    procesarEscaneo(codigoScan)
+    comentariosRef.current?.guardarAhora()
   }
 
   const hayCambiosSinSincronizar = pendientesSync.size > 0 || erroresPorIdx.size > 0
@@ -370,9 +333,9 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
 
       <div className="pedido-ciclo">
         <StepperEtapas estado={estado} />
-        {puedeAvanzarEtapa && (siguienteEtapa || puedeCancelar) && (
+        {(puedeIniciarSiguienteEtapa || puedeCancelar) && (
           <div className="pedido-ciclo-acciones">
-            {siguienteEtapa && (
+            {puedeIniciarSiguienteEtapa && (
               <button type="button" className="btn btn-primary btn-sm" onClick={() => avanzarEtapa(siguienteEtapa.destino)} disabled={cambiandoEstado}>
                 {siguienteEtapa.label}
               </button>
@@ -433,27 +396,15 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         </div>
       </div>
 
-      <form className="escaner-surtido" onSubmit={onSubmitScan}>
-        <label htmlFor="escaner-input"><IconScan /> Escanear SKU, LPN o código de barras</label>
-        <div className="escaner-surtido-fila">
-          <input
-            id="escaner-input"
-            ref={scanInputRef}
-            type="text"
-            placeholder="Escanea o ingresa el código…"
-            value={codigoScan}
-            onChange={(e) => setCodigoScan(e.target.value)}
-            autoComplete="off"
-          />
-          <button type="submit" className="btn btn-primary">Agregar</button>
-        </div>
-        {mensajeScan && (
-          <div className={`escaner-mensaje escaner-mensaje-${mensajeScan.tipo}`}>
-            {mensajeScan.tipo === 'error' && <IconAlert width={14} height={14} />}
-            {mensajeScan.texto}
-          </div>
-        )}
-      </form>
+      <ComentariosPedido
+        ref={comentariosRef}
+        pedidoId={pedido.id}
+        comentariosIniciales={pedido.comentarios || ''}
+        actualizadoIso={pedido.comentariosActualizado}
+        actualizadoPorNombre={pedido.comentariosActualizadoPorNombre}
+        titulo="Comentarios del pedido"
+        placeholder="Escribe notas, avances, incidencias o instrucciones sobre este pedido…"
+      />
 
       <div className="tabla-wrap">
         <table className="tabla-pedidos tabla-pedidos-densa tabla-surtido">
@@ -572,13 +523,6 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
           </tbody>
         </table>
       </div>
-
-      <ComentariosPedido
-        pedidoId={pedido.id}
-        comentariosIniciales={pedido.comentarios || ''}
-        actualizadoIso={pedido.comentariosActualizado}
-        actualizadoPorNombre={pedido.comentariosActualizadoPorNombre}
-      />
 
       <div className="barra-sticky-surtido">
         <div className="barra-sticky-izquierda">

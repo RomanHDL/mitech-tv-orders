@@ -5,10 +5,10 @@ import {
   IconActivity,
   IconAlert,
   IconBan,
+  IconBox,
   IconCalendar,
   IconCheckCircle,
   IconClipboardList,
-  IconClock,
   IconExcel,
   IconFilter,
   IconMoreHorizontal,
@@ -74,7 +74,7 @@ const ICONO_METRICA = {
   despachados: IconCheckCircle,
   terminados: IconActivity,
   cancelados: IconBan,
-  tiempo: IconClock,
+  enSurtido: IconBox,
 }
 
 function TarjetaMetrica({ tipo, valor, titulo, desc }) {
@@ -230,10 +230,10 @@ export default function HistorialCliente({ rol }) {
         <TarjetaMetrica tipo="terminados" valor={metricas ? metricas.pedidosTerminados : '—'} titulo="Pedidos terminados" desc="Surtido finalizado" />
         <TarjetaMetrica tipo="cancelados" valor={metricas ? metricas.pedidosCancelados : '—'} titulo="Pedidos cancelados" desc="Cancelaciones registradas" />
         <TarjetaMetrica
-          tipo="tiempo"
-          valor={metricas && metricas.tiempoPromedioHoras != null ? `${metricas.tiempoPromedioHoras.toFixed(1)} h` : 'Sin datos'}
-          titulo="Tiempo promedio"
-          desc="De creación a despacho"
+          tipo="enSurtido"
+          valor={metricas ? metricas.pedidosEnSurtido : '—'}
+          titulo="Pedidos en surtido"
+          desc="Actualmente en preparación"
         />
       </div>
 

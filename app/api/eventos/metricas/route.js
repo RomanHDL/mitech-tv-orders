@@ -21,41 +21,28 @@ export async function GET() {
   let despachados = 0
   let terminados = 0
   let cancelados = 0
+  let enSurtido = 0
   for (const p of pedidos) {
     const { progresoPct } = calcularTotales(p)
     const estado = normalizeOrderStatus({ progresoPct, estadoOperativo: p.estadoOperativo || null })
     if (estado === 'DESPACHADO') despachados++
     else if (estado === 'TERMINADO') terminados++
     else if (estado === 'CANCELADO') cancelados++
+    // "En surtido" = activos que todavía no han terminado (PENDIENTE o
+    // EN_PROCESO). TERMINADO/CARGANDO/LISTO_SALIDA/DESPACHADO/CANCELADO no
+    // cuentan aquí — ya salieron del flujo de surtido.
+    else if (estado === 'PENDIENTE' || estado === 'EN_PROCESO') enSurtido++
   }
 
   const idsPermitidos = await idsDePedidosDeCapturista(db, usuario)
   const filtroEventos = idsPermitidos ? { pedidoId: { $in: idsPermitidos } } : {}
   const movimientosTotales = await db.collection('eventos').countDocuments(filtroEventos)
 
-  // Tiempo promedio de creación a despacho: solo para pedidos que tienen
-  // AMBOS eventos reales (no se estima ni se inventa para el resto).
-  const pipeline = [
-    { $match: { ...filtroEventos, tipo: { $in: ['CREACION', 'DESPACHO'] } } },
-    {
-      $group: {
-        _id: '$pedidoId',
-        creacion: { $min: { $cond: [{ $eq: ['$tipo', 'CREACION'] }, '$creadoEn', '$$REMOVE'] } },
-        despacho: { $min: { $cond: [{ $eq: ['$tipo', 'DESPACHO'] }, '$creadoEn', '$$REMOVE'] } },
-      },
-    },
-    { $match: { creacion: { $ne: null }, despacho: { $ne: null } } },
-    { $project: { horas: { $divide: [{ $subtract: ['$despacho', '$creacion'] }, 1000 * 60 * 60] } } },
-    { $group: { _id: null, promedioHoras: { $avg: '$horas' }, n: { $sum: 1 } } },
-  ]
-  const resultado = await db.collection('eventos').aggregate(pipeline).toArray()
-  const tiempoPromedioHoras = resultado[0]?.n > 0 ? resultado[0].promedioHoras : null
-
   return NextResponse.json({
     movimientosTotales,
     pedidosDespachados: despachados,
     pedidosTerminados: terminados,
     pedidosCancelados: cancelados,
-    tiempoPromedioHoras,
+    pedidosEnSurtido: enSurtido,
   })
 }

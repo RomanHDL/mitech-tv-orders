@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { IconAlert, IconBox, IconCheckCircle, IconClipboardList, IconClock, IconRetry, IconScan } from '../components/icons'
+import { IconAlert, IconBox, IconCheckCircle, IconClipboardList, IconClock, IconRetry } from '../components/icons'
 import { ESTADO_LABEL } from '@/lib/catalogos'
 import { diasHastaLimite, estaVencido } from '@/lib/estado-pedido'
 import PanelSurtido from './panel-surtido'
@@ -27,7 +27,6 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
   const [estadoFiltro, setEstadoFiltro] = useState('todos')
   const [condicionFiltro, setCondicionFiltro] = useState('todos')
   const [vencimientoFiltro, setVencimientoFiltro] = useState('todos')
-  const [verCompletados, setVerCompletados] = useState(false)
   const [seleccionadoId, setSeleccionadoId] = useState(null)
   const [pedidoDetalle, setPedidoDetalle] = useState(null)
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
@@ -39,12 +38,10 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
   )
 
   const activos = useMemo(() => pedidos.filter((p) => p.activo), [pedidos])
-  const completados = useMemo(() => pedidos.filter((p) => !p.activo), [pedidos])
-  const base = verCompletados ? [...activos, ...completados] : activos
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
-    return base.filter((p) => {
+    return activos.filter((p) => {
       if (q) {
         const coincide =
           p.pedidoNombre.toLowerCase().includes(q) ||
@@ -62,7 +59,7 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
       }
       return true
     })
-  }, [base, busqueda, estadoFiltro, condicionFiltro, vencimientoFiltro])
+  }, [activos, busqueda, estadoFiltro, condicionFiltro, vencimientoFiltro])
 
   const cargarDetalle = (id) => {
     setCargandoDetalle(true)
@@ -106,7 +103,7 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
     <main className="surtir-page">
       <div className="page-header">
         <h1>Surtir pedidos</h1>
-        <p className="subtitle">Prepara, escanea y completa los pedidos activos.</p>
+        <p className="subtitle">Prepara y completa los pedidos activos.</p>
       </div>
 
       <div className="metricas-grid surtir-metricas">
@@ -179,12 +176,6 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
             <option value="sinfecha">Sin fecha límite</option>
           </select>
         </div>
-        <button type="button" className="btn btn-secondary" title="Escanear QR">
-          <IconScan /> Escanear QR
-        </button>
-        <button type="button" className="btn btn-secondary" onClick={() => setVerCompletados((v) => !v)}>
-          {verCompletados ? 'Ocultar completados' : `Mostrar completados (${completados.length})`}
-        </button>
       </div>
 
       <div className="surtir-content">
