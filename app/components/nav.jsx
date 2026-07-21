@@ -6,7 +6,36 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
 import LanguageSwitcher from './language-switcher'
-import { IconChevronDown, IconClose, IconMenu } from './icons'
+import {
+  IconActivity,
+  IconBox,
+  IconChevronDown,
+  IconClipboardList,
+  IconClock,
+  IconClose,
+  IconDocument,
+  IconForklift,
+  IconMenu,
+  IconPencil,
+  IconPlus,
+  IconRefresh,
+  IconUser,
+} from './icons'
+
+// Un ícono por módulo — mismo id estable de lib/modulos.js, para que el
+// menú luzca "arriba ícono, abajo etiqueta" sin repetir imports por rol.
+const ICONO_MODULO = {
+  'new-order': IconPlus,
+  orders: IconClipboardList,
+  'live-orders': IconActivity,
+  history: IconClock,
+  picking: IconForklift,
+  'onn-catalog': IconBox,
+  users: IconUser,
+  manual: IconDocument,
+  'manual-editor': IconPencil,
+  changelog: IconRefresh,
+}
 
 const LINKS_POR_ROL = {
   capturista: [
@@ -117,11 +146,15 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
         </Link>
 
         <div className="nav-links nav-links-escritorio">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
-              {t(l.labelKey)}
-            </Link>
-          ))}
+          {links.map((l) => {
+            const Icono = ICONO_MODULO[l.moduleId]
+            return (
+              <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
+                {Icono && <Icono className="nav-link-icono" />}
+                <span className="nav-link-texto">{t(l.labelKey)}</span>
+              </Link>
+            )
+          })}
         </div>
 
         <div className="nav-right">
@@ -167,11 +200,15 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
 
       {menuMovilAbierto && (
         <div className="nav-links-movil">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
-              {t(l.labelKey)}
-            </Link>
-          ))}
+          {links.map((l) => {
+            const Icono = ICONO_MODULO[l.moduleId]
+            return (
+              <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
+                {Icono && <Icono className="nav-link-icono" />}
+                <span className="nav-link-texto">{t(l.labelKey)}</span>
+              </Link>
+            )
+          })}
         </div>
       )}
     </nav>

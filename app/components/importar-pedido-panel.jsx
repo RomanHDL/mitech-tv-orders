@@ -3,7 +3,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 import { parsearTexto, filasAItems, aplicarCatalogo, parsearBloqueAlternativas } from '@/lib/importar-pedido'
-import { IconAlert, IconClipboard, IconExcel, IconDocument, IconCheck, IconClose, IconPlus } from './icons'
+import { IconAlert, IconClipboard, IconExcel, IconDocument, IconCheck, IconDownload, IconUpload } from './icons'
 
 const TABS = [
   { id: 'pegar', label: 'Pegar', Icon: IconClipboard },
@@ -11,14 +11,26 @@ const TABS = [
   { id: 'foto', label: 'Foto', Icon: IconDocument },
 ]
 
-export default function ImportarPedidoPanel({ onImportar }) {
-  const [abierto, setAbierto] = useState(false)
+function descargarPlantilla() {
+  const wb = XLSX.utils.book_new()
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Marca', 'Modelo', 'Cantidad'],
+    ['Hisense', '75A6H', 5],
+    ['Samsung', 'DU7000', 10],
+  ])
+  ws['!cols'] = [{ wch: 16 }, { wch: 16 }, { wch: 10 }]
+  XLSX.utils.book_append_sheet(wb, ws, 'Pedido')
+  XLSX.writeFile(wb, 'plantilla-pedido.xlsx')
+}
+
+export default function ImportarPedidoPanel({ onImportar, disabled = false }) {
   const [tab, setTab] = useState('pegar')
   const [texto, setTexto] = useState('')
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
   const [progreso, setProgreso] = useState(0)
+  const [arrastrando, setArrastrando] = useState(false)
   const excelRef = useRef(null)
   const fotoRef = useRef(null)
   // Catálogo ONN (modelo -> pulgada). Solo el admin lo recibe; otros roles
@@ -50,12 +62,6 @@ export default function ImportarPedidoPanel({ onImportar }) {
     [items]
   )
 
-  const reset = () => {
-    setTexto('')
-    setItems([])
-    setError('')
-  }
-
   const cargarFilas = (filas, crudo) => {
     if (!filas.length) {
       const bloque = parsearBloqueAlternativas(crudo || '')
@@ -79,8 +85,7 @@ export default function ImportarPedidoPanel({ onImportar }) {
     else setItems([])
   }
 
-  const onExcel = async (e) => {
-    const file = e.target.files?.[0]
+  const leerExcel = async (file) => {
     if (!file) return
     setError('')
     try {
@@ -94,9 +99,21 @@ export default function ImportarPedidoPanel({ onImportar }) {
       cargarFilas(parsearTexto(lineas), lineas)
     } catch {
       setError('No se pudo leer el archivo de Excel.')
-    } finally {
-      if (excelRef.current) excelRef.current.value = ''
     }
+  }
+
+  const onExcel = async (e) => {
+    const file = e.target.files?.[0]
+    await leerExcel(file)
+    if (excelRef.current) excelRef.current.value = ''
+  }
+
+  const onDropExcel = async (e) => {
+    e.preventDefault()
+    setArrastrando(false)
+    if (disabled) return
+    const file = e.dataTransfer.files?.[0]
+    await leerExcel(file)
   }
 
   // Lee la foto con OCR gratis EN EL NAVEGADOR (tesseract.js). Sin API key.
@@ -134,37 +151,21 @@ export default function ImportarPedidoPanel({ onImportar }) {
   const confirmar = () => {
     if (!items.length) return
     onImportar(items)
-    reset()
-    setAbierto(false)
-  }
-
-  if (!abierto) {
-    return (
-      <button type="button" className="btn-importar-toggle" onClick={() => setAbierto(true)}>
-        <IconPlus />
-        Importar pedido en lote
-        <span className="atajo">pegar · Excel · foto</span>
-      </button>
-    )
+    setTexto('')
+    setItems([])
+    setError('')
   }
 
   return (
-    <div className="importar-panel">
-      <div className="importar-panel-header">
-        <strong>Importar pedido</strong>
-        <button type="button" className="btn-quitar" onClick={() => { reset(); setAbierto(false) }} aria-label="Cerrar">
-          <IconClose width={14} height={14} />
-          Cerrar
-        </button>
-      </div>
-
+    <div className={`importar-panel ${disabled ? 'deshabilitado' : ''}`}>
       <div className="importar-tabs">
         {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
             type="button"
             className={`importar-tab ${tab === id ? 'activa' : ''}`}
-            onClick={() => { setTab(id); }}
+            onClick={() => setTab(id)}
+            disabled={disabled}
           >
             <Icon width={16} height={16} />
             {label}
@@ -173,22 +174,43 @@ export default function ImportarPedidoPanel({ onImportar }) {
       </div>
 
       <div className="importar-body">
+        {disabled && (
+          <div className="importar-deshabilitado-aviso">
+            Pedido completo — no se pueden importar más televisiones.
+          </div>
+        )}
+
         {tab === 'pegar' && (
           <textarea
             className="importar-textarea"
             value={texto}
             onChange={(e) => onPegar(e.target.value)}
             placeholder={'Pega aquí (copiado de Excel o WhatsApp). Una TV por renglón:\nHISENSE\t32H40G\t66\nONN\t100012585\t194'}
-            rows={6}
+            rows={5}
+            disabled={disabled}
           />
         )}
 
         {tab === 'excel' && (
-          <div className="importar-dropzone">
-            <input ref={excelRef} type="file" accept=".xlsx,.xls,.csv" onChange={onExcel} hidden />
-            <button type="button" className="btn btn-secondary" onClick={() => excelRef.current?.click()}>
+          <div
+            className={`importar-dropzone ${arrastrando ? 'arrastrando' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); if (!disabled) setArrastrando(true) }}
+            onDragLeave={() => setArrastrando(false)}
+            onDrop={onDropExcel}
+          >
+            <input ref={excelRef} type="file" accept=".xlsx,.xls,.csv" onChange={onExcel} hidden disabled={disabled} />
+            <span className="importar-dropzone-icono">
+              <IconUpload width={28} height={28} />
+            </span>
+            <p className="importar-dropzone-titulo">Arrastra tu archivo aquí</p>
+            <p className="hint">o</p>
+            <button type="button" className="btn btn-secondary" onClick={() => excelRef.current?.click()} disabled={disabled}>
               <IconExcel width={16} height={16} />
               Elegir archivo .xlsx / .csv
+            </button>
+            <button type="button" className="btn-plantilla" onClick={descargarPlantilla}>
+              <IconDownload width={14} height={14} />
+              Descargar plantilla
             </button>
             <p className="hint">Columnas: Marca · Modelo · Cantidad</p>
           </div>
@@ -196,8 +218,11 @@ export default function ImportarPedidoPanel({ onImportar }) {
 
         {tab === 'foto' && (
           <div className="importar-dropzone">
-            <input ref={fotoRef} type="file" accept="image/*" onChange={onFoto} hidden />
-            <button type="button" className="btn btn-secondary" onClick={() => fotoRef.current?.click()} disabled={cargando}>
+            <input ref={fotoRef} type="file" accept="image/*" onChange={onFoto} hidden disabled={disabled} />
+            <span className="importar-dropzone-icono">
+              <IconDocument width={28} height={28} />
+            </span>
+            <button type="button" className="btn btn-secondary" onClick={() => fotoRef.current?.click()} disabled={cargando || disabled}>
               <IconDocument width={16} height={16} />
               {cargando ? `Leyendo foto… ${progreso}%` : 'Elegir foto del pedido'}
             </button>
@@ -244,7 +269,7 @@ export default function ImportarPedidoPanel({ onImportar }) {
                 </tbody>
               </table>
             </div>
-            <button type="button" className="btn btn-primary" onClick={confirmar}>
+            <button type="button" className="btn btn-primary" onClick={confirmar} disabled={disabled}>
               <IconCheck width={16} height={16} />
               Importar {items.length} {items.length === 1 ? 'TV' : 'TVs'}
             </button>
