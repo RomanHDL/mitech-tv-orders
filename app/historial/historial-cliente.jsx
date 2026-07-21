@@ -10,29 +10,8 @@ import {
   IconPrinter,
   IconSearch,
 } from '../components/icons'
-
-function diasHastaLimite(fechaLimite) {
-  if (!fechaLimite) return null
-  const [y, m, d] = fechaLimite.split('-').map(Number)
-  if (!y || !m || !d) return null
-  const limite = new Date(y, m - 1, d)
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  return Math.round((limite.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
-}
-
-function tiempoRestanteTexto(dias) {
-  if (dias === null) return { texto: '—', clase: 'sin-fecha' }
-  if (dias < 0) {
-    const abs = Math.abs(dias)
-    return { texto: `Vencido (${abs} ${abs === 1 ? 'día' : 'días'})`, clase: 'vencido' }
-  }
-  if (dias === 0) return { texto: 'Hoy', clase: 'urgente' }
-  if (dias === 1) return { texto: 'Mañana', clase: 'urgente' }
-  if (dias <= 3) return { texto: `${dias} días`, clase: 'urgente' }
-  if (dias <= 7) return { texto: `${dias} días`, clase: 'cercano' }
-  return { texto: `${dias} días`, clase: 'normal' }
-}
+import { ESTADO_LABEL } from '@/lib/catalogos'
+import { cumplimientoTexto } from '@/lib/estado-pedido'
 
 function formatearFechaLimite(iso) {
   if (!iso) return '—'
@@ -174,9 +153,8 @@ export default function HistorialCliente({ grupos }) {
                       </thead>
                       <tbody>
                         {g.pedidos.map((p) => {
-                          const badge = badgeProgreso(p.progresoPct)
-                          const dias = diasHastaLimite(p.fechaLimite)
-                          const tiempo = tiempoRestanteTexto(dias)
+                          const estado = p.estado || 'PENDIENTE'
+                          const tiempo = cumplimientoTexto(p)
                           return (
                             <tr key={p.id}>
                               <td data-label="N° Pedido">
@@ -219,9 +197,12 @@ export default function HistorialCliente({ grupos }) {
                                 <span className="numero-grande">
                                   {p.totalSurtido}/{p.totalRequerido}
                                 </span>
-                                <span className={`badge-progreso ${badge.clase}`} style={{ marginLeft: '0.4rem' }}>
+                                <span
+                                  className={`badge-estado-op estado-${estado.toLowerCase().replace('_', '-')}`}
+                                  style={{ marginLeft: '0.4rem' }}
+                                >
                                   {p.completado ? <IconCheck width={10} height={10} /> : null}
-                                  {badge.label}
+                                  {ESTADO_LABEL[estado]}
                                 </span>
                               </td>
                               <td>

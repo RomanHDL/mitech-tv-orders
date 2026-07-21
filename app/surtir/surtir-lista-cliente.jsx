@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { IconBox, IconCheck, IconClipboard } from '../components/icons'
+import { ESTADO_LABEL } from '@/lib/catalogos'
 
 function estadoCard(p) {
   if (p.completado) return 'completo'
@@ -100,6 +101,14 @@ export default function SurtirListaCliente({ pedidos }) {
                     <span className="check"><IconCheck /> {t('surtir.listo')}</span>
                   ) : (
                     <span className="pct">{p.pct}%</span>
+                  )}
+                  {/* Si ya avanzó de etapa logística (Cargando/Listo/Despachado/
+                      Cancelado), lo mostramos para que el surtidor sepa que
+                      este pedido ya no necesita más acción de surtido. */}
+                  {p.estado && !['PENDIENTE', 'EN_PROCESO', 'TERMINADO'].includes(p.estado) && (
+                    <span className={`badge-estado-op estado-${p.estado.toLowerCase().replace('_', '-')}`}>
+                      {ESTADO_LABEL[p.estado]}
+                    </span>
                   )}
                 </div>
               </div>

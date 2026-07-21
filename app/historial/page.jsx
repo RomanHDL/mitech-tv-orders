@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/mongodb'
 import { getUsuario } from '@/lib/auth'
+import { calcularTotales, normalizeOrderStatus } from '@/lib/estado-pedido'
 import HistorialCliente from './historial-cliente'
 
 export const dynamic = 'force-dynamic'
@@ -24,17 +25,9 @@ async function obtenerPedidos(usuario) {
 
   return pedidos.map((p) => {
     const tvs = p.televisiones || []
-    const sumaCantidades = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
-    const totalRequerido =
-      typeof p.cantidadTotal === 'number' && p.cantidadTotal > 0
-        ? p.cantidadTotal
-        : sumaCantidades
-    const totalSurtido = tvs.reduce((s, tv) => {
-      const surt = tv.cantidadSurtida || 0
-      if (tv.sinLimite || (tv.cantidad || 0) === 0) return s + surt
-      return s + Math.min(tv.cantidad || 0, surt)
-    }, 0)
-    const pct = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
+    const { totalRequerido, totalSurtido, progresoPct: pct, pendiente } = calcularTotales(p)
+    const estadoOperativo = p.estadoOperativo || null
+    const estado = normalizeOrderStatus({ progresoPct: pct, estadoOperativo })
     const totalPallets = tvs.reduce((s, tv) => s + (tv.unidad === 'pallet' ? (tv.cantidad || 0) : 0), 0)
     const totalPiezas = tvs.reduce((s, tv) => s + (tv.unidad !== 'pallet' ? (tv.cantidad || 0) : 0), 0)
     return {
@@ -48,7 +41,10 @@ async function obtenerPedidos(usuario) {
       creadoPorNombre: p.creadoPorNombre || '',
       totalRequerido,
       totalSurtido,
+      pendiente,
       progresoPct: pct,
+      estadoOperativo,
+      estado,
       completado: pct >= 100 && totalRequerido > 0,
       totalPallets,
       totalPiezas,

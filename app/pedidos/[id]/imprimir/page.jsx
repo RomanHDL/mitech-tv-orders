@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
 import { unidadLabel } from '@/lib/catalogos'
+import { calcularTotales, diasHastaLimite, normalizeOrderStatus } from '@/lib/estado-pedido'
 import PrintButton from './print-button'
 import FitToPage from './fit-to-page'
 import './imprimir.css'
@@ -56,19 +57,19 @@ function formatearFechaLimite(iso) {
   })
 }
 
-function diasHastaLimite(iso) {
-  if (!iso) return null
-  const [y, m, d] = String(iso).split('-').map(Number)
-  if (!y || !m || !d) return null
-  const limite = new Date(y, m - 1, d)
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  return Math.round((limite.getTime() - hoy.getTime()) / 86400000)
-}
+// Igual que en la lista/historial: los estados finales (Cargando, Listo para
+// salida, Despachado, Cancelado, Surtido terminado) nunca deben mostrar
+// "Vencido" — el pedido ya avanzó, la fecha límite dejó de importar.
+function tiempoRestante(estado, dias, pendiente) {
+  if (estado === 'DESPACHADO') return { texto: 'DESPACHADO', tono: 'verde' }
+  if (estado === 'LISTO_SALIDA') return { texto: 'LISTO PARA SALIDA', tono: 'verde' }
+  if (estado === 'CARGANDO') return { texto: 'CARGANDO', tono: 'amarillo' }
+  if (estado === 'TERMINADO') return { texto: 'SURTIDO TERMINADO', tono: 'verde' }
+  if (estado === 'CANCELADO') return { texto: 'CANCELADO', tono: 'rojo' }
 
-function tiempoRestante(dias) {
   if (dias === null) return null
-  if (dias < 0) return { texto: `VENCIDO HACE ${Math.abs(dias)} D`, tono: 'rojo' }
+  if (dias < 0 && pendiente > 0) return { texto: `VENCIDO HACE ${Math.abs(dias)} D`, tono: 'rojo' }
+  if (dias < 0) return null
   if (dias === 0) return { texto: 'ENTREGA HOY', tono: 'rojo' }
   if (dias === 1) return { texto: 'ENTREGA MAÑANA', tono: 'amarillo' }
   if (dias <= 3) return { texto: `${dias} DÍAS`, tono: 'amarillo' }
@@ -97,8 +98,10 @@ export default async function ImprimirPage({ params }) {
     day: '2-digit', month: 'long', year: 'numeric',
   })
   const fechaLimiteFmt = formatearFechaLimite(pedido.fechaLimite)
+  const { progresoPct, pendiente } = calcularTotales(pedido)
+  const estado = normalizeOrderStatus({ progresoPct, estadoOperativo: pedido.estadoOperativo || null })
   const dias = diasHastaLimite(pedido.fechaLimite)
-  const tiempo = tiempoRestante(dias)
+  const tiempo = tiempoRestante(estado, dias, pendiente)
   const generadoFmt = new Date().toLocaleString('es-MX', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',

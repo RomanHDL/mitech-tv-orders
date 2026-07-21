@@ -6,15 +6,35 @@ import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import {
+  IconActivity,
   IconAlert,
+  IconBan,
   IconBox,
+  IconCheckCircle,
+  IconClipboardList,
+  IconClock,
   IconExcel,
+  IconForklift,
   IconPlus,
   IconPrinter,
   IconSearch,
   IconTrash,
+  IconTruck,
+  IconTruckCheck,
 } from '../components/icons'
+import { ESTADO_LABEL } from '@/lib/catalogos'
+import { cumplimientoTexto, estaVencido } from '@/lib/estado-pedido'
 import PedidoDetalleModal from './pedido-detalle-modal'
+
+const ESTADO_ICONO = {
+  PENDIENTE: IconClock,
+  EN_PROCESO: IconActivity,
+  TERMINADO: IconCheckCircle,
+  CARGANDO: IconForklift,
+  LISTO_SALIDA: IconTruckCheck,
+  DESPACHADO: IconTruck,
+  CANCELADO: IconBan,
+}
 
 // Excel limita los nombres de pestaña a 31 caracteres y no permite \ / ? * [ ]
 function sanitizarNombrePestana(nombre, usados) {
@@ -32,37 +52,28 @@ function sanitizarNombrePestana(nombre, usados) {
   return final
 }
 
-// fechaLimite viene como 'YYYY-MM-DD'. Calcula días hasta hoy (0 = hoy, negativo = vencido).
-function diasHastaLimite(fechaLimite) {
-  if (!fechaLimite) return null
-  const [y, m, d] = fechaLimite.split('-').map(Number)
-  if (!y || !m || !d) return null
-  const limite = new Date(y, m - 1, d)
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  const diff = limite.getTime() - hoy.getTime()
-  return Math.round(diff / (1000 * 60 * 60 * 24))
-}
-
-function tiempoRestanteTexto(dias) {
-  if (dias === null) return { texto: '—', clase: 'sin-fecha' }
-  if (dias < 0) {
-    const abs = Math.abs(dias)
-    return { texto: `Vencido (${abs} ${abs === 1 ? 'día' : 'días'})`, clase: 'vencido' }
-  }
-  if (dias === 0) return { texto: 'Hoy', clase: 'urgente' }
-  if (dias === 1) return { texto: 'Mañana', clase: 'urgente' }
-  if (dias <= 3) return { texto: `${dias} días`, clase: 'urgente' }
-  if (dias <= 7) return { texto: `${dias} días`, clase: 'cercano' }
-  return { texto: `${dias} días`, clase: 'normal' }
-}
-
 function formatearFechaLimite(iso) {
   if (!iso) return '—'
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
   const fecha = new Date(y, m - 1, d)
   return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
+}
+
+// Fecha de despacho, si el historial de estados registra esa transición
+// (nunca se inventa: si no hay entrada DESPACHADO, se deja vacío).
+function fechaDespacho(p) {
+  const historial = p.historialEstados || []
+  const entrada = [...historial].reverse().find((h) => h.estadoNuevo === 'DESPACHADO')
+  if (!entrada?.fecha) return ''
+  try {
+    return new Intl.DateTimeFormat('es-MX', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      timeZone: 'America/Mexico_City',
+    }).format(new Date(entrada.fecha))
+  } catch {
+    return ''
+  }
 }
 
 function descargarPedidosXLSX(pedidos) {
@@ -74,51 +85,46 @@ function descargarPedidosXLSX(pedidos) {
     'Pedido',
     'Fecha creación',
     'Fecha límite',
-    'Tiempo restante',
+    'Cumplimiento',
     'Dueño',
     'Condiciones',
     'Modelos',
-    'Cantidad requerida',
-    'Cantidad surtida',
-    'Progreso',
-    'Estado',
+    'Solicitado',
+    'Surtido',
+    'Pendiente',
+    '% Surtido',
+    'Estado operativo',
+    'Vencido',
+    'Fecha despacho',
   ]
   const historialFilas = pedidos.map((p) => {
     const tvs = p.televisiones || []
-    const sumaCantidades = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
-    const requerido =
-      typeof p.cantidadTotal === 'number' && p.cantidadTotal > 0
-        ? p.cantidadTotal
-        : sumaCantidades
-    const surtido = tvs.reduce((s, tv) => {
-      const sur = tv.cantidadSurtida || 0
-      if (tv.sinLimite || (tv.cantidad || 0) === 0) return s + sur
-      return s + Math.min(tv.cantidad || 0, sur)
-    }, 0)
-    const pct = requerido > 0 ? Math.round((surtido / requerido) * 100) : 0
-    const estado = pct >= 100 ? 'Completado' : pct > 0 ? 'Parcial' : 'Pendiente'
-    const dias = diasHastaLimite(p.fechaLimite)
-    const tiempo = tiempoRestanteTexto(dias).texto
+    // Nunca exportamos "Vencido" para un pedido ya terminado/cargando/listo/
+    // despachado — cumplimientoTexto ya aplica esa prioridad.
+    const cumplimiento = cumplimientoTexto(p).texto
     return [
       p.numeroPedido || '',
       p.pedidoNombre,
       p.fechaFmt,
       p.fechaLimite,
-      tiempo,
+      cumplimiento,
       p.creadoPorNombre,
       (p.condiciones || []).join(' / '),
       tvs.length,
-      requerido,
-      surtido,
-      `${pct}%`,
-      estado,
+      p.totalTvs,
+      p.totalSurtido,
+      p.pendiente,
+      `${p.progresoPct}%`,
+      ESTADO_LABEL[p.estado] || p.estado,
+      estaVencido(p) ? 'Sí' : 'No',
+      fechaDespacho(p),
     ]
   })
   const wsHistorial = XLSX.utils.aoa_to_sheet([historialEncabezados, ...historialFilas])
   wsHistorial['!cols'] = [
-    { wch: 14 }, { wch: 24 }, { wch: 18 }, { wch: 14 }, { wch: 16 },
-    { wch: 18 }, { wch: 22 }, { wch: 8 }, { wch: 12 }, { wch: 12 },
-    { wch: 10 }, { wch: 12 },
+    { wch: 14 }, { wch: 24 }, { wch: 18 }, { wch: 14 }, { wch: 18 },
+    { wch: 18 }, { wch: 22 }, { wch: 8 }, { wch: 12 }, { wch: 10 },
+    { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 9 }, { wch: 18 },
   ]
   XLSX.utils.book_append_sheet(wb, wsHistorial, 'Historial')
 
@@ -126,13 +132,13 @@ function descargarPedidosXLSX(pedidos) {
   const nombresUsados = new Set(['historial'])
   for (const p of pedidos) {
     const tvs = p.televisiones || []
-    const dias = diasHastaLimite(p.fechaLimite)
     const encabezadoInfo = [
       ['Número de pedido', p.numeroPedido || ''],
       ['Pedido', p.pedidoNombre],
       ['Fecha creación', p.fechaFmt],
       ['Fecha límite', p.fechaLimite || ''],
-      ['Tiempo restante', tiempoRestanteTexto(dias).texto],
+      ['Cumplimiento', cumplimientoTexto(p).texto],
+      ['Estado operativo', ESTADO_LABEL[p.estado] || p.estado],
       ['Dueño', p.creadoPorNombre || ''],
       ['Condiciones', (p.condiciones || []).join(' / ')],
       [],
@@ -179,10 +185,26 @@ function tagClass(c) {
   return `tag tag-${c.toLowerCase()}`
 }
 
-function badgeProgreso(pct) {
-  if (pct >= 100) return { label: 'Completado', clase: 'completo' }
-  if (pct > 0) return { label: `${pct}%`, clase: 'parcial' }
-  return { label: 'Pendiente', clase: 'pendiente' }
+// Clasificación de progreso puramente numérica (0/parcial/100%) — se usa
+// SOLO para las 4 tarjetas de resumen, que deben seguir mostrando las
+// mismas cifras de siempre sin verse afectadas por el estado operativo.
+function progresoClase(pct) {
+  if (pct >= 100) return 'completo'
+  if (pct > 0) return 'parcial'
+  return 'pendiente'
+}
+
+// Barra compacta de % surtido: verde a 100%, azul si avanza, gris en 0%.
+function BarraProgreso({ pct }) {
+  const clase = pct >= 100 ? 'completa' : pct > 0 ? 'avanzando' : 'vacia'
+  return (
+    <div className="barra-progreso-celda">
+      <div className="barra-progreso-track">
+        <div className={`barra-progreso-fill ${clase}`} style={{ width: `${Math.min(100, pct)}%` }} />
+      </div>
+      <span className="barra-progreso-texto">{pct}%</span>
+    </div>
+  )
 }
 
 const POR_PAGINA = 10
@@ -206,13 +228,14 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
 
   // Stats sobre el TOTAL de pedidos, no sobre los filtrados — igual que en
   // el MI Stack: el dashboard siempre resume "todo", los filtros son solo
-  // para la tabla de abajo.
+  // para la tabla de abajo. Cifras sin cambios: siguen siendo puramente de
+  // progreso de surtido (0/parcial/100%), no del estado operativo nuevo.
   const stats = useMemo(() => {
     let pendientes = 0, enProceso = 0, completados = 0
     for (const p of pedidos) {
-      const badge = badgeProgreso(p.progresoPct)
-      if (badge.clase === 'completo') completados++
-      else if (badge.clase === 'parcial') enProceso++
+      const clase = progresoClase(p.progresoPct)
+      if (clase === 'completo') completados++
+      else if (clase === 'parcial') enProceso++
       else pendientes++
     }
     return { total: pedidos.length, pendientes, enProceso, completados }
@@ -230,7 +253,11 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
           (p.televisiones || []).some((tv) => (tv.modelo || '').toLowerCase().includes(q))
         if (!coincide) return false
       }
-      if (estadoFiltro !== 'todos' && badgeProgreso(p.progresoPct).clase !== estadoFiltro) return false
+      if (estadoFiltro === 'VENCIDOS') {
+        if (!estaVencido(p)) return false
+      } else if (estadoFiltro !== 'todos' && p.estado !== estadoFiltro) {
+        return false
+      }
       if (fechaDesde && p.fecha && new Date(p.fecha) < new Date(fechaDesde)) return false
       if (fechaHasta && p.fecha) {
         const hasta = new Date(fechaHasta)
@@ -321,18 +348,22 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
     <>
       <div className="pedidos-stats">
         <div className="stat-card">
+          <IconClipboardList className="stat-icono" />
           <div className="stat-numero">{stats.total}</div>
           <div className="stat-label">{t('pedidos.total')}</div>
         </div>
         <div className="stat-card stat-pendiente">
+          <IconClock className="stat-icono" />
           <div className="stat-numero">{stats.pendientes}</div>
           <div className="stat-label">{t('pedidos.pendientes')}</div>
         </div>
         <div className="stat-card stat-parcial">
+          <IconActivity className="stat-icono" />
           <div className="stat-numero">{stats.enProceso}</div>
           <div className="stat-label">{t('pedidos.enProceso')}</div>
         </div>
         <div className="stat-card stat-completo">
+          <IconCheckCircle className="stat-icono" />
           <div className="stat-numero">{stats.completados}</div>
           <div className="stat-label">{t('pedidos.completados')}</div>
         </div>
@@ -357,9 +388,14 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
             onChange={(e) => { setEstadoFiltro(e.target.value); setPagina(1) }}
           >
             <option value="todos">{t('pedidos.todos')}</option>
-            <option value="pendiente">{t('pedidos.pendientes')}</option>
-            <option value="parcial">{t('pedidos.enProceso')}</option>
-            <option value="completo">{t('pedidos.completados')}</option>
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="EN_PROCESO">En proceso</option>
+            <option value="TERMINADO">Surtido terminado</option>
+            <option value="CARGANDO">Cargando</option>
+            <option value="LISTO_SALIDA">Listo para salida</option>
+            <option value="DESPACHADO">Despachado</option>
+            <option value="CANCELADO">Cancelado</option>
+            <option value="VENCIDOS">Vencidos</option>
           </select>
         </div>
 
@@ -455,25 +491,26 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
               <th>Pedido</th>
               <th>Fecha creación</th>
               <th>Fecha límite</th>
-              <th>Tiempo restante</th>
+              <th>Cumplimiento</th>
               {esAdmin && <th>Dueño</th>}
               <th>Condiciones</th>
               <th>Estado</th>
               <th>Solicitado</th>
               <th>Surtido</th>
               <th>Pendiente</th>
-              <th></th>
+              <th>% Surtido</th>
+              <th>Etapa logística</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {pedidosPagina.map((p) => {
-              const badge = badgeProgreso(p.progresoPct)
-              const dias = diasHastaLimite(p.fechaLimite)
-              const tiempo = tiempoRestanteTexto(dias)
+              const cumplimiento = cumplimientoTexto(p)
               const indiceGlobal = pedidosFiltrados.indexOf(p)
-              const completo = p.progresoPct >= 100
+              const IconoEtapa = ESTADO_ICONO[p.estado] || IconClock
+              const completo = p.estado === 'DESPACHADO' || (p.estado === 'TERMINADO' && p.progresoPct >= 100)
               return (
-                <tr key={p.id} className={completo ? 'fila-completa' : ''}>
+                <tr key={p.id} className={completo ? 'fila-completa' : p.estado === 'CANCELADO' ? 'fila-cancelada' : ''}>
                   <td className="td-icono">
                     <Link
                       href={`/pedidos/${p.id}/imprimir`}
@@ -509,9 +546,9 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                   <td data-label="Fecha límite">
                     <div className="pedido-fecha">{formatearFechaLimite(p.fechaLimite)}</div>
                   </td>
-                  <td data-label="Tiempo restante">
-                    <span className={`tiempo-restante tr-${tiempo.clase}`}>
-                      {tiempo.texto}
+                  <td data-label="Cumplimiento">
+                    <span className={`tiempo-restante tr-${cumplimiento.clase}`}>
+                      {cumplimiento.texto}
                     </span>
                   </td>
                   {esAdmin && (
@@ -539,7 +576,9 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                     </div>
                   </td>
                   <td data-label="Estado">
-                    <span className={`badge-progreso ${badge.clase}`}>{badge.label}</span>
+                    <span className={`badge-estado-op estado-${p.estado.toLowerCase().replace('_', '-')}`}>
+                      {ESTADO_LABEL[p.estado]}
+                    </span>
                   </td>
                   <td data-label="Solicitado">
                     <span className="numero-grande">{p.totalTvs}</span>
@@ -552,7 +591,16 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                       ? <span className="pill pill-pendiente">{p.pendiente}</span>
                       : <span className="pill pill-completo">Completo</span>}
                   </td>
-                  <td>
+                  <td data-label="% Surtido">
+                    <BarraProgreso pct={p.progresoPct} />
+                  </td>
+                  <td data-label="Etapa logística">
+                    <span className={`etapa-chip estado-${p.estado.toLowerCase().replace('_', '-')}`}>
+                      <IconoEtapa />
+                      {ESTADO_LABEL[p.estado]}
+                    </span>
+                  </td>
+                  <td data-label="Acciones">
                     <div className="acciones">
                       {esAdmin && (
                         <>
@@ -611,9 +659,11 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
         resumen={pedidosFiltrados[detalleIndex]}
         posicion={detalleIndex + 1}
         total={pedidosFiltrados.length}
+        rol={rol}
         onClose={() => setDetalleIndex(null)}
         onAnterior={() => setDetalleIndex((i) => Math.max(0, i - 1))}
         onSiguiente={() => setDetalleIndex((i) => Math.min(pedidosFiltrados.length - 1, i + 1))}
+        onCambiado={() => startTransition(() => router.refresh())}
       />
     )}
     </>

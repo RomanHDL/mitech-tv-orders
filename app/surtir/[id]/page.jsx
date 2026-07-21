@@ -36,6 +36,8 @@ export default async function SurtirPage({ params }) {
       ? pedido.comentariosActualizado.toISOString()
       : null,
     comentariosActualizadoPorNombre: pedido.comentariosActualizadoPorNombre || null,
+    estadoOperativo: pedido.estadoOperativo || null,
+    historialEstados: pedido.historialEstados || [],
     televisiones: (pedido.televisiones || []).map((tv) => ({
       marca: tv.marca,
       pulgadas: tv.pulgadas,
@@ -48,5 +50,5 @@ export default async function SurtirPage({ params }) {
     })),
   }
 
-  return <SurtirCliente pedido={datos} />
+  return <SurtirCliente pedido={datos} rol={usuario?.rol} />
 }

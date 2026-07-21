@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import ComentariosPedido from '../components/comentarios-pedido'
+import StepperEtapas from './stepper-etapas'
+import { ESTADO_LABEL } from '@/lib/catalogos'
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -10,12 +12,6 @@ import {
   IconClose,
   IconPrinter,
 } from '../components/icons'
-
-function badgeEstado(pct) {
-  if (pct >= 100) return { label: 'Completado', clase: 'completo' }
-  if (pct > 0) return { label: `${pct}%`, clase: 'parcial' }
-  return { label: 'Pendiente', clase: 'pendiente' }
-}
 
 function tagClase(c) {
   return `tag tag-${c.toLowerCase()}`
@@ -38,20 +34,79 @@ function estadoPartida(tv) {
   return surt > 0 ? 'Parcial' : 'Pendiente'
 }
 
+// Próxima etapa accionable desde el estado actual (null si no hay ninguna,
+// ej. ya DESPACHADO). CANCELADO se maneja aparte con su propio botón.
+function proximaEtapa(estado) {
+  if (estado === 'PENDIENTE' || estado === 'EN_PROCESO' || estado === 'TERMINADO') {
+    return { destino: 'CARGANDO', label: 'Iniciar carga' }
+  }
+  if (estado === 'CARGANDO') return { destino: 'LISTO_SALIDA', label: 'Marcar listo para salida' }
+  if (estado === 'LISTO_SALIDA') return { destino: 'DESPACHADO', label: 'Confirmar despacho' }
+  return null
+}
+
 export default function PedidoDetalleModal({
   resumen,
   posicion,
   total,
+  rol,
   onClose,
   onAnterior,
   onSiguiente,
+  onCambiado,
 }) {
   const [seccionAbierta, setSeccionAbierta] = useState('articulos')
   const [comentarios, setComentarios] = useState(null)
   const [cargandoComentarios, setCargandoComentarios] = useState(true)
+  const [cambiandoEstado, setCambiandoEstado] = useState(false)
+  const [errorEstado, setErrorEstado] = useState('')
   const modalRef = useRef(null)
 
-  const badge = badgeEstado(resumen.progresoPct)
+  const estado = resumen.estado || 'PENDIENTE'
+  const puedeAvanzarEtapa = rol === 'admin' || rol === 'surtidor'
+  const siguiente = proximaEtapa(estado)
+  const puedeCancelar = estado !== 'DESPACHADO' && estado !== 'CANCELADO'
+
+  async function avanzarEtapa(destino) {
+    setErrorEstado('')
+    let razon = null
+
+    if (destino === 'DESPACHADO') {
+      if (!confirm('¿Confirmas que este pedido ya salió de las instalaciones?')) return
+      if (resumen.pendiente > 0) {
+        if (rol !== 'admin') {
+          setErrorEstado('No se puede despachar con unidades pendientes.')
+          return
+        }
+        razon = window.prompt(
+          'Este pedido tiene unidades pendientes. Escribe la razón para despachar de todos modos:'
+        )
+        if (!razon || !razon.trim()) return
+      }
+    }
+
+    if (destino === 'CANCELADO') {
+      if (!confirm('¿Confirmas que quieres cancelar este pedido?')) return
+    }
+
+    setCambiandoEstado(true)
+    try {
+      const res = await fetch(`/api/pedidos/${resumen.id}/estado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: destino, razon }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'No se pudo cambiar el estado')
+      }
+      onCambiado?.()
+    } catch (err) {
+      setErrorEstado(err.message)
+    } finally {
+      setCambiandoEstado(false)
+    }
+  }
 
   // El resumen que llega de la lista ya trae número/nombre/fecha/artículos —
   // pero no los comentarios (la lista no los necesita), así que se piden aparte.
@@ -123,7 +178,9 @@ export default function PedidoDetalleModal({
         <div className="modal-header">
           <div className="modal-pedido-titulo">
             <h2>Pedido: #{resumen.numeroPedido || '—'}</h2>
-            <span className={`badge-progreso ${badge.clase}`}>{badge.label}</span>
+            <span className={`badge-estado-op estado-${estado.toLowerCase().replace('_', '-')}`}>
+              {ESTADO_LABEL[estado]}
+            </span>
           </div>
 
           <div className="modal-pedido-acciones">
@@ -214,6 +271,55 @@ export default function PedidoDetalleModal({
                   : <span className="pill pill-completo">Completo</span>}
               </div>
             </div>
+          </div>
+
+          <div className="pedido-ciclo">
+            <h3 className="pedido-ciclo-titulo">Ciclo del pedido</h3>
+            <StepperEtapas estado={estado} />
+
+            {puedeAvanzarEtapa && (siguiente || puedeCancelar) && (
+              <div className="pedido-ciclo-acciones">
+                {siguiente && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => avanzarEtapa(siguiente.destino)}
+                    disabled={cambiandoEstado}
+                  >
+                    {siguiente.label}
+                  </button>
+                )}
+                {puedeCancelar && (
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => avanzarEtapa('CANCELADO')}
+                    disabled={cambiandoEstado}
+                  >
+                    Cancelar pedido
+                  </button>
+                )}
+              </div>
+            )}
+
+            {errorEstado && (
+              <div className="alerta alerta-error">
+                <span>{errorEstado}</span>
+              </div>
+            )}
+
+            {resumen.historialEstados && resumen.historialEstados.length > 0 && (
+              <ul className="pedido-ciclo-historial">
+                {resumen.historialEstados.map((h, i) => (
+                  <li key={i}>
+                    <strong>{ESTADO_LABEL[h.estadoNuevo] || h.estadoNuevo}</strong>
+                    {' — '}
+                    {h.usuarioNombre || 'usuario'}
+                    {h.observacion ? ` · ${h.observacion}` : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="acordeon">

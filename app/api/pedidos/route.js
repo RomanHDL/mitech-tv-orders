@@ -111,6 +111,11 @@ export async function POST(req) {
     creadoPor: usuario?.userId || null,
     creadoPorNombre: usuario?.nombre || null,
     creadoPorRol: usuario?.rol || null,
+    // Estado logístico (Cargando/Listo para salida/Despachado/Cancelado).
+    // null = todavía no hay ninguna acción de etapa; el estado visible se
+    // deriva del progreso de surtido hasta que alguien lo avance a mano.
+    estadoOperativo: null,
+    historialEstados: [],
   })
 
   return NextResponse.json({ id: result.insertedId.toString() }, { status: 201 })

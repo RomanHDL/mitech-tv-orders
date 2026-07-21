@@ -2,9 +2,12 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { unidadLabel } from '@/lib/catalogos'
+import { unidadLabel, ESTADO_LABEL } from '@/lib/catalogos'
+import { normalizeOrderStatus } from '@/lib/estado-pedido'
 import ComentariosPedido from '../../components/comentarios-pedido'
+import StepperEtapas from '../../pedidos/stepper-etapas'
 import {
   IconAlert,
   IconArrowLeft,
@@ -15,6 +18,16 @@ import {
   IconPrinter,
   IconRefresh,
 } from '../../components/icons'
+
+// Próxima etapa accionable — mismo helper que el modal de detalle de /pedidos.
+function proximaEtapa(estado) {
+  if (estado === 'PENDIENTE' || estado === 'EN_PROCESO' || estado === 'TERMINADO') {
+    return { destino: 'CARGANDO', label: 'Iniciar carga' }
+  }
+  if (estado === 'CARGANDO') return { destino: 'LISTO_SALIDA', label: 'Marcar listo para salida' }
+  if (estado === 'LISTO_SALIDA') return { destino: 'DESPACHADO', label: 'Confirmar despacho' }
+  return null
+}
 
 function agruparPorMarca(televisiones) {
   const grupos = {}
@@ -28,10 +41,13 @@ function agruparPorMarca(televisiones) {
   }))
 }
 
-export default function SurtirCliente({ pedido }) {
+export default function SurtirCliente({ pedido, rol }) {
   const { t } = useTranslation()
+  const router = useRouter()
   const [tvs, setTvs] = useState(pedido.televisiones)
   const [error, setError] = useState('')
+  const [cambiandoEstado, setCambiandoEstado] = useState(false)
+  const [errorEstado, setErrorEstado] = useState('')
   // Estado del autoguardado: 'idle' | 'guardando' | 'guardado' | 'error'
   const [estadoGuardado, setEstadoGuardado] = useState('idle')
   // Última acción para deshacer: { idx, valorAnterior, label } | null
@@ -61,6 +77,50 @@ export default function SurtirCliente({ pedido }) {
   }, 0)
   const progreso = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
   const completado = totalRequerido > 0 && totalSurtido >= totalRequerido
+  const pendienteCantidad = Math.max(0, totalRequerido - totalSurtido)
+
+  const estado = normalizeOrderStatus({ progresoPct: progreso, estadoOperativo: pedido.estadoOperativo })
+  const puedeAvanzarEtapa = rol === 'admin' || rol === 'surtidor'
+  const siguienteEtapa = proximaEtapa(estado)
+  const puedeCancelar = estado !== 'DESPACHADO' && estado !== 'CANCELADO'
+
+  async function avanzarEtapa(destino) {
+    setErrorEstado('')
+    let razon = null
+
+    if (destino === 'DESPACHADO') {
+      if (!confirm('¿Confirmas que este pedido ya salió de las instalaciones?')) return
+      if (pendienteCantidad > 0) {
+        if (rol !== 'admin') {
+          setErrorEstado('No se puede despachar con unidades pendientes.')
+          return
+        }
+        razon = window.prompt(
+          'Este pedido tiene unidades pendientes. Escribe la razón para despachar de todos modos:'
+        )
+        if (!razon || !razon.trim()) return
+      }
+    }
+    if (destino === 'CANCELADO' && !confirm('¿Confirmas que quieres cancelar este pedido?')) return
+
+    setCambiandoEstado(true)
+    try {
+      const res = await fetch(`/api/pedidos/${pedido.id}/estado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: destino, razon }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'No se pudo cambiar el estado')
+      }
+      router.refresh()
+    } catch (err) {
+      setErrorEstado(err.message)
+    } finally {
+      setCambiandoEstado(false)
+    }
+  }
 
   const registrarUndo = (accion) => {
     if (undoTimeout.current) clearTimeout(undoTimeout.current)
@@ -197,6 +257,55 @@ export default function SurtirCliente({ pedido }) {
           )}
         </div>
       </header>
+
+      <div className="pedido-ciclo">
+        <h3 className="pedido-ciclo-titulo">Ciclo del pedido</h3>
+        <StepperEtapas estado={estado} />
+
+        {puedeAvanzarEtapa && (siguienteEtapa || puedeCancelar) && (
+          <div className="pedido-ciclo-acciones">
+            {siguienteEtapa && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => avanzarEtapa(siguienteEtapa.destino)}
+                disabled={cambiandoEstado}
+              >
+                {siguienteEtapa.label}
+              </button>
+            )}
+            {puedeCancelar && (
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={() => avanzarEtapa('CANCELADO')}
+                disabled={cambiandoEstado}
+              >
+                Cancelar pedido
+              </button>
+            )}
+          </div>
+        )}
+
+        {errorEstado && (
+          <div className="alerta alerta-error">
+            <span>{errorEstado}</span>
+          </div>
+        )}
+
+        {pedido.historialEstados && pedido.historialEstados.length > 0 && (
+          <ul className="pedido-ciclo-historial">
+            {pedido.historialEstados.map((h, i) => (
+              <li key={i}>
+                <strong>{ESTADO_LABEL[h.estadoNuevo] || h.estadoNuevo}</strong>
+                {' — '}
+                {h.usuarioNombre || 'usuario'}
+                {h.observacion ? ` · ${h.observacion}` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {error && (
         <div className="alerta alerta-error">

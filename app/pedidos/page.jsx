@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getDb } from '@/lib/mongodb'
 import { getRol } from '@/lib/auth'
+import { calcularTotales, normalizeOrderStatus } from '@/lib/estado-pedido'
 import ListaCliente from './lista-cliente'
 import { IconDocument, IconPlus } from '../components/icons'
 
@@ -35,20 +36,10 @@ async function obtenerPedidos() {
 
   return pedidos.map((p) => {
     const tvs = p.televisiones || []
-    const sumaCantidades = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
-    const totalRequerido =
-      typeof p.cantidadTotal === 'number' && p.cantidadTotal > 0
-        ? p.cantidadTotal
-        : sumaCantidades
-    // Surtido cuenta lo que se haya marcado, acotado a la cantidad del TV
-    // cuando esta definida; las TVs "sin límite" cuentan tal cual.
-    const totalSurtido = tvs.reduce((s, tv) => {
-      const surt = tv.cantidadSurtida || 0
-      if (tv.sinLimite || (tv.cantidad || 0) === 0) return s + surt
-      return s + Math.min(tv.cantidad || 0, surt)
-    }, 0)
+    const { totalRequerido, totalSurtido, progresoPct, pendiente } = calcularTotales(p)
     const tienePallets = tvs.some((tv) => tv.unidad === 'pallet')
-    const pct = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
+    const estadoOperativo = p.estadoOperativo || null
+    const estado = normalizeOrderStatus({ progresoPct, estadoOperativo })
     return {
       id: p._id.toString(),
       numeroPedido: p.numeroPedido || '',
@@ -60,10 +51,13 @@ async function obtenerPedidos() {
       cantidadTotal:
         typeof p.cantidadTotal === 'number' && p.cantidadTotal > 0 ? p.cantidadTotal : null,
       totalTvs: totalRequerido,
-      pendiente: Math.max(0, totalRequerido - totalSurtido),
+      pendiente,
       cantidadModelos: tvs.length,
       totalSurtido,
-      progresoPct: pct,
+      progresoPct,
+      estadoOperativo,
+      estado,
+      historialEstados: p.historialEstados || [],
       tienePallets,
       creadoPor: p.creadoPor || '',
       creadoPorNombre: p.creadoPorNombre || '',

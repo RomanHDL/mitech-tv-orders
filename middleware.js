@@ -88,8 +88,10 @@ function verificarAcceso(pathname, method, rol) {
   if (rol === 'surtidor') {
     // HTML: módulo de surtido
     if (pathname === '/surtir' || pathname.startsWith('/surtir/')) return true
-    // API: solo PATCH para tracking de surtido
+    // API: PATCH para tracking de surtido y cambio de etapa logística
+    // (carga/salida/despacho — el piso es quien mueve el pedido físicamente)
     if (method === 'PATCH' && /^\/api\/pedidos\/[^/]+$/.test(pathname)) return true
+    if (method === 'PATCH' && /^\/api\/pedidos\/[^/]+\/estado$/.test(pathname)) return true
     return false
   }
 
