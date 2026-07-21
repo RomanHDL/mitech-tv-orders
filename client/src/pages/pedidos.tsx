@@ -1,29 +1,26 @@
 // Puerto de app/pedidos/page.jsx + lista-cliente.jsx — lista con búsqueda,
-// export Excel, reasignar dueño (admin) y print/editar/eliminar.
+// filtros, orden, paginación local, export Excel, reasignar dueño (admin) y
+// print/editar/eliminar. Se convirtió en un orquestador delgado: la UI vive
+// en client/src/components/pedidos/*, este archivo solo trae los datos
+// reales (queries/mutations, sin tocar sus endpoints) y arma el filtrado.
 import { useMemo, useState } from 'react'
-import { Link } from 'wouter'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, FileSpreadsheet, FileText, Package, Plus, Printer, Search, Trash2 } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { apiRequest } from '@/lib/queryClient'
 import { useAuth } from '@/hooks/use-auth'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { descargarPedidosXLSX } from '@/lib/exportar-pedidos'
-import {
-  badgeProgreso,
-  diasHastaLimite,
-  formatearFechaHora,
-  formatearFechaLimite,
-  progresoPct,
-  tienePallets,
-  tiempoRestanteTexto,
-  totalRequerido,
-  totalSurtido,
-} from '@/lib/pedido-stats'
+import { estaVencido, normalizeOrderStatus, progresoPct, totalRequerido, totalSurtido } from '@/lib/pedido-stats'
+import PedidosHeader from '@/components/pedidos/pedidos-header'
+import PedidosToolbar, { type EstadoFiltro, type OrdenarPor } from '@/components/pedidos/pedidos-toolbar'
+import PedidosStats from '@/components/pedidos/pedidos-stats'
+import PedidosEmptyState from '@/components/pedidos/pedidos-empty-state'
+import PedidosTable, { type UsuarioAsignable } from '@/components/pedidos/pedidos-table'
+import PedidosPagination from '@/components/pedidos/pedidos-pagination'
 import type { PedidoConTvs } from '@shared/schema'
 
-type UsuarioAsignable = { id: string; nombre: string; rol: string }
+const POR_PAGINA = 10
 
 export default function Pedidos() {
   const { usuario } = useAuth()
@@ -38,20 +35,64 @@ export default function Pedidos() {
   })
 
   const [busqueda, setBusqueda] = useState('')
+  const busquedaDebounced = useDebouncedValue(busqueda, 300)
+  const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>('todos')
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
+  const [ordenarPor, setOrdenarPor] = useState<OrdenarPor>('recientes')
+  const [pagina, setPagina] = useState(1)
   const [error, setError] = useState('')
   const [eliminandoId, setEliminandoId] = useState<string | null>(null)
   const [asignandoId, setAsignandoId] = useState<string | null>(null)
 
   const pedidosFiltrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    if (!q) return pedidos
-    return pedidos.filter(
-      (p) =>
-        p.pedidoNombre.toLowerCase().includes(q) ||
-        (p.numeroPedido || '').toLowerCase().includes(q) ||
-        p.condiciones.some((c) => c.toLowerCase().includes(q))
-    )
-  }, [pedidos, busqueda])
+    const q = busquedaDebounced.trim().toLowerCase()
+
+    const filtrados = pedidos.filter((p) => {
+      if (q) {
+        const coincide =
+          p.pedidoNombre.toLowerCase().includes(q) ||
+          (p.numeroPedido || '').toLowerCase().includes(q) ||
+          p.condiciones.some((c) => c.toLowerCase().includes(q)) ||
+          p.televisiones.some((tv) => tv.modelo.toLowerCase().includes(q))
+        if (!coincide) return false
+      }
+      if (estadoFiltro === 'VENCIDOS') {
+        const pendiente = totalRequerido(p) - totalSurtido(p.televisiones)
+        if (!estaVencido({ progresoPct: progresoPct(p), estadoOperativo: p.estadoOperativo, pendiente, fechaLimite: p.fechaLimite })) return false
+      } else if (estadoFiltro !== 'todos') {
+        const estado = normalizeOrderStatus({ progresoPct: progresoPct(p), estadoOperativo: p.estadoOperativo })
+        if (estado !== estadoFiltro) return false
+      }
+      if (fechaDesde && new Date(p.fecha) < new Date(fechaDesde)) return false
+      if (fechaHasta) {
+        const hasta = new Date(fechaHasta)
+        hasta.setHours(23, 59, 59, 999)
+        if (new Date(p.fecha) > hasta) return false
+      }
+      return true
+    })
+
+    return [...filtrados].sort((a, b) => {
+      switch (ordenarPor) {
+        case 'antiguos':
+          return new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+        case 'fechaLimite':
+          return (a.fechaLimite || '').localeCompare(b.fechaLimite || '')
+        case 'nombre':
+          return a.pedidoNombre.localeCompare(b.pedidoNombre)
+        case 'cantidad':
+          return totalRequerido(b) - totalRequerido(a)
+        case 'recientes':
+        default:
+          return new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+      }
+    })
+  }, [pedidos, busquedaDebounced, estadoFiltro, fechaDesde, fechaHasta, ordenarPor])
+
+  const totalPaginas = Math.max(1, Math.ceil(pedidosFiltrados.length / POR_PAGINA))
+  const paginaSegura = Math.min(pagina, totalPaginas)
+  const pedidosPagina = pedidosFiltrados.slice((paginaSegura - 1) * POR_PAGINA, paginaSegura * POR_PAGINA)
 
   const eliminarMutation = useMutation({
     mutationFn: async (id: string) => apiRequest('DELETE', `/api/pedidos/${id}`),
@@ -89,179 +130,86 @@ export default function Pedidos() {
     }
   }
 
+  function limpiarFiltros() {
+    setBusqueda('')
+    setEstadoFiltro('todos')
+    setFechaDesde('')
+    setFechaHasta('')
+    setOrdenarPor('recientes')
+    setPagina(1)
+  }
+
   if (isLoading) return null
 
   return (
-    <main className="mx-auto max-w-6xl p-4 sm:p-6">
-      <div className="mb-4">
-        <h1 className="font-display text-3xl text-primary">{t('nav.pedidos')}</h1>
-        <p className="text-muted-foreground">{pedidos.length === 0 ? t('pedidos.sinPedidos') : t('pedidos.totalPedidos', { count: pedidos.length })}</p>
-      </div>
+    <main className="w-full pb-10 pt-8" style={{ paddingInline: 'clamp(20px, 2vw, 32px)' }}>
+      <PedidosHeader />
+
+      <PedidosToolbar
+        busqueda={busqueda}
+        onBusquedaChange={(v) => {
+          setBusqueda(v)
+          setPagina(1)
+        }}
+        estado={estadoFiltro}
+        onEstadoChange={(v) => {
+          setEstadoFiltro(v)
+          setPagina(1)
+        }}
+        fechaDesde={fechaDesde}
+        onFechaDesdeChange={(v) => {
+          setFechaDesde(v)
+          setPagina(1)
+        }}
+        fechaHasta={fechaHasta}
+        onFechaHastaChange={(v) => {
+          setFechaHasta(v)
+          setPagina(1)
+        }}
+        ordenarPor={ordenarPor}
+        onOrdenarPorChange={(v) => {
+          setOrdenarPor(v)
+          setPagina(1)
+        }}
+        onExportarExcel={() => descargarPedidosXLSX(pedidosFiltrados)}
+        exportarDeshabilitado={pedidosFiltrados.length === 0}
+      />
+
+      <PedidosStats pedidos={pedidos} />
+
+      {error && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {pedidos.length === 0 ? (
-        <div className="rounded-lg border bg-card p-10 text-center shadow-sm">
-          <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-2 text-lg font-semibold">{t('pedidos.noHayPedidos')}</h3>
-          <p className="text-muted-foreground">{t('pedidos.creaPrimero')}</p>
-          <Link href="/">
-            <Button className="mt-4">
-              <Plus className="h-4 w-4" /> {t('pedidoForm.nuevoPedido')}
-            </Button>
-          </Link>
-        </div>
+        <PedidosEmptyState variante="sinDatos" />
+      ) : pedidosFiltrados.length === 0 ? (
+        <PedidosEmptyState variante="sinResultados" onLimpiarFiltros={limpiarFiltros} />
       ) : (
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder={t('pedidos.buscarPlaceholder')} value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="pl-9" />
-            </div>
-            <Button variant="secondary" onClick={() => descargarPedidosXLSX(pedidosFiltrados)} disabled={pedidosFiltrados.length === 0}>
-              <FileSpreadsheet className="h-4 w-4" /> Excel
-            </Button>
-            <Link href="/">
-              <Button>
-                <Plus className="h-4 w-4" /> {t('pedidoForm.nuevoPedido')}
-              </Button>
-            </Link>
-          </div>
-
-          {error && (
-            <div className="mb-3 flex items-center gap-2 rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {pedidosFiltrados.length === 0 ? (
-            <p className="p-6 text-center text-muted-foreground">{t('pedidos.sinResultados', { busqueda })}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-sm">
-                <thead>
-                  <tr className="border-b text-left text-xs uppercase text-muted-foreground">
-                    <th className="p-2">{t('pedidos.colNumero')}</th>
-                    <th className="p-2">{t('pedidos.colPedido')}</th>
-                    <th className="p-2">{t('pedidos.colFechaCreacion')}</th>
-                    <th className="p-2">{t('pedidos.colFechaLimite')}</th>
-                    <th className="p-2">{t('pedidos.colTiempoRestante')}</th>
-                    {esAdmin && <th className="p-2">{t('pedidos.colDueno')}</th>}
-                    <th className="p-2">{t('pedidoForm.condiciones')}</th>
-                    <th className="p-2">{t('pedidos.colTotal')}</th>
-                    <th className="p-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {pedidosFiltrados.map((p) => {
-                    const pct = progresoPct(p)
-                    const badge = badgeProgreso(pct, t)
-                    const dias = diasHastaLimite(p.fechaLimite)
-                    const tiempo = tiempoRestanteTexto(dias, t)
-                    const surtido = totalSurtido(p.televisiones)
-                    const requerido = totalRequerido(p)
-                    return (
-                      <tr key={p.id} className="border-b last:border-0">
-                        <td className="p-2 font-mono text-xs">{p.numeroPedido || '—'}</td>
-                        <td className="p-2">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-medium">{p.pedidoNombre}</span>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                                badge.clase === 'completo'
-                                  ? 'bg-success/20 text-success'
-                                  : badge.clase === 'parcial'
-                                    ? 'bg-accent/30 text-accent-foreground'
-                                    : 'bg-muted text-muted-foreground'
-                              }`}
-                            >
-                              {badge.label}
-                            </span>
-                            {tienePallets(p.televisiones) && (
-                              <span className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs" title={t('pedidoForm.pallets')}>
-                                <Package className="h-3 w-3" /> {t('pedidoForm.pallets')}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2 whitespace-nowrap">{formatearFechaHora(p.fecha)}</td>
-                        <td className="p-2 whitespace-nowrap">{formatearFechaLimite(p.fechaLimite)}</td>
-                        <td className="p-2">
-                          <span
-                            className={`whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ${
-                              tiempo.clase === 'vencido'
-                                ? 'bg-destructive/15 text-destructive'
-                                : tiempo.clase === 'urgente'
-                                  ? 'bg-accent/30'
-                                  : tiempo.clase === 'cercano'
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'text-muted-foreground'
-                            }`}
-                          >
-                            {tiempo.texto}
-                          </span>
-                        </td>
-                        {esAdmin && (
-                          <td className="p-2">
-                            <select
-                              className="h-9 rounded-md border border-input bg-background px-2 text-xs"
-                              value={p.creadoPor || ''}
-                              disabled={asignandoId === p.id}
-                              onChange={(e) => cambiarDueno(p.id, e.target.value)}
-                            >
-                              <option value="">{t('pedidos.sinDueno')}</option>
-                              {usuarios.map((u) => (
-                                <option key={u.id} value={u.id}>
-                                  {u.nombre} ({u.rol})
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        )}
-                        <td className="p-2">
-                          <div className="flex flex-wrap gap-1">
-                            {p.condiciones.length > 0 ? (
-                              p.condiciones.map((c) => (
-                                <span key={c} className="rounded bg-secondary px-1.5 py-0.5 text-xs font-semibold">
-                                  {c}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2 whitespace-nowrap font-semibold">
-                          {surtido}/{requerido}
-                        </td>
-                        <td className="p-2">
-                          <div className="flex flex-wrap gap-1">
-                            <Link href={`/pedidos/${p.id}/imprimir`}>
-                              <Button size="sm">
-                                <Printer className="h-3.5 w-3.5" /> {t('common.imprimir')}
-                              </Button>
-                            </Link>
-                            {esAdmin && (
-                              <>
-                                <Link href={`/pedidos/${p.id}/editar`}>
-                                  <Button size="sm" variant="secondary">
-                                    {t('common.editar')}
-                                  </Button>
-                                </Link>
-                                <Button size="sm" variant="destructive" disabled={eliminandoId === p.id} onClick={() => eliminar(p.id, p.pedidoNombre)}>
-                                  <Trash2 className="h-3.5 w-3.5" /> {eliminandoId === p.id ? '…' : t('common.eliminar')}
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <>
+          <PedidosTable
+            pedidos={pedidosPagina}
+            esAdmin={esAdmin}
+            rol={usuario?.rol}
+            usuarios={usuarios}
+            asignandoId={asignandoId}
+            eliminandoId={eliminandoId}
+            onCambiarDueno={cambiarDueno}
+            onEliminar={eliminar}
+          />
+          <PedidosPagination
+            desde={(paginaSegura - 1) * POR_PAGINA + 1}
+            hasta={Math.min(paginaSegura * POR_PAGINA, pedidosFiltrados.length)}
+            total={pedidosFiltrados.length}
+            puedeAnterior={paginaSegura > 1}
+            puedeSiguiente={paginaSegura < totalPaginas}
+            onAnterior={() => setPagina((p) => Math.max(1, p - 1))}
+            onSiguiente={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+          />
+        </>
       )}
     </main>
   )

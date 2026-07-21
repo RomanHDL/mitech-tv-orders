@@ -4,12 +4,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'wouter'
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, ArrowLeft, Box, Check, Minus, Plus, Printer, RefreshCw } from 'lucide-react'
 import { apiRequest, ApiError } from '@/lib/queryClient'
 import { useAuth } from '@/hooks/use-auth'
 import ComentariosPedido from '@/components/comentarios-pedido'
-import { unidadLabel, type PedidoConTvs, type TelevisionRow } from '@shared/schema'
+import StepperEtapas from '@/components/pedidos/stepper-etapas'
+import { normalizeOrderStatus } from '@/lib/pedido-stats'
+import { unidadLabel, ESTADO_LABEL, type PedidoConTvs, type TelevisionRow, type PedidoEstadoLogRow, type EstadoOperativo } from '@shared/schema'
+
+type PedidoDetalle = PedidoConTvs & { historialEstados?: PedidoEstadoLogRow[] }
+
+// Próxima etapa accionable — mismo helper que la tabla de /pedidos.
+function proximaEtapa(estado: EstadoOperativo): { destino: EstadoOperativo; label: string } | null {
+  if (estado === 'PENDIENTE' || estado === 'EN_PROCESO' || estado === 'TERMINADO') {
+    return { destino: 'CARGANDO', label: 'Iniciar carga' }
+  }
+  if (estado === 'CARGANDO') return { destino: 'LISTO_SALIDA', label: 'Marcar listo para salida' }
+  if (estado === 'LISTO_SALIDA') return { destino: 'DESPACHADO', label: 'Confirmar despacho' }
+  return null
+}
 
 function agruparPorMarca(televisiones: TelevisionRow[]) {
   const grupos: Record<string, TelevisionRow[]> = {}
@@ -28,11 +42,14 @@ export default function SurtirDetalle() {
   const { id } = useParams<{ id: string }>()
   const { usuario } = useAuth()
   const { t } = useTranslation()
-  const { data: pedido, isLoading } = useQuery<PedidoConTvs>({ queryKey: [`/api/pedidos/${id}`] })
+  const queryClient = useQueryClient()
+  const { data: pedido, isLoading } = useQuery<PedidoDetalle>({ queryKey: [`/api/pedidos/${id}`] })
 
   const [tvs, setTvs] = useState<TelevisionRow[]>([])
   const [error, setError] = useState('')
   const [estadoGuardado, setEstadoGuardado] = useState<'idle' | 'guardando' | 'guardado' | 'error'>('idle')
+  const [cambiandoEstado, setCambiandoEstado] = useState(false)
+  const [errorEstado, setErrorEstado] = useState('')
   const [ultimaAccion, setUltimaAccion] = useState<UltimaAccion>(null)
   const guardadoTimeout = useRef<ReturnType<typeof setTimeout>>()
   const undoTimeout = useRef<ReturnType<typeof setTimeout>>()
@@ -65,6 +82,40 @@ export default function SurtirDetalle() {
   }, 0)
   const progreso = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
   const completado = totalRequerido > 0 && totalSurtido >= totalRequerido
+  const pendienteCantidad = Math.max(0, totalRequerido - totalSurtido)
+
+  const estado = normalizeOrderStatus({ progresoPct: progreso, estadoOperativo: pedido?.estadoOperativo ?? null })
+  const puedeAvanzarEtapa = usuario?.rol === 'admin' || usuario?.rol === 'surtidor'
+  const siguienteEtapa = proximaEtapa(estado)
+  const puedeCancelar = estado !== 'DESPACHADO' && estado !== 'CANCELADO'
+
+  async function avanzarEtapa(destino: EstadoOperativo) {
+    setErrorEstado('')
+    let razon: string | null = null
+
+    if (destino === 'DESPACHADO') {
+      if (!confirm('¿Confirmas que este pedido ya salió de las instalaciones?')) return
+      if (pendienteCantidad > 0) {
+        if (usuario?.rol !== 'admin') {
+          setErrorEstado('No se puede despachar con unidades pendientes.')
+          return
+        }
+        razon = window.prompt('Este pedido tiene unidades pendientes. Escribe la razón para despachar de todos modos:')
+        if (!razon || !razon.trim()) return
+      }
+    }
+    if (destino === 'CANCELADO' && !confirm('¿Confirmas que quieres cancelar este pedido?')) return
+
+    setCambiandoEstado(true)
+    try {
+      await apiRequest('PATCH', `/api/pedidos/${id}/estado`, { estado: destino, razon })
+      await queryClient.invalidateQueries({ queryKey: [`/api/pedidos/${id}`] })
+    } catch (err) {
+      setErrorEstado(err instanceof ApiError ? err.message : 'No se pudo cambiar el estado')
+    } finally {
+      setCambiandoEstado(false)
+    }
+  }
 
   const registrarUndo = (accion: UltimaAccion) => {
     clearTimeout(undoTimeout.current)
@@ -182,6 +233,51 @@ export default function SurtirDetalle() {
         </div>
       </header>
 
+      <div className="mb-4 rounded-md border bg-secondary/30 p-3.5">
+        <h3 className="mb-2.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">Ciclo del pedido</h3>
+        <StepperEtapas estado={estado} />
+
+        {puedeAvanzarEtapa && (siguienteEtapa || puedeCancelar) && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {siguienteEtapa && (
+              <button
+                type="button"
+                onClick={() => avanzarEtapa(siguienteEtapa.destino)}
+                disabled={cambiandoEstado}
+                className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {siguienteEtapa.label}
+              </button>
+            )}
+            {puedeCancelar && (
+              <button
+                type="button"
+                onClick={() => avanzarEtapa('CANCELADO')}
+                disabled={cambiandoEstado}
+                className="inline-flex h-9 items-center rounded-md border border-destructive px-3 text-sm font-semibold text-destructive disabled:opacity-50"
+              >
+                Cancelar pedido
+              </button>
+            )}
+          </div>
+        )}
+
+        {errorEstado && <div className="mt-2 text-sm font-semibold text-destructive">{errorEstado}</div>}
+
+        {pedido.historialEstados && pedido.historialEstados.length > 0 && (
+          <ul className="mt-3 space-y-1 border-t pt-2 text-xs text-muted-foreground">
+            {pedido.historialEstados.map((h, i) => (
+              <li key={i}>
+                <strong>{ESTADO_LABEL[h.estadoNuevo] || h.estadoNuevo}</strong>
+                {' — '}
+                {h.usuarioNombre || 'usuario'}
+                {h.observacion ? ` · ${h.observacion}` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {error && (
         <div className="mb-3 flex items-center gap-2 rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
@@ -207,7 +303,7 @@ export default function SurtirDetalle() {
                 const completo = !esSinLimite && surtida >= tv.cantidad
                 const enProgreso = surtida > 0 && !completo
                 const esPallet = tv.unidad === 'pallet'
-                const descTv = `${marca} ${tv.pulgadas}"${tv.modelo ? ' ' + tv.modelo : ''}`
+                const descTv = `${marca} ${tv.pulgadas}"${tv.condicion ? ' ' + tv.condicion : ''}${tv.modelo ? ' ' + tv.modelo : ''}`
                 const unidadTxt = unidadLabel(tv.cantidad || 1, tv.unidad)
 
                 return (
@@ -220,6 +316,9 @@ export default function SurtirDetalle() {
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-lg font-bold">{tv.pulgadas}&quot;</span>
+                        {tv.condicion && (
+                          <span className="rounded bg-secondary px-1.5 py-0.5 text-xs font-semibold">{tv.condicion}</span>
+                        )}
                         {esPallet && (
                           <span className="flex items-center gap-1 rounded bg-accent/30 px-1.5 py-0.5 text-xs font-semibold">
                             <Box className="h-3 w-3" /> {t('pedidoForm.pallet')}

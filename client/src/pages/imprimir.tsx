@@ -4,7 +4,8 @@ import { useParams } from 'wouter'
 import { useQuery } from '@tanstack/react-query'
 import PrintButton from '@/components/print-button'
 import { useFitToPage } from '@/hooks/use-fit-to-page'
-import { unidadLabel, type PedidoConTvs, type TelevisionRow } from '@shared/schema'
+import { unidadLabel, type PedidoConTvs, type TelevisionRow, type EstadoOperativo } from '@shared/schema'
+import { diasHastaLimite, normalizeOrderStatus, totalRequerido, totalSurtido } from '@/lib/pedido-stats'
 import './imprimir.css'
 
 function agruparPorMarca(televisiones: TelevisionRow[]) {
@@ -51,19 +52,19 @@ function formatearFechaLimiteLarga(iso: string | null) {
   return new Date(y, m - 1, d).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
-function diasHastaLimite(iso: string | null) {
-  if (!iso) return null
-  const [y, m, d] = String(iso).split('-').map(Number)
-  if (!y || !m || !d) return null
-  const limite = new Date(y, m - 1, d)
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  return Math.round((limite.getTime() - hoy.getTime()) / 86400000)
-}
+// Igual que en la tabla/historial: los estados finales (Cargando, Listo
+// para salida, Despachado, Cancelado, Surtido terminado) nunca deben
+// mostrar "Vencido" — el pedido ya avanzó, la fecha límite dejó de importar.
+function tiempoRestante(estado: EstadoOperativo, dias: number | null, pendiente: number) {
+  if (estado === 'DESPACHADO') return { texto: 'DESPACHADO', tono: 'verde' }
+  if (estado === 'LISTO_SALIDA') return { texto: 'LISTO PARA SALIDA', tono: 'verde' }
+  if (estado === 'CARGANDO') return { texto: 'CARGANDO', tono: 'amarillo' }
+  if (estado === 'TERMINADO') return { texto: 'SURTIDO TERMINADO', tono: 'verde' }
+  if (estado === 'CANCELADO') return { texto: 'CANCELADO', tono: 'rojo' }
 
-function tiempoRestante(dias: number | null) {
   if (dias === null) return null
-  if (dias < 0) return { texto: `VENCIDO HACE ${Math.abs(dias)} D`, tono: 'rojo' }
+  if (dias < 0 && pendiente > 0) return { texto: `VENCIDO HACE ${Math.abs(dias)} D`, tono: 'rojo' }
+  if (dias < 0) return null
   if (dias === 0) return { texto: 'ENTREGA HOY', tono: 'rojo' }
   if (dias === 1) return { texto: 'ENTREGA MAÑANA', tono: 'amarillo' }
   if (dias <= 3) return { texto: `${dias} DÍAS`, tono: 'amarillo' }
@@ -87,8 +88,13 @@ export default function Imprimir() {
   const totalLineas = grupos.reduce((s, g) => s + g.items.length + 1, 0)
   const fechaFmt = new Date(pedido.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
   const fechaLimiteFmt = formatearFechaLimiteLarga(pedido.fechaLimite)
+  const req = totalRequerido(pedido)
+  const surt = totalSurtido(pedido.televisiones)
+  const pct = req > 0 ? Math.round((surt / req) * 100) : 0
+  const pendiente = req - surt
+  const estado = normalizeOrderStatus({ progresoPct: pct, estadoOperativo: pedido.estadoOperativo })
   const dias = diasHastaLimite(pedido.fechaLimite)
-  const tiempo = tiempoRestante(dias)
+  const tiempo = tiempoRestante(estado, dias, pendiente)
   const generadoFmt = new Date().toLocaleString('es-MX', {
     day: '2-digit',
     month: '2-digit',
@@ -175,6 +181,9 @@ export default function Imprimir() {
                 {items.map((tv) => (
                   <li key={tv.id} className={tv.unidad === 'pallet' ? 'es-pallet' : ''}>
                     <span className="col-pulgadas">{tv.pulgadas}&quot;</span>
+                    {tv.condicion && (
+                      <span className={`col-condicion condicion-chip cond-${tv.condicion.toLowerCase()}`}>{tv.condicion}</span>
+                    )}
                     <span className="col-cantidad">{tv.sinLimite ? 'S/L' : tv.cantidad}</span>
                     <span className="col-unidad">{tv.sinLimite ? '' : unidadLabel(tv.cantidad, tv.unidad, true)}</span>
                     <span className="col-modelo">{tv.modelo ? tv.modelo : <span className="modelo-vacio">—</span>}</span>

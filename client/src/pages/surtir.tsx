@@ -6,8 +6,15 @@ import { Link } from 'wouter'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Box, Check, Clipboard } from 'lucide-react'
-import { progresoPct, totalRequerido, totalSurtido, formatearFechaLimite } from '@/lib/pedido-stats'
-import type { PedidoConTvs } from '@shared/schema'
+import { normalizeOrderStatus, progresoPct, totalRequerido, totalSurtido, formatearFechaLimite } from '@/lib/pedido-stats'
+import { ESTADO_LABEL, type PedidoConTvs } from '@shared/schema'
+
+const ESTADO_BADGE_CLASE: Record<string, string> = {
+  CARGANDO: 'bg-orange-50 text-orange-700',
+  LISTO_SALIDA: 'bg-violet-50 text-violet-700',
+  DESPACHADO: 'bg-emerald-50 text-emerald-700',
+  CANCELADO: 'bg-red-50 text-red-700',
+}
 
 export default function Surtir() {
   const { t } = useTranslation()
@@ -70,6 +77,8 @@ export default function Surtir() {
             const marcas = new Set(p.televisiones.map((tv) => tv.marca).filter(Boolean)).size
             const totalPallets = p.televisiones.reduce((s, tv) => s + (tv.unidad === 'pallet' ? tv.cantidad || 0 : 0), 0)
             const totalPiezas = p.televisiones.reduce((s, tv) => s + (tv.unidad !== 'pallet' ? tv.cantidad || 0 : 0), 0)
+            const estado = normalizeOrderStatus({ progresoPct: pct, estadoOperativo: p.estadoOperativo })
+            const yaAvanzoEtapa = !['PENDIENTE', 'EN_PROCESO', 'TERMINADO'].includes(estado)
             return (
               <Link key={p.id} href={`/surtir/${p.id}`}>
                 <a
@@ -104,6 +113,14 @@ export default function Surtir() {
                       <span className="font-semibold">{pct}%</span>
                     )}
                   </div>
+
+                  {/* Si ya avanzó de etapa logística, lo mostramos para que el
+                      surtidor sepa que este pedido ya no necesita más acción. */}
+                  {yaAvanzoEtapa && (
+                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${ESTADO_BADGE_CLASE[estado] || 'bg-muted'}`}>
+                      {ESTADO_LABEL[estado]}
+                    </span>
+                  )}
 
                   <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     <span>{t('surtir.marcasCount', { count: marcas })}</span>

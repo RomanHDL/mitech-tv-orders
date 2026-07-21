@@ -9,15 +9,15 @@ import { Box, Check, ChevronDown, Printer, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   badgeProgreso,
-  diasHastaLimite,
+  cumplimientoTexto,
   formatearFechaHora,
   formatearFechaLimite,
+  normalizeOrderStatus,
   tienePallets,
-  tiempoRestanteTexto,
   totalRequerido,
   totalSurtido,
 } from '@/lib/pedido-stats'
-import type { PedidoConTvs } from '@shared/schema'
+import { ESTADO_LABEL, type PedidoConTvs } from '@shared/schema'
 
 type Grupo = {
   nombre: string
@@ -153,12 +153,12 @@ export default function Historial() {
                           </thead>
                           <tbody>
                             {g.pedidos.map((p) => {
-                              const dias = diasHastaLimite(p.fechaLimite)
-                              const tiempo = tiempoRestanteTexto(dias, t)
                               const req = totalRequerido(p)
                               const surt = totalSurtido(p.televisiones)
                               const pct = req > 0 ? Math.round((surt / req) * 100) : 0
-                              const badgeP = badgeProgreso(pct, t)
+                              const pendiente = req - surt
+                              const estado = normalizeOrderStatus({ progresoPct: pct, estadoOperativo: p.estadoOperativo })
+                              const tiempo = cumplimientoTexto({ progresoPct: pct, estadoOperativo: p.estadoOperativo, pendiente, fechaLimite: p.fechaLimite }, t)
                               return (
                                 <tr key={p.id} className="border-t">
                                   <td className="p-2 font-mono text-xs">{p.numeroPedido || '—'}</td>
@@ -181,9 +181,9 @@ export default function Historial() {
                                   </td>
                                   <td className="p-2 whitespace-nowrap font-semibold">
                                     {surt}/{req}{' '}
-                                    <span className={`ml-1 rounded-full px-1.5 py-0.5 text-xs font-semibold ${badgeP.clase === 'completo' ? 'bg-success/20 text-success' : badgeP.clase === 'parcial' ? 'bg-accent/30' : 'bg-muted'}`}>
-                                      {badgeP.clase === 'completo' && <Check className="mr-0.5 inline h-2.5 w-2.5" />}
-                                      {badgeP.label}
+                                    <span className="ml-1 rounded-full bg-secondary px-1.5 py-0.5 text-xs font-semibold">
+                                      {estado === 'DESPACHADO' && <Check className="mr-0.5 inline h-2.5 w-2.5" />}
+                                      {ESTADO_LABEL[estado]}
                                     </span>
                                   </td>
                                   <td className="p-2">

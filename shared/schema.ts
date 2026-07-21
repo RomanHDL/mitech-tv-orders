@@ -36,7 +36,42 @@ export const CONDICIONES = [
   'BOX', 'DNP', 'DMT', 'DMA',
 ] as const
 
+// Condiciones oficiales por partida/SKU (distinto de CONDICIONES, que es el
+// tag general del pedido). Exclusivamente estas 3 — no agregar más sin
+// autorización explícita.
+export const CONDICIONES_PARTIDA = ['GRA', 'GRB', 'GRC'] as const
+
 export const UNIDADES = ['pieza', 'pallet'] as const
+
+// ── Estado operativo (ciclo logístico) ──────────────────────────────────
+// Independiente del progreso de surtido (cantidad/cantidadSurtida). Los
+// primeros 3 (PENDIENTE/EN_PROCESO/TERMINADO) se derivan siempre del
+// progreso; los 3 últimos (CARGANDO/LISTO_SALIDA/DESPACHADO) y CANCELADO
+// solo se alcanzan por acción explícita de un admin/surtidor — nunca se
+// infieren. Mismo catálogo que lib/estado-pedido.js del app Vercel.
+export const ESTADOS_OPERATIVOS = [
+  'PENDIENTE', 'EN_PROCESO', 'TERMINADO', 'CARGANDO', 'LISTO_SALIDA', 'DESPACHADO', 'CANCELADO',
+] as const
+
+export const ESTADO_LABEL: Record<string, string> = {
+  PENDIENTE: 'Pendiente',
+  EN_PROCESO: 'En proceso',
+  TERMINADO: 'Surtido terminado',
+  CARGANDO: 'Cargando',
+  LISTO_SALIDA: 'Listo para salida',
+  DESPACHADO: 'Despachado',
+  CANCELADO: 'Cancelado',
+}
+
+// Jerarquía: un estado avanzado nunca retrocede. CANCELADO es terminal
+// aparte, no entra en la jerarquía numérica.
+export const ESTADO_ORDEN: Record<string, number> = {
+  PENDIENTE: 0, EN_PROCESO: 1, TERMINADO: 2, CARGANDO: 3, LISTO_SALIDA: 4, DESPACHADO: 5,
+}
+
+// Estados que se fijan a mano vía PATCH /api/pedidos/:id/estado.
+// PENDIENTE/EN_PROCESO/TERMINADO siempre se derivan solos del surtido.
+export const ESTADOS_TRANSICION = ['CARGANDO', 'LISTO_SALIDA', 'DESPACHADO', 'CANCELADO'] as const
 
 export const SKU_REGEX = /^[A-Za-z0-9]{3,20}$/
 
@@ -57,6 +92,7 @@ export function unidadLabel(cantidad: number, unidad: string, mayuscula = false)
 // ── Enums ───────────────────────────────────────────────────────────────
 export const rolEnum = pgEnum('rol', ['admin', 'capturista', 'surtidor'])
 export const unidadEnum = pgEnum('unidad', UNIDADES)
+export const estadoOperativoEnum = pgEnum('estado_operativo', ESTADOS_OPERATIVOS)
 
 // ── usuarios ────────────────────────────────────────────────────────────
 // Auth híbrida: admin/capturista entran por OIDC Nextcloud (oidcSub); el
@@ -98,6 +134,27 @@ export const pedidos = pgTable('pedidos', {
   creadoPor: uuid('creado_por').references(() => usuarios.id),
   creadoPorNombre: text('creado_por_nombre'),
   creadoPorRol: text('creado_por_rol'),
+  // Etapa logística (Cargando/Listo para salida/Despachado/Cancelado).
+  // NULL = todavía no hay ninguna acción de etapa; el estado visible se
+  // deriva del progreso de surtido hasta que alguien lo avance a mano
+  // (ver normalizeOrderStatus en client/src/lib/pedido-stats.ts).
+  estadoOperativo: estadoOperativoEnum('estado_operativo'),
+})
+
+// ── pedido_estado_log ───────────────────────────────────────────────────
+// Bitácora de cada cambio de etapa logística (quién, cuándo, de qué a qué,
+// observación opcional — ej. la razón de un despacho con pendientes).
+// Modelada igual que changelog_dismissals: FK + timestamp con default now().
+export const pedidoEstadoLog = pgTable('pedido_estado_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  pedidoId: uuid('pedido_id').notNull().references(() => pedidos.id, { onDelete: 'cascade' }),
+  usuarioId: uuid('usuario_id').references(() => usuarios.id),
+  usuarioNombre: text('usuario_nombre'),
+  usuarioRol: text('usuario_rol'),
+  estadoAnterior: text('estado_anterior').notNull(),
+  estadoNuevo: text('estado_nuevo').notNull(),
+  observacion: text('observacion'),
+  creadoEn: timestamp('creado_en', { withTimezone: true }).notNull().defaultNow(),
 })
 
 // ── pedido_televisiones ─────────────────────────────────────────────────
@@ -110,6 +167,11 @@ export const pedidoTelevisiones = pgTable('pedido_televisiones', {
   orden: integer('orden').notNull(),
   marca: text('marca').notNull(),
   pulgadas: integer('pulgadas').notNull(),
+  // Condición de ESTA partida (distinta de pedidos.condiciones, que es el tag
+  // general del pedido). Dos partidas con el mismo SKU pero condición
+  // distinta son líneas independientes — ver el emparejamiento en el PUT de
+  // server/routes/pedidos.ts.
+  condicion: text('condicion').notNull(),
   modelo: text('modelo').notNull(),
   modelosAlternativos: text('modelos_alternativos').array().notNull().default(sql`'{}'::text[]`),
   cantidad: integer('cantidad').notNull().default(0),
@@ -142,6 +204,7 @@ export const televisionInputSchema = z.object({
   pulgadas: z.coerce.number().refine((n) => (PULGADAS as readonly number[]).includes(n), {
     message: 'pulgadas inválidas',
   }),
+  condicion: z.enum(CONDICIONES_PARTIDA),
   modelo: z.string().trim().toUpperCase().regex(SKU_REGEX, 'captura el modelo / SKU (mín. 3 letras o números)'),
   modelosAlternativos: z.array(z.string().trim().toUpperCase().regex(SKU_REGEX)).default([]),
   cantidad: z.coerce.number().int().min(0).default(0),
@@ -180,6 +243,11 @@ export const catalogoOnnInputSchema = z.object({
 
 export const duenoInputSchema = z.object({
   userId: z.string().uuid().nullable(),
+})
+
+export const estadoTransitionInputSchema = z.object({
+  estado: z.enum(ESTADOS_TRANSICION),
+  razon: z.string().trim().optional().nullable(),
 })
 
 // ── User Manual (gate check #11) ─────────────────────────────────────────
@@ -289,6 +357,9 @@ export type Pedido = typeof pedidos.$inferSelect
 // Forma "pedido + televisiones" tal como la consume el cliente (equivalente
 // al documento Mongo original, para minimizar cambios en la UI portada).
 export type PedidoConTvs = Pedido & { televisiones: TelevisionRow[] }
+
+export type PedidoEstadoLogRow = typeof pedidoEstadoLog.$inferSelect
+export type EstadoOperativo = (typeof ESTADOS_OPERATIVOS)[number]
 
 export type DocumentationCategory = typeof documentationCategories.$inferSelect
 export type DocumentationPage = typeof documentationPages.$inferSelect

@@ -5,8 +5,34 @@ import { Router, type Express } from 'express'
 import { eq, desc, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db'
-import { pedidos, pedidoTelevisiones, usuarios, pedidoInputSchema, surtidoInputSchema, comentarioInputSchema, duenoInputSchema, type PedidoConTvs } from '../../shared/schema'
+import {
+  pedidos,
+  pedidoTelevisiones,
+  pedidoEstadoLog,
+  usuarios,
+  pedidoInputSchema,
+  surtidoInputSchema,
+  comentarioInputSchema,
+  duenoInputSchema,
+  estadoTransitionInputSchema,
+  ESTADO_ORDEN,
+  ESTADO_LABEL,
+  type PedidoConTvs,
+  type PedidoEstadoLogRow,
+  type EstadoOperativo,
+} from '../../shared/schema'
 import { requireUser, requireRole, getUsuario } from '../middleware/auth'
+
+// GET /api/pedidos/:id trae también la bitácora de cambios de etapa (el
+// modal de detalle la muestra debajo del stepper) — se pide aparte, no en
+// la lista, igual que el app Vercel solo la trae en el detalle.
+async function obtenerHistorialEstados(pedidoId: string) {
+  return db
+    .select()
+    .from(pedidoEstadoLog)
+    .where(eq(pedidoEstadoLog.pedidoId, pedidoId))
+    .orderBy(pedidoEstadoLog.creadoEn)
+}
 
 const router = Router()
 
@@ -21,22 +47,38 @@ async function obtenerPedidoConTvs(id: string): Promise<PedidoConTvs | null> {
   return { ...pedido, televisiones }
 }
 
-// Junta pedidos + sus televisiones en una sola pasada (evita N+1). `filas`
-// ya viene ordenada/filtrada por el caller (lista completa vs. cola de
-// surtir con ownership).
-async function juntarConTvs(filas: (typeof pedidos.$inferSelect)[]): Promise<PedidoConTvs[]> {
+// Junta pedidos + sus televisiones + bitácora de estado en una sola pasada
+// (evita N+1). `filas` ya viene ordenada/filtrada por el caller (lista
+// completa vs. cola de surtir con ownership). La bitácora viaja también en
+// la lista (a diferencia del comentario original) porque el Excel necesita
+// la fecha de despacho sin tener que pedir cada pedido uno por uno.
+async function juntarConTvs(
+  filas: (typeof pedidos.$inferSelect)[]
+): Promise<(PedidoConTvs & { historialEstados: PedidoEstadoLogRow[] })[]> {
   if (filas.length === 0) return []
   const ids = filas.map((p) => p.id)
-  const tvs = await db.select().from(pedidoTelevisiones).where(inArray(pedidoTelevisiones.pedidoId, ids))
+  const [tvs, logs] = await Promise.all([
+    db.select().from(pedidoTelevisiones).where(inArray(pedidoTelevisiones.pedidoId, ids)),
+    db.select().from(pedidoEstadoLog).where(inArray(pedidoEstadoLog.pedidoId, ids)),
+  ])
   const tvsPorPedido = new Map<string, typeof tvs>()
   for (const tv of tvs) {
     const lista = tvsPorPedido.get(tv.pedidoId) || []
     lista.push(tv)
     tvsPorPedido.set(tv.pedidoId, lista)
   }
+  const logsPorPedido = new Map<string, typeof logs>()
+  for (const l of logs) {
+    const lista = logsPorPedido.get(l.pedidoId) || []
+    lista.push(l)
+    logsPorPedido.set(l.pedidoId, lista)
+  }
   return filas.map((p) => ({
     ...p,
     televisiones: (tvsPorPedido.get(p.id) || []).sort((a, b) => a.orden - b.orden),
+    historialEstados: (logsPorPedido.get(p.id) || []).sort(
+      (a, b) => new Date(a.creadoEn).getTime() - new Date(b.creadoEn).getTime()
+    ),
   }))
 }
 
@@ -102,6 +144,7 @@ router.post('/api/pedidos', requireRole('admin', 'capturista'), async (req, res)
       orden,
       marca: tv.marca,
       pulgadas: tv.pulgadas,
+      condicion: tv.condicion,
       modelo: tv.modelo,
       modelosAlternativos: tv.modelosAlternativos,
       cantidad: tv.sinLimite ? 0 : tv.cantidad,
@@ -118,7 +161,8 @@ router.post('/api/pedidos', requireRole('admin', 'capturista'), async (req, res)
 router.get('/api/pedidos/:id', requireUser, async (req, res) => {
   const pedido = await obtenerPedidoConTvs(req.params.id)
   if (!pedido) return res.status(404).json({ error: 'No encontrado' })
-  res.json(pedido)
+  const historialEstados = await obtenerHistorialEstados(req.params.id)
+  res.json({ ...pedido, historialEstados })
 })
 
 // ── PUT /api/pedidos/:id — edición completa (admin) ──────────────────────
@@ -143,8 +187,16 @@ router.put('/api/pedidos/:id', requireRole('admin'), async (req, res) => {
   await db.insert(pedidoTelevisiones).values(
     televisiones.map((tv, orden) => {
       const cantidadFinal = tv.sinLimite ? 0 : tv.cantidad
+      // Emparejamiento por SKU + condición (marca+pulgadas+modelo+unidad+
+      // condicion): dos partidas del mismo SKU con condición distinta son
+      // líneas independientes y no comparten cantidadSurtida.
       const match = existente.televisiones.find(
-        (v) => v.marca === tv.marca && v.pulgadas === tv.pulgadas && v.modelo === tv.modelo && v.unidad === tv.unidad
+        (v) =>
+          v.marca === tv.marca &&
+          v.pulgadas === tv.pulgadas &&
+          v.modelo === tv.modelo &&
+          v.unidad === tv.unidad &&
+          v.condicion === tv.condicion
       )
       const cantidadSurtida = match
         ? tv.sinLimite
@@ -156,6 +208,7 @@ router.put('/api/pedidos/:id', requireRole('admin'), async (req, res) => {
         orden,
         marca: tv.marca,
         pulgadas: tv.pulgadas,
+        condicion: tv.condicion,
         modelo: tv.modelo,
         modelosAlternativos: tv.modelosAlternativos,
         cantidad: cantidadFinal,
@@ -280,6 +333,88 @@ router.patch('/api/pedidos/:id/dueno', requireRole('admin'), async (req, res) =>
     .set({ creadoPor: nuevoDueno.id, creadoPorNombre: nuevoDueno.nombre, creadoPorRol: nuevoDueno.rol })
     .where(eq(pedidos.id, req.params.id))
   res.json({ ok: true })
+})
+
+// ── PATCH /api/pedidos/:id/estado — avanzar etapa logística ──────────────
+// Solo admin y surtidor (el piso mueve carga/salida; el admin supervisa y
+// puede forzar un despacho con pendientes dando una razón). Nunca "inventa"
+// progreso: PENDIENTE/EN_PROCESO/TERMINADO se siguen derivando solos del
+// surtido — esta ruta solo mueve las etapas que requieren una acción física
+// real (carga, salida, despacho, cancelación), y dejan rastro en
+// pedido_estado_log.
+function pendienteYProgreso(televisiones: { cantidad: number; cantidadSurtida: number; sinLimite: boolean }[], cantidadTotal: number | null) {
+  const sumaCantidades = televisiones.reduce((s, tv) => s + (tv.cantidad || 0), 0)
+  const totalRequerido = typeof cantidadTotal === 'number' && cantidadTotal > 0 ? cantidadTotal : sumaCantidades
+  const totalSurtido = televisiones.reduce((s, tv) => {
+    const surt = tv.cantidadSurtida || 0
+    if (tv.sinLimite || (tv.cantidad || 0) === 0) return s + surt
+    return s + Math.min(tv.cantidad || 0, surt)
+  }, 0)
+  const progresoPct = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
+  const pendiente = Math.max(0, totalRequerido - totalSurtido)
+  return { pendiente, progresoPct }
+}
+
+function estadoActual(estadoOperativo: string | null, progresoPct: number): EstadoOperativo {
+  if (estadoOperativo === 'CANCELADO') return 'CANCELADO'
+  const computed: EstadoOperativo = progresoPct >= 100 ? 'TERMINADO' : progresoPct > 0 ? 'EN_PROCESO' : 'PENDIENTE'
+  if (estadoOperativo && ESTADO_ORDEN[estadoOperativo] > ESTADO_ORDEN[computed]) {
+    return estadoOperativo as EstadoOperativo
+  }
+  return computed
+}
+
+router.patch('/api/pedidos/:id/estado', requireRole('admin', 'surtidor'), async (req, res) => {
+  const parsed = estadoTransitionInputSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Estado destino inválido' })
+  }
+  const { estado: destino, razon } = parsed.data
+
+  const pedido = await obtenerPedidoConTvs(req.params.id)
+  if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' })
+
+  const usuario = getUsuario(req)!
+  const { pendiente, progresoPct } = pendienteYProgreso(pedido.televisiones, pedido.cantidadTotal)
+  const actual = estadoActual(pedido.estadoOperativo, progresoPct)
+
+  if (actual === 'CANCELADO') {
+    return res.status(400).json({ error: 'El pedido ya está cancelado' })
+  }
+
+  if (destino === 'CANCELADO') {
+    if (actual === 'DESPACHADO') {
+      return res.status(400).json({ error: 'No se puede cancelar un pedido ya despachado' })
+    }
+  } else {
+    // Solo se puede avanzar, nunca retroceder ni "re-marcar" la misma etapa.
+    if (ESTADO_ORDEN[destino] <= ESTADO_ORDEN[actual]) {
+      return res.status(400).json({
+        error: `No se puede pasar de "${ESTADO_LABEL[actual]}" a "${ESTADO_LABEL[destino]}"`,
+      })
+    }
+    if (destino === 'DESPACHADO' && pendiente > 0) {
+      const razonValida = typeof razon === 'string' && razon.trim().length > 0
+      if (usuario.rol !== 'admin' || !razonValida) {
+        return res.status(400).json({
+          error: 'No se puede despachar con unidades pendientes, salvo excepción de admin con razón',
+        })
+      }
+    }
+  }
+
+  await db.update(pedidos).set({ estadoOperativo: destino }).where(eq(pedidos.id, req.params.id))
+  await db.insert(pedidoEstadoLog).values({
+    pedidoId: req.params.id,
+    usuarioId: usuario.id,
+    usuarioNombre: usuario.nombre,
+    usuarioRol: usuario.rol,
+    estadoAnterior: actual,
+    estadoNuevo: destino,
+    observacion: typeof razon === 'string' && razon.trim() ? razon.trim() : null,
+  })
+
+  res.json({ ok: true, estado: destino })
 })
 
 export function registerPedidosRoutes(app: Express) {
