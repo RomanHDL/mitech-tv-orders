@@ -3,6 +3,8 @@ import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
 import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_PARTIDA, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
 import { getUsuario } from '@/lib/auth'
+import { registrarEvento } from '@/lib/eventos'
+import { calcularTotales } from '@/lib/estado-pedido'
 
 export async function GET(_req, { params }) {
   const { id } = await params
@@ -61,7 +63,12 @@ export async function PATCH(req, { params }) {
 
   const pedido = await db.collection('pedidos').findOne(
     { _id: new ObjectId(id) },
-    { projection: { televisiones: 1, creadoPor: 1, creadoPorRol: 1 } }
+    {
+      projection: {
+        televisiones: 1, creadoPor: 1, creadoPorRol: 1,
+        cantidadTotal: 1, numeroPedido: 1, pedidoNombre: 1, condiciones: 1,
+      },
+    }
   )
   if (!pedido) {
     return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
@@ -81,10 +88,45 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ error: 'No se puede surtir más que la cantidad pedida' }, { status: 400 })
   }
 
+  const { progresoPct: pctAntes } = calcularTotales(pedido)
+
   await db.collection('pedidos').updateOne(
     { _id: new ObjectId(id) },
     { $set: { [`televisiones.${tvIndex}.cantidadSurtida`]: cantidadSurtida } }
   )
+
+  // Solo se registra evento cuando el progreso CRUZA un umbral real (0%→algo,
+  // algo→100%) — nunca uno por cada unidad marcada, para no saturar la
+  // bitácora con ruido.
+  const televisionesDespues = pedido.televisiones.map((t, i) =>
+    i === tvIndex ? { ...t, cantidadSurtida } : t
+  )
+  const { progresoPct: pctDespues, totalRequerido, totalSurtido } = calcularTotales({
+    ...pedido,
+    televisiones: televisionesDespues,
+  })
+
+  if (pctAntes === 0 && pctDespues > 0) {
+    await registrarEvento(db, pedido, {
+      tipo: 'SURTIDO',
+      estadoAnterior: 'PENDIENTE',
+      estadoNuevo: 'EN_PROCESO',
+      usuarioId: usuario?.userId || null,
+      usuarioNombre: usuario?.nombre || null,
+      detalle: 'Surtido iniciado',
+    })
+  }
+  if (pctAntes < 100 && pctDespues >= 100) {
+    await registrarEvento(db, pedido, {
+      tipo: 'SURTIDO',
+      estadoAnterior: 'EN_PROCESO',
+      estadoNuevo: 'TERMINADO',
+      usuarioId: usuario?.userId || null,
+      usuarioNombre: usuario?.nombre || null,
+      detalle: '100% surtido',
+      detalleSecundario: `${totalSurtido} de ${totalRequerido} artículos surtidos`,
+    })
+  }
 
   return NextResponse.json({ ok: true })
 }
@@ -135,7 +177,12 @@ export async function PUT(req, { params }) {
   const db = await getDb()
   const existing = await db.collection('pedidos').findOne(
     { _id: new ObjectId(id) },
-    { projection: { televisiones: 1 } }
+    {
+      projection: {
+        televisiones: 1, numeroPedido: 1, pedidoNombre: 1, condiciones: 1,
+        fechaLimite: 1, cantidadTotal: 1,
+      },
+    }
   )
   if (!existing) {
     return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
@@ -229,6 +276,41 @@ export async function PUT(req, { params }) {
       },
     }
   )
+
+  // Detecta qué cambió realmente para no registrar un evento vacío cuando el
+  // usuario solo reabre y guarda sin tocar nada.
+  const cambios = []
+  if (existing.fechaLimite !== fechaLimite) cambios.push('Fecha límite modificada')
+  const condicionesAntes = [...(existing.condiciones || [])].sort().join(',')
+  const condicionesDespues = [...condiciones].sort().join(',')
+  if (condicionesAntes !== condicionesDespues) cambios.push('Condiciones actualizadas')
+  if ((existing.numeroPedido || '') !== numeroPedido.trim()) cambios.push('Número de pedido actualizado')
+  if ((existing.pedidoNombre || '') !== pedidoNombre.trim()) cambios.push('Nombre actualizado')
+
+  const sumaAntes = tvsExistentes.reduce((s, tv) => s + (tv.sinLimite ? 0 : tv.cantidad || 0), 0)
+  const sumaDespues = tvsLimpias.reduce((s, tv) => s + (tv.sinLimite ? 0 : tv.cantidad), 0)
+  const cambioCantidades = sumaAntes !== sumaDespues
+  const mismasLineas =
+    tvsExistentes.length === tvsLimpias.length &&
+    tvsExistentes.every((v, i) => v.marca === tvsLimpias[i].marca && v.modelo === tvsLimpias[i].modelo && v.condicion === tvsLimpias[i].condicion)
+
+  const usuarioEdita = await getUsuario()
+  if (cambios.length > 0 || cambioCantidades) {
+    const esSoloCantidades = cambioCantidades && cambios.length === 0 && mismasLineas
+    await registrarEvento(
+      db,
+      { _id: id, numeroPedido: numeroPedido.trim(), pedidoNombre: pedidoNombre.trim(), condiciones },
+      {
+        tipo: esSoloCantidades ? 'CAMBIO_CANTIDADES' : 'EDICION',
+        usuarioId: usuarioEdita?.userId || null,
+        usuarioNombre: usuarioEdita?.nombre || null,
+        detalle: esSoloCantidades ? 'Cantidades modificadas' : (cambios[0] || 'Pedido editado'),
+        detalleSecundario: esSoloCantidades
+          ? `De ${sumaAntes} a ${sumaDespues} piezas`
+          : (cambios.length > 1 ? cambios.slice(1).join(' · ') : (cambioCantidades ? `Cantidades: de ${sumaAntes} a ${sumaDespues}` : null)),
+      }
+    )
+  }
 
   return NextResponse.json({ ok: true })
 }

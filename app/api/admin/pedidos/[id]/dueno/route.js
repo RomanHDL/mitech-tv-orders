@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { getRol } from '@/lib/auth'
+import { getRol, getUsuario } from '@/lib/auth'
+import { registrarEvento } from '@/lib/eventos'
 
 // Reasigna el dueño de un pedido. Solo admin.
 // Body: { userId: string | null }
@@ -25,7 +26,16 @@ export async function PATCH(req, { params }) {
   const { userId } = body
   const db = await getDb()
 
+  const pedido = await db.collection('pedidos').findOne(
+    { _id: new ObjectId(id) },
+    { projection: { numeroPedido: 1, pedidoNombre: 1, condiciones: 1, creadoPorNombre: 1 } }
+  )
+  if (!pedido) {
+    return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
+  }
+
   let cambios
+  let nuevoDuenoNombre = null
   if (userId) {
     if (typeof userId !== 'string' || !ObjectId.isValid(userId)) {
       return NextResponse.json({ error: 'userId inválido' }, { status: 400 })
@@ -34,6 +44,7 @@ export async function PATCH(req, { params }) {
     if (!usuario) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
+    nuevoDuenoNombre = usuario.nombre || null
     cambios = {
       creadoPor: usuario._id.toString(),
       creadoPorNombre: usuario.nombre || null,
@@ -43,13 +54,19 @@ export async function PATCH(req, { params }) {
     cambios = { creadoPor: null, creadoPorNombre: null, creadoPorRol: null }
   }
 
-  const result = await db.collection('pedidos').updateOne(
+  await db.collection('pedidos').updateOne(
     { _id: new ObjectId(id) },
     { $set: cambios }
   )
-  if (result.matchedCount === 0) {
-    return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
-  }
+
+  const usuarioActual = await getUsuario()
+  await registrarEvento(db, pedido, {
+    tipo: 'CAMBIO_DUENO',
+    usuarioId: usuarioActual?.userId || null,
+    usuarioNombre: usuarioActual?.nombre || null,
+    detalle: 'Dueño actualizado',
+    detalleSecundario: `${pedido.creadoPorNombre || '— sin dueño —'} → ${nuevoDuenoNombre || '— sin dueño —'}`,
+  })
 
   return NextResponse.json({ ok: true })
 }

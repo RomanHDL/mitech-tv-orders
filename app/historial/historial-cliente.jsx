@@ -1,231 +1,379 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import Link from 'next/link'
-import { useTranslation } from 'react-i18next'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  IconBox,
-  IconCheck,
-  IconChevronDown,
-  IconPrinter,
+  IconActivity,
+  IconAlert,
+  IconBan,
+  IconCalendar,
+  IconCheckCircle,
+  IconClipboardList,
+  IconClock,
+  IconExcel,
+  IconFilter,
+  IconMoreHorizontal,
+  IconPdf,
+  IconPencil,
+  IconPlus,
   IconSearch,
+  IconTruck,
 } from '../components/icons'
-import { ESTADO_LABEL } from '@/lib/catalogos'
-import { cumplimientoTexto } from '@/lib/estado-pedido'
+import TablaEventos from './tabla-eventos'
+import PanelDetalle from './panel-detalle'
+import { calcularRango } from './eventos-helpers'
+import { exportarEventosExcel } from './exportar-historial'
 
-function formatearFechaLimite(iso) {
-  if (!iso) return '—'
-  const [y, m, d] = iso.split('-').map(Number)
-  if (!y || !m || !d) return iso
-  const fecha = new Date(y, m - 1, d)
-  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
+const ESTADOS_FILTRO = [
+  { valor: 'todos', label: 'Todos' },
+  { valor: 'PENDIENTE', label: 'Pendiente' },
+  { valor: 'EN_PROCESO', label: 'En proceso' },
+  { valor: 'TERMINADO', label: 'Surtido terminado' },
+  { valor: 'CARGANDO', label: 'Cargando' },
+  { valor: 'LISTO_SALIDA', label: 'Listo para salida' },
+  { valor: 'DESPACHADO', label: 'Despachado' },
+  { valor: 'CANCELADO', label: 'Cancelado' },
+]
+
+const TIPOS_FILTRO = [
+  { valor: 'todos', label: 'Todos' },
+  { valor: 'CREACION', label: 'Creación' },
+  { valor: 'CAMBIO_ESTADO', label: 'Cambio de estado' },
+  { valor: 'EDICION', label: 'Edición' },
+  { valor: 'SURTIDO', label: 'Surtido' },
+  { valor: 'CARGA', label: 'Carga' },
+  { valor: 'DESPACHO', label: 'Despacho' },
+  { valor: 'CANCELACION', label: 'Cancelación' },
+  { valor: 'CAMBIO_DUENO', label: 'Cambio de dueño' },
+  { valor: 'CAMBIO_CANTIDADES', label: 'Cambio de cantidades' },
+  { valor: 'OTRO', label: 'Otro' },
+]
+
+const CATEGORIAS = [
+  { valor: 'todos', label: 'Todos', Icono: IconClipboardList },
+  { valor: 'cambios_estado', label: 'Cambios de estado', Icono: IconActivity },
+  { valor: 'ediciones', label: 'Ediciones', Icono: IconPencil },
+  { valor: 'despachos', label: 'Despachos', Icono: IconTruck },
+  { valor: 'cancelaciones', label: 'Cancelaciones', Icono: IconBan },
+  { valor: 'creaciones', label: 'Creaciones', Icono: IconPlus },
+  { valor: 'otros', label: 'Otros', Icono: IconMoreHorizontal },
+]
+
+const RANGOS_RAPIDOS = [
+  { valor: 'hoy', label: 'Hoy' },
+  { valor: '7d', label: 'Últimos 7 días' },
+  { valor: '30d', label: 'Últimos 30 días' },
+  { valor: 'mes', label: 'Este mes' },
+  { valor: 'mesAnterior', label: 'Mes anterior' },
+  { valor: 'personalizado', label: 'Personalizado' },
+]
+
+const POR_PAGINA_OPCIONES = [8, 15, 25, 50, 100]
+
+const ICONO_METRICA = {
+  total: IconClipboardList,
+  despachados: IconCheckCircle,
+  terminados: IconActivity,
+  cancelados: IconBan,
+  tiempo: IconClock,
 }
 
-function badgeProgreso(pct) {
-  if (pct >= 100) return { label: 'Completado', clase: 'completo' }
-  if (pct > 0) return { label: `${pct}%`, clase: 'parcial' }
-  return { label: 'Pendiente', clase: 'pendiente' }
+function TarjetaMetrica({ tipo, valor, titulo, desc }) {
+  const Icono = ICONO_METRICA[tipo]
+  return (
+    <div className={`metrica-card metrica-${tipo}`}>
+      <span className="metrica-icono"><Icono /></span>
+      <div>
+        <div className="metrica-valor">{valor}</div>
+        <div className="metrica-titulo">{titulo}</div>
+        <div className="metrica-desc">{desc}</div>
+      </div>
+    </div>
+  )
 }
 
-export default function HistorialCliente({ grupos }) {
-  const { t } = useTranslation()
+export default function HistorialCliente({ rol }) {
   const [busqueda, setBusqueda] = useState('')
-  const [expandido, setExpandido] = useState(() => new Set())
+  const [desde, setDesde] = useState('')
+  const [hasta, setHasta] = useState('')
+  const [estadoFiltro, setEstadoFiltro] = useState('todos')
+  const [tipoFiltro, setTipoFiltro] = useState('todos')
+  const [usuarioFiltro, setUsuarioFiltro] = useState('todos')
+  const [condicionFiltro, setCondicionFiltro] = useState('todos')
+  const [categoria, setCategoria] = useState('todos')
+  const [rangoActivo, setRangoActivo] = useState(null)
+  const [masFiltrosAbierto, setMasFiltrosAbierto] = useState(false)
+  const [pagina, setPagina] = useState(1)
+  const [porPagina, setPorPagina] = useState(15)
 
-  const gruposFiltrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    if (!q) return grupos
-    return grupos.filter((g) => {
-      if (g.nombre.toLowerCase().includes(q)) return true
-      return g.pedidos.some(
-        (p) =>
-          (p.numeroPedido || '').toLowerCase().includes(q) ||
-          p.condiciones.some((c) => c.toLowerCase().includes(q))
-      )
-    })
-  }, [grupos, busqueda])
+  const [eventos, setEventos] = useState([])
+  const [total, setTotal] = useState(0)
+  const [cargandoEventos, setCargandoEventos] = useState(true)
+  const [errorEventos, setErrorEventos] = useState('')
 
-  const toggle = (nombre) => {
-    setExpandido((prev) => {
-      const next = new Set(prev)
-      if (next.has(nombre)) next.delete(nombre)
-      else next.add(nombre)
-      return next
+  const [metricas, setMetricas] = useState(null)
+  const [opciones, setOpciones] = useState({ usuarios: [], condiciones: [] })
+
+  const [pedidoSeleccionadoId, setPedidoSeleccionadoId] = useState(null)
+  const [exportando, setExportando] = useState(false)
+
+  const debounceRef = useRef(null)
+  const abortRef = useRef(null)
+
+  useEffect(() => {
+    fetch('/api/eventos/metricas').then((r) => r.json()).then(setMetricas).catch(() => {})
+    fetch('/api/eventos/opciones').then((r) => r.json()).then(setOpciones).catch(() => {})
+  }, [])
+
+  const cargarEventos = useCallback(() => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setCargandoEventos(true)
+    setErrorEventos('')
+
+    const params = new URLSearchParams({
+      q: busqueda, desde, hasta, estado: estadoFiltro, tipo: tipoFiltro,
+      usuario: usuarioFiltro, condicion: condicionFiltro, categoria,
+      pagina: String(pagina), porPagina: String(porPagina),
     })
+
+    fetch(`/api/eventos?${params}`, { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error('No se pudo cargar el historial')
+        return r.json()
+      })
+      .then((data) => {
+        setEventos(data.eventos)
+        setTotal(data.total)
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') setErrorEventos(err.message)
+      })
+      .finally(() => setCargandoEventos(false))
+  }, [busqueda, desde, hasta, estadoFiltro, tipoFiltro, usuarioFiltro, condicionFiltro, categoria, pagina, porPagina])
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(cargarEventos, 350)
+    return () => clearTimeout(debounceRef.current)
+  }, [cargarEventos])
+
+  function limpiarFiltros() {
+    setBusqueda('')
+    setDesde('')
+    setHasta('')
+    setEstadoFiltro('todos')
+    setTipoFiltro('todos')
+    setUsuarioFiltro('todos')
+    setCondicionFiltro('todos')
+    setCategoria('todos')
+    setRangoActivo(null)
+    setPagina(1)
   }
 
-  const todoAbierto = expandido.size === gruposFiltrados.length && gruposFiltrados.length > 0
+  function elegirRango(clave) {
+    if (clave === 'personalizado') {
+      setRangoActivo('personalizado')
+      return
+    }
+    const { desde: d, hasta: h } = calcularRango(clave)
+    setDesde(d)
+    setHasta(h)
+    setRangoActivo(clave)
+    setPagina(1)
+  }
 
-  const toggleTodos = () => {
-    if (todoAbierto) {
-      setExpandido(new Set())
-    } else {
-      setExpandido(new Set(gruposFiltrados.map((g) => g.nombre)))
+  async function manejarExcel() {
+    setExportando(true)
+    try {
+      await exportarEventosExcel({ busqueda, desde, hasta, estadoFiltro, tipoFiltro, usuarioFiltro, condicionFiltro, categoria })
+    } catch (err) {
+      setErrorEventos(err.message)
+    } finally {
+      setExportando(false)
     }
   }
 
-  if (grupos.length === 0) {
-    return (
-      <div className="card">
-        <div className="empty">
-          <p>{t('historial.sinPedidos')}</p>
-        </div>
-      </div>
-    )
+  function manejarPdf() {
+    const params = new URLSearchParams({
+      q: busqueda, desde, hasta, estado: estadoFiltro, tipo: tipoFiltro,
+      usuario: usuarioFiltro, condicion: condicionFiltro, categoria,
+    })
+    window.open(`/historial/exportar-pdf?${params}`, '_blank')
   }
 
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina))
+
   return (
-    <div className="card">
-      <div className="lista-toolbar">
-        <div className="search-box">
-          <IconSearch className="icon-search" />
-          <input
-            type="text"
-            placeholder={t('historial.buscarPlaceholder')}
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
+    <>
+      <div className="historial-encabezado">
+        <div>
+          <h1>Historial de pedidos</h1>
+          <p className="subtitle">Consulta movimientos, cambios y eventos de los pedidos</p>
         </div>
-        <div className="lista-toolbar-acciones">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={toggleTodos}
-            disabled={gruposFiltrados.length === 0}
-          >
-            {todoAbierto ? t('historial.colapsarTodo') : t('historial.expandirTodo')}
+        <div className="historial-encabezado-acciones">
+          <button type="button" className="btn btn-secondary" onClick={manejarExcel} disabled={exportando}>
+            <IconExcel className="icono-verde" /> {exportando ? 'Exportando…' : 'Exportar Excel'}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={manejarPdf}>
+            <IconPdf className="icono-rojo" /> Descargar PDF
+          </button>
+          <button type="button" className="btn btn-secondary btn-icono-solo" title="Más opciones" aria-label="Más opciones">
+            <IconMoreHorizontal />
           </button>
         </div>
       </div>
 
-      {gruposFiltrados.length === 0 ? (
-        <div className="empty">
-          <p>No se encontró nada con "{busqueda}".</p>
-        </div>
-      ) : (
-        <div className="historial-grupos">
-          {gruposFiltrados.map((g) => {
-            const abierto = expandido.has(g.nombre)
-            const badge = badgeProgreso(g.progresoPct)
-            return (
-              <div key={g.nombre} className={`historial-grupo ${abierto ? 'abierto' : ''}`}>
-                <button
-                  type="button"
-                  className="historial-grupo-header"
-                  onClick={() => toggle(g.nombre)}
-                  aria-expanded={abierto}
-                >
-                  <span className={`historial-chevron ${abierto ? 'abierto' : ''}`}>
-                    <IconChevronDown />
-                  </span>
-                  <div className="historial-grupo-titulo">
-                    <h3>{g.nombre}</h3>
-                    <span className="historial-grupo-meta">
-                      {g.cantidad} {g.cantidad === 1 ? 'pedido' : 'pedidos'}
-                      {g.completados > 0 && ` · ${g.completados} completado${g.completados === 1 ? '' : 's'}`}
-                      {g.ultimaFechaFmt && ` · último ${g.ultimaFechaFmt}`}
-                    </span>
-                  </div>
-                  <div className="historial-grupo-stats">
-                    <span className="numero-grande">
-                      {g.totalSurtido}/{g.totalRequerido}
-                    </span>
-                    <span className={`badge-progreso ${badge.clase}`}>{badge.label}</span>
-                  </div>
-                </button>
+      <div className="metricas-grid">
+        <TarjetaMetrica tipo="total" valor={metricas ? metricas.movimientosTotales : '—'} titulo="Movimientos totales" desc="Todos los eventos registrados" />
+        <TarjetaMetrica tipo="despachados" valor={metricas ? metricas.pedidosDespachados : '—'} titulo="Pedidos despachados" desc="Completados y enviados" />
+        <TarjetaMetrica tipo="terminados" valor={metricas ? metricas.pedidosTerminados : '—'} titulo="Pedidos terminados" desc="Surtido finalizado" />
+        <TarjetaMetrica tipo="cancelados" valor={metricas ? metricas.pedidosCancelados : '—'} titulo="Pedidos cancelados" desc="Cancelaciones registradas" />
+        <TarjetaMetrica
+          tipo="tiempo"
+          valor={metricas && metricas.tiempoPromedioHoras != null ? `${metricas.tiempoPromedioHoras.toFixed(1)} h` : 'Sin datos'}
+          titulo="Tiempo promedio"
+          desc="De creación a despacho"
+        />
+      </div>
 
-                {abierto && (
-                  <div className="historial-grupo-detalle">
-                    <div className="tabla-wrap">
-                    <table className="tabla-pedidos tabla-historial">
-                      <thead>
-                        <tr>
-                          <th>N° Pedido</th>
-                          <th>Fecha creación</th>
-                          <th>Fecha límite</th>
-                          <th>Tiempo restante</th>
-                          <th>Dueño</th>
-                          <th>Condiciones</th>
-                          <th>Modelos</th>
-                          <th>Total</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {g.pedidos.map((p) => {
-                          const estado = p.estado || 'PENDIENTE'
-                          const tiempo = cumplimientoTexto(p)
-                          return (
-                            <tr key={p.id}>
-                              <td data-label="N° Pedido">
-                                <span className="numero-pedido">{p.numeroPedido || '—'}</span>
-                              </td>
-                              <td data-label="Fecha creación">
-                                <div className="pedido-fecha">{p.fechaFmt}</div>
-                              </td>
-                              <td data-label="Fecha límite">
-                                <div className="pedido-fecha">{formatearFechaLimite(p.fechaLimite)}</div>
-                              </td>
-                              <td data-label="Tiempo restante">
-                                <span className={`tiempo-restante tr-${tiempo.clase}`}>
-                                  {tiempo.texto}
-                                </span>
-                              </td>
-                              <td data-label="Dueño">
-                                <div className="pedido-fecha">{p.creadoPorNombre || '—'}</div>
-                              </td>
-                              <td data-label="Condiciones">
-                                <div className="tags-celda">
-                                  {p.condiciones.length > 0
-                                    ? p.condiciones.map((c) => (
-                                        <span key={c} className={`tag tag-${c.toLowerCase()}`}>
-                                          {c}
-                                        </span>
-                                      ))
-                                    : <span className="tag-empty">—</span>}
-                                </div>
-                              </td>
-                              <td data-label="Modelos">
-                                {p.cantidadModelos}
-                                {p.totalPallets > 0 && (
-                                  <span className="badge-pallet" style={{ marginLeft: '0.4rem' }}>
-                                    <IconBox /> {p.totalPallets}
-                                  </span>
-                                )}
-                              </td>
-                              <td data-label="Total">
-                                <span className="numero-grande">
-                                  {p.totalSurtido}/{p.totalRequerido}
-                                </span>
-                                <span
-                                  className={`badge-estado-op estado-${estado.toLowerCase().replace('_', '-')}`}
-                                  style={{ marginLeft: '0.4rem' }}
-                                >
-                                  {p.completado ? <IconCheck width={10} height={10} /> : null}
-                                  {ESTADO_LABEL[estado]}
-                                </span>
-                              </td>
-                              <td>
-                                <div className="acciones">
-                                  <Link href={`/pedidos/${p.id}/imprimir`} className="btn btn-primary btn-sm">
-                                    <IconPrinter />
-                                    {t('common.imprimir')}
-                                  </Link>
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
+      <div className="card historial-panel-filtros">
+        <div className="historial-filtros-fila">
+          <div className="search-box historial-buscador">
+            <IconSearch className="icon-search" />
+            <input
+              type="text"
+              placeholder="Buscar por número, nombre, SKU o usuario…"
+              value={busqueda}
+              onChange={(e) => { setBusqueda(e.target.value); setPagina(1) }}
+            />
+          </div>
+
+          <div className="filtro-campo">
+            <label>Desde</label>
+            <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setRangoActivo(null); setPagina(1) }} />
+          </div>
+          <div className="filtro-campo">
+            <label>Hasta</label>
+            <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setRangoActivo(null); setPagina(1) }} />
+          </div>
+
+          <div className="filtro-campo">
+            <label>Estado</label>
+            <select value={estadoFiltro} onChange={(e) => { setEstadoFiltro(e.target.value); setPagina(1) }}>
+              {ESTADOS_FILTRO.map((o) => <option key={o.valor} value={o.valor}>{o.label}</option>)}
+            </select>
+          </div>
+
+          <div className="filtro-campo">
+            <label>Tipo de evento</label>
+            <select value={tipoFiltro} onChange={(e) => { setTipoFiltro(e.target.value); setPagina(1) }}>
+              {TIPOS_FILTRO.map((o) => <option key={o.valor} value={o.valor}>{o.label}</option>)}
+            </select>
+          </div>
+
+          <div className="lista-toolbar-acciones">
+            <button type="button" onClick={limpiarFiltros} className="btn btn-secondary">Limpiar</button>
+            <button type="button" onClick={manejarExcel} disabled={exportando} className="btn btn-excel">
+              <IconExcel /> Excel
+            </button>
+            <button
+              type="button"
+              className={`btn btn-secondary ${masFiltrosAbierto ? 'activo' : ''}`}
+              onClick={() => setMasFiltrosAbierto((v) => !v)}
+            >
+              <IconFilter /> Más filtros
+            </button>
+          </div>
         </div>
-      )}
-    </div>
+
+        {masFiltrosAbierto && (
+          <div className="historial-filtros-fila historial-filtros-extra">
+            <div className="filtro-campo">
+              <label>Usuario</label>
+              <select value={usuarioFiltro} onChange={(e) => { setUsuarioFiltro(e.target.value); setPagina(1) }}>
+                <option value="todos">Todos</option>
+                {opciones.usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+              </select>
+            </div>
+            <div className="filtro-campo">
+              <label>Condición</label>
+              <select value={condicionFiltro} onChange={(e) => { setCondicionFiltro(e.target.value); setPagina(1) }}>
+                <option value="todos">Todos</option>
+                {opciones.condiciones.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
+        <div className="historial-rangos-rapidos">
+          <span className="historial-rangos-titulo"><IconCalendar /> RANGOS RÁPIDOS</span>
+          <div className="historial-rangos-botones">
+            {RANGOS_RAPIDOS.map((r) => (
+              <button
+                key={r.valor}
+                type="button"
+                className={`chip-rango ${rangoActivo === r.valor ? 'activo' : ''}`}
+                onClick={() => elegirRango(r.valor)}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="historial-categorias">
+        {CATEGORIAS.map((c) => (
+          <button
+            key={c.valor}
+            type="button"
+            className={`historial-categoria-tab ${categoria === c.valor ? 'activa' : ''}`}
+            onClick={() => { setCategoria(c.valor); setPagina(1) }}
+          >
+            <c.Icono /> {c.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="historial-content">
+        <div className="historial-panel-tabla card">
+          <TablaEventos
+            eventos={eventos}
+            cargando={cargandoEventos}
+            error={errorEventos}
+            onReintentar={cargarEventos}
+            pedidoSeleccionadoId={pedidoSeleccionadoId}
+            onSeleccionar={setPedidoSeleccionadoId}
+          />
+
+          {!cargandoEventos && !errorEventos && (
+            <div className="paginacion">
+              <span className="paginacion-info">
+                Mostrando {total === 0 ? 0 : (pagina - 1) * porPagina + 1} a {Math.min(pagina * porPagina, total)} de {total.toLocaleString('es-MX')} registros
+              </span>
+              <div className="paginacion-botones">
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina(1)} disabled={pagina <= 1}>«</button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina <= 1}>Anterior</button>
+                <span className="paginacion-actual">Página {pagina} de {totalPaginas}</span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={pagina >= totalPaginas}>Siguiente</button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina(totalPaginas)} disabled={pagina >= totalPaginas}>»</button>
+              </div>
+              <select
+                className="select-por-pagina"
+                value={porPagina}
+                onChange={(e) => { setPorPagina(Number(e.target.value)); setPagina(1) }}
+              >
+                {POR_PAGINA_OPCIONES.map((n) => <option key={n} value={n}>{n} por página</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="historial-panel-lateral card">
+          <PanelDetalle pedidoId={pedidoSeleccionadoId} onCerrar={() => setPedidoSeleccionadoId(null)} />
+        </div>
+      </div>
+    </>
   )
 }

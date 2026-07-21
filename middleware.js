@@ -75,8 +75,13 @@ function verificarAcceso(pathname, method, rol) {
   if (rol === 'admin') return true
 
   if (rol === 'capturista') {
-    // HTML: '/' (form), '/pedidos' (listar) y validación de sus pedidos
+    // HTML: '/' (form), '/pedidos' (listar), '/historial' (solo lo suyo,
+    // filtrado en el propio endpoint/página) y validación de sus pedidos.
+    // Nota: nav.jsx ya mostraba el link a Historial para capturista; esta
+    // regla estaba faltando, así que hoy ese link redirigía a su home sin
+    // avisar — se corrige aquí.
     if (pathname === '/' || pathname === '/pedidos') return true
+    if (pathname === '/historial' || pathname.startsWith('/historial/')) return true
     if (pathname === '/surtir' || pathname.startsWith('/surtir/')) return true
     // API: crear pedidos y tracking de validación (la validación de ownership
     // se hace en el handler para devolver 403 cuando no es su pedido)

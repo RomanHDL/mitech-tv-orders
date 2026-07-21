@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_PARTIDA, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
 import { getUsuario } from '@/lib/auth'
+import { registrarEvento } from '@/lib/eventos'
 
 export async function POST(req) {
   const usuario = await getUsuario()
@@ -100,13 +101,14 @@ export async function POST(req) {
   }
 
   const db = await getDb()
+  const fechaCreacion = new Date()
   const result = await db.collection('pedidos').insertOne({
     numeroPedido: numeroPedido.trim(),
     pedidoNombre: pedidoNombre.trim(),
     condiciones,
     cantidadTotal: cantidadTotalLimpia,
     televisiones: tvsLimpias,
-    fecha: new Date(),
+    fecha: fechaCreacion,
     fechaLimite,
     creadoPor: usuario?.userId || null,
     creadoPorNombre: usuario?.nombre || null,
@@ -117,6 +119,22 @@ export async function POST(req) {
     estadoOperativo: null,
     historialEstados: [],
   })
+
+  const totalTvs = tvsLimpias.length
+  await registrarEvento(
+    db,
+    { _id: result.insertedId, numeroPedido: numeroPedido.trim(), pedidoNombre: pedidoNombre.trim(), condiciones },
+    {
+      tipo: 'CREACION',
+      estadoAnterior: null,
+      estadoNuevo: 'PENDIENTE',
+      usuarioId: usuario?.userId || null,
+      usuarioNombre: usuario?.nombre || null,
+      detalle: 'Pedido creado',
+      detalleSecundario: `${totalTvs} ${totalTvs === 1 ? 'modelo' : 'modelos'} capturados`,
+      fecha: fechaCreacion,
+    }
+  )
 
   return NextResponse.json({ id: result.insertedId.toString() }, { status: 201 })
 }

@@ -4,6 +4,7 @@ import { getDb } from '@/lib/mongodb'
 import { getUsuario } from '@/lib/auth'
 import { ESTADOS_TRANSICION, ESTADO_ORDEN, ESTADO_LABEL } from '@/lib/catalogos'
 import { normalizeOrderStatus, calcularTotales } from '@/lib/estado-pedido'
+import { registrarEvento, TIPO_EVENTO_POR_DESTINO, DETALLE_POR_DESTINO } from '@/lib/eventos'
 
 // Avanza el estado logístico de un pedido (Cargando / Listo para salida /
 // Despachado / Cancelado). Solo admin y surtidor (ya filtrado por
@@ -87,6 +88,16 @@ export async function PATCH(req, { params }) {
       $push: { historialEstados: entradaHistorial },
     }
   )
+
+  await registrarEvento(db, pedido, {
+    tipo: TIPO_EVENTO_POR_DESTINO[destino] || 'CAMBIO_ESTADO',
+    estadoAnterior: actual,
+    estadoNuevo: destino,
+    usuarioId: usuario.userId || null,
+    usuarioNombre: usuario.nombre || null,
+    detalle: DETALLE_POR_DESTINO[destino] || ESTADO_LABEL[destino],
+    detalleSecundario: entradaHistorial.observacion,
+  })
 
   return NextResponse.json({ ok: true, estado: destino })
 }
