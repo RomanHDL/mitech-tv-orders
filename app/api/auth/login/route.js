@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { buscarUsuario, emailValido, pinValido } from '@/lib/auth'
+import { sanearModulos } from '@/lib/modulos'
 
 export async function POST(req) {
   let body
@@ -46,9 +47,14 @@ export async function POST(req) {
     path: '/',
   }
 
-  const response = NextResponse.json({ rol: user.rol, email: user.email || null })
+  // buscarUsuario() ya garantiza allowedModules (lo rellena con el default
+  // del rol si el usuario es de antes de que existiera este campo).
+  const allowedModules = sanearModulos(user.allowedModules)
+
+  const response = NextResponse.json({ rol: user.rol, email: user.email || null, allowedModules })
   response.cookies.set('rol', user.rol, cookieOpts)
   response.cookies.set('userId', user._id.toString(), cookieOpts)
+  response.cookies.set('allowedModules', JSON.stringify(allowedModules), cookieOpts)
   if (user.email) {
     response.cookies.set('email', user.email, cookieOpts)
   }

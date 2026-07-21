@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { moduloDePagina, primerModuloPermitido } from './lib/modulos'
 
 export function middleware(request) {
   const { pathname } = request.nextUrl
@@ -42,6 +43,35 @@ export function middleware(request) {
     const url = request.nextUrl.clone()
     url.pathname = homeDelRol(rol)
     return NextResponse.redirect(url)
+  }
+
+  // Capa adicional: permisos reales por módulo (allowedModules), encima del
+  // control por rol de arriba. Solo para páginas — las APIs se protegen
+  // aparte con requireModule() dentro de cada handler (esto es solo para no
+  // mostrar ni un parpadeo de contenido restringido). Si la cookie no existe
+  // (sesión de antes de que existiera esta función) se omite por completo:
+  // nadie que ya tenía sesión abierta pierde acceso de golpe, y a partir del
+  // siguiente login sí queda con el control real aplicado.
+  if (!isApi) {
+    const rawModulos = request.cookies.get('allowedModules')?.value
+    if (rawModulos) {
+      let permitidos = null
+      try {
+        const parsed = JSON.parse(rawModulos)
+        if (Array.isArray(parsed)) permitidos = parsed
+      } catch {
+        permitidos = null
+      }
+      if (permitidos) {
+        const moduloRequerido = moduloDePagina(pathname)
+        if (moduloRequerido && !permitidos.includes(moduloRequerido)) {
+          const url = request.nextUrl.clone()
+          url.pathname = primerModuloPermitido(permitidos) || '/login'
+          url.searchParams.set('sinAcceso', '1')
+          return NextResponse.redirect(url)
+        }
+      }
+    }
   }
 
   return NextResponse.next()

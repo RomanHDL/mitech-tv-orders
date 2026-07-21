@@ -6,5 +6,6 @@ export async function POST() {
   response.cookies.delete('userId')
   response.cookies.delete('email')
   response.cookies.delete('nombre')
+  response.cookies.delete('allowedModules')
   return response
 }

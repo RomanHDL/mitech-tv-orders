@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
-import { getUsuario } from '@/lib/auth'
+import { requireModule } from '@/lib/auth'
 import { CHANGELOG_CATEGORIAS, CHANGELOG_PRIORIDADES, versionValida } from '@/lib/changelog'
 
 export async function GET() {
@@ -11,9 +11,13 @@ export async function GET() {
   })
 }
 
+// Crear entradas es una acción administrativa: el módulo 'changelog' también
+// da acceso de solo lectura a capturista/surtidor, así que aquí se exige
+// además el rol admin.
 export async function POST(req) {
-  const usuario = await getUsuario()
-  if (usuario?.rol !== 'admin') {
+  const chk = await requireModule('changelog')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+  if (chk.usuario.rol !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 

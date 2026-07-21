@@ -1,18 +1,30 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
-import { emailValido, normalizarEmail, normalizarUid, pinValido } from '@/lib/auth'
+import { emailValido, normalizarEmail, normalizarUid, pinValido, requireModule } from '@/lib/auth'
+import { DEFAULT_MODULOS_POR_ROL, sanearModulos } from '@/lib/modulos'
 
 const ROLES = ['admin', 'capturista', 'surtidor']
 
 export async function GET() {
+  const chk = await requireModule('users')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+
   const db = await getDb()
   const usuarios = await db.collection('usuarios')
     .find({})
     .sort({ creado: -1 })
     .toArray()
 
-  return NextResponse.json(
-    usuarios.map((u) => ({
+  // Migración perezosa: cualquier usuario sin allowedModules recibe el
+  // default de su rol y se persiste — nunca se pisa uno que ya exista.
+  const resultado = []
+  for (const u of usuarios) {
+    let allowedModules = sanearModulos(u.allowedModules)
+    if (allowedModules.length === 0) {
+      allowedModules = DEFAULT_MODULOS_POR_ROL[u.rol] || []
+      await db.collection('usuarios').updateOne({ _id: u._id }, { $set: { allowedModules } })
+    }
+    resultado.push({
       id: u._id.toString(),
       email: u.email || '',
       nombre: u.nombre || '',
@@ -20,12 +32,18 @@ export async function GET() {
       tienePin: Boolean(u.pin),
       tieneNfc: Boolean(u.nfcUid),
       nfcUid: u.nfcUid || '',
+      allowedModules,
       creado: u.creado ? new Date(u.creado).toISOString() : null,
-    }))
-  )
+    })
+  }
+
+  return NextResponse.json(resultado)
 }
 
 export async function POST(req) {
+  const chk = await requireModule('users')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+
   let body
   try {
     body = await req.json()
@@ -64,6 +82,17 @@ export async function POST(req) {
     )
   }
 
+  // Módulos permitidos: siempre se sanean contra la whitelist real (nunca
+  // se confía en lo que llegue del cliente). Si no mandan nada, se usa el
+  // default del rol; si mandan algo, debe quedar al menos un módulo.
+  const modulosEnviados = sanearModulos(body.allowedModules)
+  const allowedModules = modulosEnviados.length > 0
+    ? modulosEnviados
+    : (Array.isArray(body.allowedModules) ? [] : DEFAULT_MODULOS_POR_ROL[rol] || [])
+  if (allowedModules.length === 0) {
+    return NextResponse.json({ error: 'Debes seleccionar al menos un módulo' }, { status: 400 })
+  }
+
   const db = await getDb()
 
   if (email) {
@@ -75,7 +104,7 @@ export async function POST(req) {
     if (dup) return NextResponse.json({ error: 'Ya existe un usuario con ese tag NFC' }, { status: 400 })
   }
 
-  const doc = { nombre, rol, creado: new Date() }
+  const doc = { nombre, rol, allowedModules, creado: new Date() }
   if (email) doc.email = email
   if (pin) doc.pin = pin
   if (nfcUid) doc.nfcUid = nfcUid

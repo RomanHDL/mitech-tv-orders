@@ -1,10 +1,11 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
-import { cookies } from 'next/headers'
 import Nav from './components/nav'
 import AutoRefresh from './components/auto-refresh'
 import ChangelogModal from './components/changelog-modal'
 import I18nProvider from './components/i18n-provider'
+import AvisoSinAcceso from './components/aviso-sin-acceso'
+import { getUsuario } from '@/lib/auth'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -21,18 +22,21 @@ export const metadata = {
 }
 
 export default async function RootLayout({ children }) {
-  const cookieStore = await cookies()
-  const rol = cookieStore.get('rol')?.value || null
-  const email = cookieStore.get('email')?.value || null
-  const nombre = cookieStore.get('nombre')?.value || null
+  const usuario = await getUsuario()
 
   return (
     <html lang="es" className={inter.variable}>
       <body>
         <I18nProvider>
-          <Nav rol={rol} email={email} nombre={nombre} />
+          <Nav
+            rol={usuario?.rol || null}
+            email={usuario?.email || null}
+            nombre={usuario?.nombre || null}
+            allowedModules={usuario?.allowedModules || null}
+          />
+          <AvisoSinAcceso />
           <AutoRefresh />
-          <ChangelogModal rol={rol} />
+          <ChangelogModal rol={usuario?.rol || null} />
           {children}
         </I18nProvider>
       </body>

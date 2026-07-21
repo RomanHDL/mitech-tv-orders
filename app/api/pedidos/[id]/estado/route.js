@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { getUsuario } from '@/lib/auth'
+import { getUsuario, requireModule } from '@/lib/auth'
 import { ESTADOS_TRANSICION, ESTADO_ORDEN, ESTADO_LABEL } from '@/lib/catalogos'
 import { normalizeOrderStatus, calcularTotales } from '@/lib/estado-pedido'
 import { registrarEvento, TIPO_EVENTO_POR_DESTINO, DETALLE_POR_DESTINO } from '@/lib/eventos'
@@ -21,6 +21,12 @@ export async function PATCH(req, { params }) {
   const usuario = await getUsuario()
   if (!usuario || (usuario.rol !== 'admin' && usuario.rol !== 'surtidor')) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  }
+  // Un surtidor mueve la etapa logística desde el módulo de Surtir; admin
+  // queda sin restricción adicional de módulo (siempre puede operar aquí).
+  if (usuario.rol === 'surtidor') {
+    const chk = await requireModule('picking')
+    if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
   }
 
   let body

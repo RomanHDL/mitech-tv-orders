@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { getRol } from '@/lib/auth'
+import { requireModule } from '@/lib/auth'
 import { PULGADAS } from '@/lib/catalogos'
 
 const COLECCION = 'catalogo_onn'
 
-// PATCH — actualiza la pulgada de un código del catálogo. Solo admin.
+// PATCH — actualiza la pulgada de un código del catálogo. Módulo 'onn-catalog' + rol admin.
 export async function PATCH(req, { params }) {
-  if ((await getRol()) !== 'admin') {
+  const chk = await requireModule('onn-catalog')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+  if (chk.usuario.rol !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
   const { id } = await params
@@ -39,9 +41,11 @@ export async function PATCH(req, { params }) {
   return NextResponse.json({ ok: true })
 }
 
-// DELETE — elimina un código del catálogo. Solo admin.
+// DELETE — elimina un código del catálogo. Módulo 'onn-catalog' + rol admin.
 export async function DELETE(_req, { params }) {
-  if ((await getRol()) !== 'admin') {
+  const chk = await requireModule('onn-catalog')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+  if (chk.usuario.rol !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
   const { id } = await params

@@ -10,29 +10,29 @@ import { IconChevronDown, IconClose, IconMenu } from './icons'
 
 const LINKS_POR_ROL = {
   capturista: [
-    { href: '/', labelKey: 'nav.nuevoPedido' },
-    { href: '/pedidos', labelKey: 'nav.pedidos' },
-    { href: '/historial', labelKey: 'nav.historial' },
-    { href: '/surtir', labelKey: 'nav.validar' },
-    { href: '/manual', labelKey: 'nav.manual' },
-    { href: '/changelog', labelKey: 'nav.novedades' },
+    { href: '/', labelKey: 'nav.nuevoPedido', moduleId: 'new-order' },
+    { href: '/pedidos', labelKey: 'nav.pedidos', moduleId: 'orders' },
+    { href: '/historial', labelKey: 'nav.historial', moduleId: 'history' },
+    { href: '/surtir', labelKey: 'nav.validar', moduleId: 'picking' },
+    { href: '/manual', labelKey: 'nav.manual', moduleId: 'manual' },
+    { href: '/changelog', labelKey: 'nav.novedades', moduleId: 'changelog' },
   ],
   surtidor: [
-    { href: '/surtir', labelKey: 'nav.surtir' },
-    { href: '/manual', labelKey: 'nav.manual' },
-    { href: '/changelog', labelKey: 'nav.novedades' },
+    { href: '/surtir', labelKey: 'nav.surtir', moduleId: 'picking' },
+    { href: '/manual', labelKey: 'nav.manual', moduleId: 'manual' },
+    { href: '/changelog', labelKey: 'nav.novedades', moduleId: 'changelog' },
   ],
   admin: [
-    { href: '/', labelKey: 'nav.nuevo' },
-    { href: '/pedidos', labelKey: 'nav.pedidos' },
-    { href: '/pedidos-live', labelKey: 'nav.pedidosLive' },
-    { href: '/historial', labelKey: 'nav.historial' },
-    { href: '/surtir', labelKey: 'nav.surtir' },
-    { href: '/admin/catalogo-onn', labelKey: 'nav.catalogoOnn' },
-    { href: '/admin/usuarios', labelKey: 'nav.usuarios' },
-    { href: '/manual', labelKey: 'nav.manual' },
-    { href: '/admin/manual', labelKey: 'nav.editarManual' },
-    { href: '/admin/changelog', labelKey: 'nav.changelog' },
+    { href: '/', labelKey: 'nav.nuevo', moduleId: 'new-order' },
+    { href: '/pedidos', labelKey: 'nav.pedidos', moduleId: 'orders' },
+    { href: '/pedidos-live', labelKey: 'nav.pedidosLive', moduleId: 'live-orders' },
+    { href: '/historial', labelKey: 'nav.historial', moduleId: 'history' },
+    { href: '/surtir', labelKey: 'nav.surtir', moduleId: 'picking' },
+    { href: '/admin/catalogo-onn', labelKey: 'nav.catalogoOnn', moduleId: 'onn-catalog' },
+    { href: '/admin/usuarios', labelKey: 'nav.usuarios', moduleId: 'users' },
+    { href: '/manual', labelKey: 'nav.manual', moduleId: 'manual' },
+    { href: '/admin/manual', labelKey: 'nav.editarManual', moduleId: 'manual-editor' },
+    { href: '/admin/changelog', labelKey: 'nav.changelog', moduleId: 'changelog' },
   ],
 }
 
@@ -42,7 +42,7 @@ const ROL_LABEL = {
   surtidor: 'Surtidor',
 }
 
-export default function Nav({ rol, email, nombre }) {
+export default function Nav({ rol, email, nombre, allowedModules }) {
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useTranslation()
@@ -82,7 +82,15 @@ export default function Nav({ rol, email, nombre }) {
   if (pathname === '/login') return null
   if (!rol) return null
 
-  const links = LINKS_POR_ROL[rol] || []
+  // Menú dinámico: solo los módulos que el usuario tiene realmente
+  // permitidos (allowedModules), conservando el orden de siempre por rol.
+  // Si por algún motivo allowedModules no llegó (no debería pasar, getUsuario
+  // siempre da al menos el default del rol), se muestra la lista completa
+  // del rol como antes — nunca un menú vacío.
+  const linksDelRol = LINKS_POR_ROL[rol] || []
+  const links = Array.isArray(allowedModules)
+    ? linksDelRol.filter((l) => allowedModules.includes(l.moduleId))
+    : linksDelRol
   const displayName = nombre || (email ? email.split('@')[0] : '')
   const inicial = (displayName || rol || '?').charAt(0).toUpperCase()
 

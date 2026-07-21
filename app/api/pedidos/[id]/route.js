@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
 import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_PARTIDA, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
-import { getUsuario } from '@/lib/auth'
+import { getUsuario, requireModule } from '@/lib/auth'
 import { registrarEvento } from '@/lib/eventos'
 import { calcularTotales } from '@/lib/estado-pedido'
 
@@ -74,10 +74,19 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
   }
 
-  // Una capturista solo puede tocar pedidos cuyo dueño es ella misma.
+  // Tracking de surtido: capturista necesita 'orders', surtidor necesita
+  // 'picking'; admin queda sin restricción adicional de módulo. Además, una
+  // capturista solo puede tocar pedidos cuyo dueño es ella misma.
   const usuario = await getUsuario()
-  if (usuario?.rol === 'capturista' && pedido.creadoPor !== usuario.userId) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  if (usuario?.rol === 'capturista') {
+    const chk = await requireModule('orders')
+    if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+    if (pedido.creadoPor !== usuario.userId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+  } else if (usuario?.rol === 'surtidor') {
+    const chk = await requireModule('picking')
+    if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
   }
 
   const tv = pedido.televisiones?.[tvIndex]

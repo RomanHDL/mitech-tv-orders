@@ -29,7 +29,20 @@
     "entendido": "Entendido",
     "cargando": "Cargando…",
     "sinResultados": "Sin resultados.",
-    "confirmarEliminar": "¿Eliminar \"{{nombre}}\"? Esta acción no se puede deshacer."
+    "confirmarEliminar": "¿Eliminar \"{{nombre}}\"? Esta acción no se puede deshacer.",
+    "sinPermisoModulo": "No tienes permiso para acceder a este módulo."
+  },
+  "modulos": {
+    "nuevo": "Nuevo",
+    "pedidos": "Pedidos",
+    "pedidosLive": "Pedidos en vivo",
+    "historial": "Historial",
+    "surtir": "Surtir",
+    "catalogoOnn": "Catálogo ONN",
+    "usuarios": "Usuarios",
+    "manual": "Manual",
+    "editarManual": "Editar Manual",
+    "changelog": "Changelog"
   },
   "login": {
     "titulo": "Iniciar sesión",
@@ -131,5 +144,18 @@
     "titulo": "Changelog",
     "novedadesTitulo": "Novedades",
     "sinEntradas": "Aún no hay entradas publicadas."
+  },
+  "usuarios": {
+    "modulosPermitidos": "Módulos permitidos",
+    "seleccionarTodos": "Seleccionar todos",
+    "deseleccionarTodos": "Deseleccionar todos",
+    "segunRol": "Según rol",
+    "modulosAccesos": "Módulos / Accesos",
+    "debeSeleccionarModulo": "Debes seleccionar al menos un módulo",
+    "guardarCambios": "Guardar cambios",
+    "cancelarEdicion": "Cancelar edición",
+    "buscarPlaceholder": "Buscar por nombre o email…",
+    "filtrarPorRol": "Filtrar por rol",
+    "todosLosRoles": "Todos los roles"
   }
 }

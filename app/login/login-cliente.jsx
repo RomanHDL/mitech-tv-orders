@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { IconAlert } from '../components/icons'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
 import LanguageSwitcher from '../components/language-switcher'
+import { primerModuloPermitido } from '@/lib/modulos'
 
 export default function LoginCliente() {
   const router = useRouter()
@@ -34,8 +35,12 @@ export default function LoginCliente() {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'No se pudo iniciar sesión')
       }
-      const { rol } = await res.json()
-      const home = rol === 'surtidor' ? '/surtir' : rol === 'capturista' ? '/' : '/pedidos'
+      const { rol, allowedModules } = await res.json()
+      // Al primer módulo REAL que tenga permitido — nunca a una ruta fija
+      // que podría no estarle permitida (p. ej. un surtidor sin "Surtir").
+      const home =
+        primerModuloPermitido(allowedModules) ||
+        (rol === 'surtidor' ? '/surtir' : rol === 'capturista' ? '/' : '/pedidos')
       router.push(home)
       router.refresh()
     } catch (err) {

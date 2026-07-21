@@ -1,11 +1,35 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { emailValido, normalizarEmail, normalizarUid, pinValido } from '@/lib/auth'
+import { emailValido, normalizarEmail, normalizarUid, pinValido, requireModule } from '@/lib/auth'
+import { sanearModulos } from '@/lib/modulos'
 
 const ROLES = ['admin', 'capturista', 'surtidor']
 
+// Un usuario "admin con acceso a Usuarios" es un admin cuyo allowedModules
+// incluye 'users', o que todavía no tiene allowedModules asignado (en cuyo
+// caso el default de admin — todos los módulos — le da acceso implícito).
+// Se usa tanto para bloquear el autobloqueo como el borrado/edición de otros.
+async function contarAdminsConAccesoUsuarios(db, excludeId) {
+  return db.collection('usuarios').countDocuments({
+    rol: 'admin',
+    _id: { $ne: excludeId },
+    $or: [
+      { allowedModules: 'users' },
+      { allowedModules: { $exists: false } },
+      { allowedModules: { $size: 0 } },
+    ],
+  })
+}
+
+function tieneAccesoUsuarios(doc) {
+  return doc.rol === 'admin' && (!Array.isArray(doc.allowedModules) || doc.allowedModules.length === 0 || doc.allowedModules.includes('users'))
+}
+
 export async function PATCH(req, { params }) {
+  const chk = await requireModule('users')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+
   const { id } = await params
   if (!ObjectId.isValid(id)) {
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -16,6 +40,12 @@ export async function PATCH(req, { params }) {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+  }
+
+  const db = await getDb()
+  const actual = await db.collection('usuarios').findOne({ _id: new ObjectId(id) })
+  if (!actual) {
+    return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
   }
 
   const $set = {}
@@ -61,11 +91,38 @@ export async function PATCH(req, { params }) {
     else $unset.nfcUid = ''
   }
 
+  if ('allowedModules' in body) {
+    const allowedModules = sanearModulos(body.allowedModules)
+    if (allowedModules.length === 0) {
+      return NextResponse.json({ error: 'Debes seleccionar al menos un módulo' }, { status: 400 })
+    }
+    $set.allowedModules = allowedModules
+  }
+
   if (Object.keys($set).length === 0 && Object.keys($unset).length === 0) {
     return NextResponse.json({ error: 'Nada que actualizar' }, { status: 400 })
   }
 
-  const db = await getDb()
+  // Invariante: nunca debe quedar el sistema sin ningún admin con acceso a
+  // Usuarios. Si este usuario hoy tiene ese acceso y el cambio se lo quitaría
+  // (cambio de rol o remoción explícita de 'users'), verificar que quede
+  // al menos otro admin con acceso antes de permitirlo.
+  const tendraAccesoDespues = (() => {
+    const rolFinal = $set.rol ?? actual.rol
+    if (rolFinal !== 'admin') return false
+    const modulosFinales = $set.allowedModules ?? actual.allowedModules
+    return !Array.isArray(modulosFinales) || modulosFinales.length === 0 || modulosFinales.includes('users')
+  })()
+
+  if (tieneAccesoUsuarios(actual) && !tendraAccesoDespues) {
+    const otros = await contarAdminsConAccesoUsuarios(db, new ObjectId(id))
+    if (otros === 0) {
+      return NextResponse.json(
+        { error: 'No puedes quitar el acceso a Usuarios: no quedaría ningún administrador con permiso para gestionar usuarios' },
+        { status: 400 }
+      )
+    }
+  }
 
   // Verificar duplicados (email/nfcUid únicos)
   if ($set.email) {
@@ -96,12 +153,36 @@ export async function PATCH(req, { params }) {
 }
 
 export async function DELETE(_req, { params }) {
+  const chk = await requireModule('users')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+
   const { id } = await params
   if (!ObjectId.isValid(id)) {
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   }
+
+  if (chk.usuario.userId === id) {
+    return NextResponse.json({ error: 'No puedes eliminar tu propia cuenta' }, { status: 400 })
+  }
+
   const db = await getDb()
-  const result = await db.collection('usuarios').deleteOne({ _id: new ObjectId(id) })
+  const objectId = new ObjectId(id)
+  const actual = await db.collection('usuarios').findOne({ _id: objectId })
+  if (!actual) {
+    return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+  }
+
+  if (tieneAccesoUsuarios(actual)) {
+    const otros = await contarAdminsConAccesoUsuarios(db, objectId)
+    if (otros === 0) {
+      return NextResponse.json(
+        { error: 'No puedes eliminar a este usuario: no quedaría ningún administrador con permiso para gestionar usuarios' },
+        { status: 400 }
+      )
+    }
+  }
+
+  const result = await db.collection('usuarios').deleteOne({ _id: objectId })
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
   }

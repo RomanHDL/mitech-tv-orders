@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
-import { getUsuario } from '@/lib/auth'
+import { requireModule } from '@/lib/auth'
 
 export async function POST(req) {
-  const usuario = await getUsuario()
-  if (usuario?.rol !== 'admin') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-  }
+  const chk = await requireModule('manual-editor')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
 
   let body
   try {

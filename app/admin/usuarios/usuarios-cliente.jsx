@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { IconAlert, IconCheck, IconClose, IconTrash } from '../../components/icons'
+import { useTranslation } from 'react-i18next'
+import { IconAlert, IconCheck, IconClose, IconSearch, IconTrash } from '../../components/icons'
+import { MODULOS, MODULO_IDS, DEFAULT_MODULOS_POR_ROL, sanearModulos } from '@/lib/modulos'
 
 const ROLES = [
   { value: 'admin', label: 'Admin' },
@@ -18,9 +20,11 @@ const formVacio = () => ({
   email: '',
   pin: '',
   nfcUid: '',
+  allowedModules: [...(DEFAULT_MODULOS_POR_ROL.surtidor || [])],
 })
 
 export default function UsuariosCliente({ usuarios }) {
+  const { t } = useTranslation()
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [editandoId, setEditandoId] = useState(null)
@@ -31,6 +35,8 @@ export default function UsuariosCliente({ usuarios }) {
   const [escaneando, setEscaneando] = useState(false)
   const [eliminandoId, setEliminandoId] = useState(null)
   const [nfcSoportado, setNfcSoportado] = useState(false)
+  const [busqueda, setBusqueda] = useState('')
+  const [rolFiltro, setRolFiltro] = useState('todos')
 
   useEffect(() => {
     setNfcSoportado(typeof window !== 'undefined' && 'NDEFReader' in window)
@@ -44,6 +50,9 @@ export default function UsuariosCliente({ usuarios }) {
       email: u.email || '',
       pin: '',
       nfcUid: u.nfcUid || '',
+      allowedModules: sanearModulos(u.allowedModules).length > 0
+        ? sanearModulos(u.allowedModules)
+        : [...(DEFAULT_MODULOS_POR_ROL[u.rol] || [])],
     })
     setError('')
     setExito('')
@@ -57,6 +66,31 @@ export default function UsuariosCliente({ usuarios }) {
     setForm(formVacio())
     setError('')
     setExito('')
+  }
+
+  const toggleModulo = (id) => {
+    setForm((prev) => ({
+      ...prev,
+      allowedModules: prev.allowedModules.includes(id)
+        ? prev.allowedModules.filter((m) => m !== id)
+        : [...prev.allowedModules, id],
+    }))
+  }
+
+  const todosSeleccionados = form.allowedModules.length === MODULO_IDS.length
+
+  const toggleSeleccionarTodos = () => {
+    setForm((prev) => ({
+      ...prev,
+      allowedModules: todosSeleccionados ? [] : [...MODULO_IDS],
+    }))
+  }
+
+  const aplicarSegunRol = () => {
+    setForm((prev) => ({
+      ...prev,
+      allowedModules: [...(DEFAULT_MODULOS_POR_ROL[prev.rol] || [])],
+    }))
   }
 
   const escanearUid = async () => {
@@ -110,6 +144,10 @@ export default function UsuariosCliente({ usuarios }) {
     if (pin && !/^\d{6,}$/.test(pin)) {
       return setError('PIN debe ser mínimo 6 dígitos numéricos')
     }
+    const allowedModules = sanearModulos(form.allowedModules)
+    if (allowedModules.length === 0) {
+      return setError(t('usuarios.debeSeleccionarModulo'))
+    }
 
     setEnviando(true)
     try {
@@ -122,9 +160,10 @@ export default function UsuariosCliente({ usuarios }) {
             rol: form.rol,
             email,
             nfcUid,
+            allowedModules,
             ...(pin ? { pin } : {}),
           }
-        : { nombre, rol: form.rol, email, pin, nfcUid }
+        : { nombre, rol: form.rol, email, pin, nfcUid, allowedModules }
 
       const res = await fetch(url, {
         method,
@@ -166,6 +205,16 @@ export default function UsuariosCliente({ usuarios }) {
       setEliminandoId(null)
     }
   }
+
+  const busquedaNormalizada = busqueda.trim().toLowerCase()
+  const usuariosFiltrados = usuarios.filter((u) => {
+    const coincideBusqueda =
+      !busquedaNormalizada ||
+      (u.nombre || '').toLowerCase().includes(busquedaNormalizada) ||
+      (u.email || '').toLowerCase().includes(busquedaNormalizada)
+    const coincideRol = rolFiltro === 'todos' || u.rol === rolFiltro
+    return coincideBusqueda && coincideRol
+  })
 
   return (
     <main className="page-wide">
@@ -279,6 +328,44 @@ export default function UsuariosCliente({ usuarios }) {
             )}
           </div>
 
+          <div className="section">
+            <div className="label">{t('usuarios.modulosPermitidos')}</div>
+            <div className="modulos-acciones">
+              <button
+                type="button"
+                onClick={toggleSeleccionarTodos}
+                className="btn btn-secondary btn-sm"
+              >
+                {todosSeleccionados ? t('usuarios.deseleccionarTodos') : t('usuarios.seleccionarTodos')}
+              </button>
+              <button
+                type="button"
+                onClick={aplicarSegunRol}
+                className="btn btn-secondary btn-sm"
+              >
+                {t('usuarios.segunRol')}
+              </button>
+            </div>
+            <div className="modulos-grid">
+              {MODULOS.map((m) => {
+                const activo = form.allowedModules.includes(m.id)
+                return (
+                  <label
+                    key={m.id}
+                    className={`modulo-card ${activo ? 'activo' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={activo}
+                      onChange={() => toggleModulo(m.id)}
+                    />
+                    <span>{t(m.labelKey)}</span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+
           {error && (
             <div className="alerta alerta-error">
               <IconAlert /><span>{error}</span>
@@ -298,11 +385,11 @@ export default function UsuariosCliente({ usuarios }) {
                 onClick={cancelarEdicion}
                 className="btn btn-secondary btn-large"
               >
-                Cancelar
+                {t('usuarios.cancelarEdicion')}
               </button>
             )}
             <button type="submit" disabled={enviando} className="btn btn-primary btn-large">
-              {enviando ? 'Guardando…' : editandoId ? 'Guardar cambios' : 'Agregar usuario'}
+              {enviando ? 'Guardando…' : editandoId ? t('usuarios.guardarCambios') : 'Agregar usuario'}
             </button>
           </div>
         </form>
@@ -310,11 +397,33 @@ export default function UsuariosCliente({ usuarios }) {
 
       <div className="card">
         <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
-          Usuarios registrados ({usuarios.length})
+          Usuarios registrados ({usuariosFiltrados.length})
         </h2>
-        {usuarios.length === 0 ? (
+
+        <div className="lista-toolbar lista-toolbar-filtros">
+          <div className="search-box">
+            <IconSearch className="icon-search" />
+            <input
+              type="text"
+              placeholder={t('usuarios.buscarPlaceholder')}
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
+          </div>
+          <div className="filtro-campo">
+            <label>{t('usuarios.filtrarPorRol')}</label>
+            <select value={rolFiltro} onChange={(e) => setRolFiltro(e.target.value)}>
+              <option value="todos">{t('usuarios.todosLosRoles')}</option>
+              {ROLES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {usuariosFiltrados.length === 0 ? (
           <div className="empty">
-            <p>No hay usuarios todavía.</p>
+            <p>{t('common.sinResultados')}</p>
           </div>
         ) : (
           <div className="tabla-wrap">
@@ -325,11 +434,17 @@ export default function UsuariosCliente({ usuarios }) {
                 <th>Rol</th>
                 <th>Email</th>
                 <th>Login</th>
+                <th>{t('usuarios.modulosAccesos')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {usuarios.map((u) => (
+              {usuariosFiltrados.map((u) => {
+                const modsUsuario = sanearModulos(u.allowedModules)
+                const modsOrdenados = MODULOS.filter((m) => modsUsuario.includes(m.id))
+                const visibles = modsOrdenados.slice(0, 3)
+                const restantes = modsOrdenados.slice(3)
+                return (
                 <tr key={u.id} className={editandoId === u.id ? 'editando' : ''}>
                   <td data-label="Nombre">
                     <strong>{u.nombre || '—'}</strong>
@@ -345,6 +460,22 @@ export default function UsuariosCliente({ usuarios }) {
                       {u.tienePin && <span className="tag tag-grb">PIN</span>}
                       {u.tieneNfc && <span className="tag tag-gra">NFC</span>}
                       {!u.tienePin && !u.tieneNfc && <span className="tag-empty">—</span>}
+                    </div>
+                  </td>
+                  <td data-label={t('usuarios.modulosAccesos')}>
+                    <div className="tags-celda">
+                      {visibles.map((m) => (
+                        <span key={m.id} className="tag tag-modulo">{t(m.labelKey)}</span>
+                      ))}
+                      {restantes.length > 0 && (
+                        <span
+                          className="tag tag-mas"
+                          title={restantes.map((m) => t(m.labelKey)).join(', ')}
+                        >
+                          +{restantes.length}
+                        </span>
+                      )}
+                      {modsOrdenados.length === 0 && <span className="tag-empty">—</span>}
                     </div>
                   </td>
                   <td>
@@ -366,7 +497,7 @@ export default function UsuariosCliente({ usuarios }) {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
           </div>

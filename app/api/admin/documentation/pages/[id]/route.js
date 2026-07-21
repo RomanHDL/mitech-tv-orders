@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { getUsuario } from '@/lib/auth'
+import { requireModule } from '@/lib/auth'
 
 export async function PATCH(req, { params }) {
-  const usuario = await getUsuario()
-  if (usuario?.rol !== 'admin') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-  }
+  const chk = await requireModule('manual-editor')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
 
   const { id } = await params
   if (!ObjectId.isValid(id)) {
@@ -38,10 +36,8 @@ export async function PATCH(req, { params }) {
 }
 
 export async function DELETE(_req, { params }) {
-  const usuario = await getUsuario()
-  if (usuario?.rol !== 'admin') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-  }
+  const chk = await requireModule('manual-editor')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
 
   const { id } = await params
   if (!ObjectId.isValid(id)) {

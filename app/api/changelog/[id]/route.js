@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { getUsuario } from '@/lib/auth'
+import { requireModule } from '@/lib/auth'
 
 export async function DELETE(_req, { params }) {
-  const usuario = await getUsuario()
-  if (usuario?.rol !== 'admin') {
+  const chk = await requireModule('changelog')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+  if (chk.usuario.rol !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
-import { getRol } from '@/lib/auth'
+import { requireModule } from '@/lib/auth'
 import { PULGADAS, SKU_REGEX } from '@/lib/catalogos'
 
 const COLECCION = 'catalogo_onn'
@@ -10,11 +10,12 @@ function normalizarModelo(raw) {
   return String(raw || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 20).toUpperCase()
 }
 
-// GET — lista del catálogo ONN. Solo admin (también para el autollenado al importar).
+// GET — lista del catálogo ONN. Cualquier rol con el módulo 'onn-catalog'
+// (admin lo tiene siempre por default; capturista también, para el
+// autollenado de pulgadas al importar en Nuevo Pedido).
 export async function GET() {
-  if ((await getRol()) !== 'admin') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-  }
+  const chk = await requireModule('onn-catalog')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
   const db = await getDb()
   const items = await db.collection(COLECCION).find({}).sort({ modelo: 1 }).toArray()
   return NextResponse.json(
@@ -26,9 +27,13 @@ export async function GET() {
   )
 }
 
-// POST — agrega un código ONN -> pulgada. Solo admin.
+// POST — agrega un código ONN -> pulgada. Requiere el módulo 'onn-catalog' y
+// rol admin (gestionar el catálogo es una acción administrativa aparte del
+// simple acceso de lectura que también da ese módulo).
 export async function POST(req) {
-  if ((await getRol()) !== 'admin') {
+  const chk = await requireModule('onn-catalog')
+  if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+  if (chk.usuario.rol !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 

@@ -29,7 +29,20 @@
     "entendido": "知道了",
     "cargando": "加载中…",
     "sinResultados": "没有结果。",
-    "confirmarEliminar": "删除“{{nombre}}”？此操作无法撤销。"
+    "confirmarEliminar": "删除“{{nombre}}”？此操作无法撤销。",
+    "sinPermisoModulo": "您无权访问此模块。"
+  },
+  "modulos": {
+    "nuevo": "新建",
+    "pedidos": "订单",
+    "pedidosLive": "实时订单",
+    "historial": "历史记录",
+    "surtir": "配货",
+    "catalogoOnn": "ONN 目录",
+    "usuarios": "用户",
+    "manual": "手册",
+    "editarManual": "编辑手册",
+    "changelog": "更新日志"
   },
   "login": {
     "titulo": "登录",
@@ -131,5 +144,18 @@
     "titulo": "更新日志",
     "novedadesTitulo": "新功能",
     "sinEntradas": "尚未发布任何条目。"
+  },
+  "usuarios": {
+    "modulosPermitidos": "允许的模块",
+    "seleccionarTodos": "全选",
+    "deseleccionarTodos": "取消全选",
+    "segunRol": "按角色",
+    "modulosAccesos": "模块 / 权限",
+    "debeSeleccionarModulo": "必须至少选择一个模块",
+    "guardarCambios": "保存更改",
+    "cancelarEdicion": "取消编辑",
+    "buscarPlaceholder": "按姓名或邮箱搜索…",
+    "filtrarPorRol": "按角色筛选",
+    "todosLosRoles": "所有角色"
   }
 }

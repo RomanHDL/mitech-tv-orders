@@ -29,7 +29,20 @@
     "entendido": "Got it",
     "cargando": "Loading…",
     "sinResultados": "No results.",
-    "confirmarEliminar": "Delete \"{{nombre}}\"? This action cannot be undone."
+    "confirmarEliminar": "Delete \"{{nombre}}\"? This action cannot be undone.",
+    "sinPermisoModulo": "You don't have permission to access this module."
+  },
+  "modulos": {
+    "nuevo": "New",
+    "pedidos": "Orders",
+    "pedidosLive": "Live orders",
+    "historial": "History",
+    "surtir": "Fulfill",
+    "catalogoOnn": "ONN catalog",
+    "usuarios": "Users",
+    "manual": "Manual",
+    "editarManual": "Edit Manual",
+    "changelog": "Changelog"
   },
   "login": {
     "titulo": "Sign in",
@@ -131,5 +144,18 @@
     "titulo": "Changelog",
     "novedadesTitulo": "What's new",
     "sinEntradas": "No entries published yet."
+  },
+  "usuarios": {
+    "modulosPermitidos": "Allowed modules",
+    "seleccionarTodos": "Select all",
+    "deseleccionarTodos": "Deselect all",
+    "segunRol": "By role",
+    "modulosAccesos": "Modules / Access",
+    "debeSeleccionarModulo": "You must select at least one module",
+    "guardarCambios": "Save changes",
+    "cancelarEdicion": "Cancel editing",
+    "buscarPlaceholder": "Search by name or email…",
+    "filtrarPorRol": "Filter by role",
+    "todosLosRoles": "All roles"
   }
 }
