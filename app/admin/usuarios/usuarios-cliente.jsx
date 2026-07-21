@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
-import { IconAlert, IconCheck, IconClose, IconSearch, IconTrash } from '../../components/icons'
-import { MODULOS, MODULO_IDS, DEFAULT_MODULOS_POR_ROL, sanearModulos } from '@/lib/modulos'
+import { IconAlert, IconCheck } from '../../components/icons'
+import { DEFAULT_MODULOS_POR_ROL, sanearModulos } from '@/lib/modulos'
+import UsuariosStats from './usuarios-stats'
+import UsuariosToolbar from './usuarios-toolbar'
+import UsuariosTabla from './usuarios-tabla'
+import UsuarioDrawer from './usuario-drawer'
+import UsuarioForm from './usuario-form'
+import ConfirmarDialog from './confirmar-dialog'
 
-const ROLES = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'capturista', label: 'Capturista' },
-  { value: 'surtidor', label: 'Surtidor' },
-]
-
-const labelRol = (v) => ROLES.find((r) => r.value === v)?.label || v
+const POR_PAGINA = 8
 
 const formVacio = () => ({
   nombre: '',
@@ -23,74 +23,143 @@ const formVacio = () => ({
   allowedModules: [...(DEFAULT_MODULOS_POR_ROL.surtidor || [])],
 })
 
+function formParaUsuario(u) {
+  const mods = sanearModulos(u.allowedModules)
+  return {
+    nombre: u.nombre || '',
+    rol: u.rol,
+    email: u.email || '',
+    pin: '',
+    nfcUid: u.nfcUid || '',
+    allowedModules: mods.length > 0 ? mods : [...(DEFAULT_MODULOS_POR_ROL[u.rol] || [])],
+  }
+}
+
 export default function UsuariosCliente({ usuarios }) {
   const { t } = useTranslation()
   const router = useRouter()
   const [, startTransition] = useTransition()
-  const [editandoId, setEditandoId] = useState(null)
-  const [form, setForm] = useState(formVacio())
-  const [error, setError] = useState('')
-  const [exito, setExito] = useState('')
-  const [enviando, setEnviando] = useState(false)
-  const [escaneando, setEscaneando] = useState(false)
-  const [eliminandoId, setEliminandoId] = useState(null)
-  const [nfcSoportado, setNfcSoportado] = useState(false)
+
+  // Búsqueda / filtro / paginación
   const [busqueda, setBusqueda] = useState('')
   const [rolFiltro, setRolFiltro] = useState('todos')
+  const [pagina, setPagina] = useState(1)
+
+  // Panel lateral (crear/editar)
+  const [drawerAbierto, setDrawerAbierto] = useState(false)
+  const [editandoUsuario, setEditandoUsuario] = useState(null) // null = modo creación
+  const [form, setForm] = useState(formVacio())
+  const [error, setError] = useState('')
+  const [errorModulos, setErrorModulos] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [escaneando, setEscaneando] = useState(false)
+  const [nfcSoportado, setNfcSoportado] = useState(false)
+  const formInicialRef = useRef(formVacio())
+  const nombreInputRef = useRef(null)
+
+  // Confirmación de "cambios sin guardar" (cerrar / cambiar de usuario)
+  const [descartarPendiente, setDescartarPendiente] = useState(false)
+  const accionPendienteRef = useRef(null) // { tipo: 'cerrar' } | { tipo: 'abrir', usuario: null|object }
+
+  // Eliminación
+  const [usuarioAEliminar, setUsuarioAEliminar] = useState(null)
+  const [eliminandoId, setEliminandoId] = useState(null)
+  const [errorEliminar, setErrorEliminar] = useState('')
+
+  // Notificación de éxito a nivel de página (el panel ya se cerró para cuando se muestra)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     setNfcSoportado(typeof window !== 'undefined' && 'NDEFReader' in window)
   }, [])
 
-  const editarUsuario = (u) => {
-    setEditandoId(u.id)
-    setForm({
-      nombre: u.nombre || '',
-      rol: u.rol,
-      email: u.email || '',
-      pin: '',
-      nfcUid: u.nfcUid || '',
-      allowedModules: sanearModulos(u.allowedModules).length > 0
-        ? sanearModulos(u.allowedModules)
-        : [...(DEFAULT_MODULOS_POR_ROL[u.rol] || [])],
-    })
+  useEffect(() => {
+    if (!toast) return
+    const id = setTimeout(() => setToast(null), 3500)
+    return () => clearTimeout(id)
+  }, [toast])
+
+  // Volver a la primera página cuando cambian los filtros.
+  useEffect(() => {
+    setPagina(1)
+  }, [busqueda, rolFiltro])
+
+  const busquedaNormalizada = busqueda.trim().toLowerCase()
+  const usuariosFiltrados = usuarios.filter((u) => {
+    const coincideBusqueda =
+      !busquedaNormalizada ||
+      (u.nombre || '').toLowerCase().includes(busquedaNormalizada) ||
+      (u.email || '').toLowerCase().includes(busquedaNormalizada)
+    const coincideRol = rolFiltro === 'todos' || u.rol === rolFiltro
+    return coincideBusqueda && coincideRol
+  })
+  const hayFiltrosActivos = busquedaNormalizada !== '' || rolFiltro !== 'todos'
+
+  const totalPaginas = Math.max(1, Math.ceil(usuariosFiltrados.length / POR_PAGINA))
+  const paginaSegura = Math.min(pagina, totalPaginas)
+  const usuariosPagina = usuariosFiltrados.slice(
+    (paginaSegura - 1) * POR_PAGINA,
+    paginaSegura * POR_PAGINA
+  )
+
+  function limpiarFiltros() {
+    setBusqueda('')
+    setRolFiltro('todos')
+  }
+
+  function estaSucio() {
+    return JSON.stringify(form) !== JSON.stringify(formInicialRef.current)
+  }
+
+  function abrirDrawer(usuarioObjetivo) {
+    const nuevaForm = usuarioObjetivo ? formParaUsuario(usuarioObjetivo) : formVacio()
+    setEditandoUsuario(usuarioObjetivo || null)
+    setForm(nuevaForm)
+    formInicialRef.current = nuevaForm
     setError('')
-    setExito('')
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+    setErrorModulos('')
+    setDrawerAbierto(true)
+  }
+
+  // Punto de entrada único para abrir el panel (crear o editar). Si ya está
+  // abierto con cambios sin guardar, pide confirmación antes de reemplazar
+  // el formulario — nunca sobrescribe en silencio.
+  function solicitarAbrir(usuarioObjetivo) {
+    if (drawerAbierto && estaSucio()) {
+      accionPendienteRef.current = { tipo: 'abrir', usuario: usuarioObjetivo || null }
+      setDescartarPendiente(true)
+      return
     }
+    abrirDrawer(usuarioObjetivo)
   }
 
-  const cancelarEdicion = () => {
-    setEditandoId(null)
-    setForm(formVacio())
-    setError('')
-    setExito('')
+  function cerrarDrawer() {
+    setDrawerAbierto(false)
   }
 
-  const toggleModulo = (id) => {
-    setForm((prev) => ({
-      ...prev,
-      allowedModules: prev.allowedModules.includes(id)
-        ? prev.allowedModules.filter((m) => m !== id)
-        : [...prev.allowedModules, id],
-    }))
+  // Punto de entrada único para cualquier intento de cierre (X, Cancelar,
+  // Escape, clic fuera) — con el mismo resguardo de cambios sin guardar.
+  function solicitarCierre() {
+    if (estaSucio()) {
+      accionPendienteRef.current = { tipo: 'cerrar' }
+      setDescartarPendiente(true)
+      return
+    }
+    cerrarDrawer()
   }
 
-  const todosSeleccionados = form.allowedModules.length === MODULO_IDS.length
-
-  const toggleSeleccionarTodos = () => {
-    setForm((prev) => ({
-      ...prev,
-      allowedModules: todosSeleccionados ? [] : [...MODULO_IDS],
-    }))
+  function confirmarDescartar() {
+    const accion = accionPendienteRef.current
+    setDescartarPendiente(false)
+    accionPendienteRef.current = null
+    if (!accion) return
+    if (accion.tipo === 'cerrar') cerrarDrawer()
+    else abrirDrawer(accion.usuario)
   }
 
-  const aplicarSegunRol = () => {
-    setForm((prev) => ({
-      ...prev,
-      allowedModules: [...(DEFAULT_MODULOS_POR_ROL[prev.rol] || [])],
-    }))
+  function cancelarDescartar() {
+    setDescartarPendiente(false)
+    accionPendienteRef.current = null
   }
 
   const escanearUid = async () => {
@@ -121,48 +190,31 @@ export default function UsuariosCliente({ usuarios }) {
     }
   }
 
-  const submit = async (e) => {
+  async function manejarSubmit(e) {
     e.preventDefault()
     setError('')
-    setExito('')
+    setErrorModulos('')
 
     const nombre = form.nombre.trim()
     const email = form.email.trim()
     const pin = form.pin.trim()
     const nfcUid = form.nfcUid.trim()
+    const idEditando = editandoUsuario?.id || null
 
     if (!nombre) return setError('Falta el nombre')
-    if (!email && !nfcUid) {
-      return setError('Necesita al menos email+PIN o tag NFC')
-    }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return setError('Email inválido')
-    }
-    if (email && !pin && !editandoId) {
-      return setError('Si pones email también necesita PIN')
-    }
-    if (pin && !/^\d{6,}$/.test(pin)) {
-      return setError('PIN debe ser mínimo 6 dígitos numéricos')
-    }
+    if (!email && !nfcUid) return setError('Necesita al menos email+PIN o tag NFC')
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError('Email inválido')
+    if (email && !pin && !idEditando) return setError('Si pones email también necesita PIN')
+    if (pin && !/^\d{6,}$/.test(pin)) return setError('PIN debe ser mínimo 6 dígitos numéricos')
     const allowedModules = sanearModulos(form.allowedModules)
-    if (allowedModules.length === 0) {
-      return setError(t('usuarios.debeSeleccionarModulo'))
-    }
+    if (allowedModules.length === 0) return setErrorModulos(t('usuarios.debeSeleccionarModulo'))
 
     setEnviando(true)
     try {
-      const url = editandoId ? `/api/usuarios/${editandoId}` : '/api/usuarios'
-      const method = editandoId ? 'PATCH' : 'POST'
-
-      const body = editandoId
-        ? {
-            nombre,
-            rol: form.rol,
-            email,
-            nfcUid,
-            allowedModules,
-            ...(pin ? { pin } : {}),
-          }
+      const url = idEditando ? `/api/usuarios/${idEditando}` : '/api/usuarios'
+      const method = idEditando ? 'PATCH' : 'POST'
+      const body = idEditando
+        ? { nombre, rol: form.rol, email, nfcUid, allowedModules, ...(pin ? { pin } : {}) }
         : { nombre, rol: form.rol, email, pin, nfcUid, allowedModules }
 
       const res = await fetch(url, {
@@ -175,11 +227,9 @@ export default function UsuariosCliente({ usuarios }) {
         throw new Error(data.error || 'No se pudo guardar')
       }
 
-      setExito(editandoId ? 'Usuario actualizado' : 'Usuario agregado')
-      setForm(formVacio())
-      setEditandoId(null)
+      setToast({ tipo: 'exito', texto: idEditando ? t('usuarios.usuarioActualizado') : t('usuarios.usuarioCreado') })
+      cerrarDrawer()
       startTransition(() => router.refresh())
-      setTimeout(() => setExito(''), 3000)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -187,323 +237,120 @@ export default function UsuariosCliente({ usuarios }) {
     }
   }
 
-  const eliminar = async (u) => {
-    const nombre = u.nombre || u.email || 'este usuario'
-    if (!confirm(`¿Eliminar a "${nombre}"?`)) return
+  async function confirmarEliminar() {
+    const u = usuarioAEliminar
+    if (!u) return
     setEliminandoId(u.id)
-    setError('')
+    setErrorEliminar('')
     try {
       const res = await fetch(`/api/usuarios/${u.id}`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'No se pudo eliminar')
       }
+      setUsuarioAEliminar(null)
+      setToast({ tipo: 'exito', texto: 'Usuario eliminado correctamente' })
       startTransition(() => router.refresh())
     } catch (err) {
-      setError(err.message)
+      setErrorEliminar(err.message)
     } finally {
       setEliminandoId(null)
     }
   }
 
-  const busquedaNormalizada = busqueda.trim().toLowerCase()
-  const usuariosFiltrados = usuarios.filter((u) => {
-    const coincideBusqueda =
-      !busquedaNormalizada ||
-      (u.nombre || '').toLowerCase().includes(busquedaNormalizada) ||
-      (u.email || '').toLowerCase().includes(busquedaNormalizada)
-    const coincideRol = rolFiltro === 'todos' || u.rol === rolFiltro
-    return coincideBusqueda && coincideRol
-  })
-
   return (
-    <main className="page-wide">
+    <main className="page-wide usuarios-page">
       <div className="page-header">
         <h1>Usuarios</h1>
-        <p className="subtitle">
-          Agrega o edita usuarios. Pueden entrar con email + PIN, NFC, o ambos.
-        </p>
+        <p className="subtitle">{t('usuarios.subtitulo')}</p>
       </div>
 
-      <div className="usuarios-grid">
-      <div className="card">
-        <h2>{editandoId ? 'Editar usuario' : 'Agregar usuario'}</h2>
-
-        <form onSubmit={submit}>
-          <div className="section">
-            <label className="label" htmlFor="u-nombre">Nombre</label>
-            <input
-              id="u-nombre"
-              type="text"
-              value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              placeholder="Ej. Juan Pérez"
-              required
-            />
-          </div>
-
-          <div className="section">
-            <div className="label">Rol</div>
-            <div className="condiciones">
-              {ROLES.map((r) => (
-                <label
-                  key={r.value}
-                  className={`condicion-chip ${form.rol === r.value ? 'activa' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="rol"
-                    value={r.value}
-                    checked={form.rol === r.value}
-                    onChange={(e) => setForm({ ...form, rol: e.target.value })}
-                  />
-                  {r.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="section">
-            <label className="label" htmlFor="u-email">
-              Email
-              <span className="label-help">opcional, para login con email + PIN</span>
-            </label>
-            <input
-              id="u-email"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="usuario@correo.com"
-            />
-          </div>
-
-          <div className="section">
-            <label className="label" htmlFor="u-pin">
-              PIN
-              <span className="label-help">
-                {editandoId ? 'deja vacío para no cambiar el PIN' : 'mínimo 6 dígitos'}
-              </span>
-            </label>
-            <input
-              id="u-pin"
-              type="text"
-              value={form.pin}
-              onChange={(e) => setForm({ ...form, pin: e.target.value })}
-              placeholder={editandoId ? 'Solo si quieres cambiarlo' : '123456'}
-              inputMode="numeric"
-              pattern="\d{6,}"
-              autoComplete="new-password"
-            />
-          </div>
-
-          <div className="section">
-            <label className="label" htmlFor="u-nfc">
-              NFC UID
-              <span className="label-help">opcional, para login con tag NFC</span>
-            </label>
-            <div className="usuario-nfc-input">
-              <input
-                id="u-nfc"
-                type="text"
-                value={form.nfcUid}
-                onChange={(e) => setForm({ ...form, nfcUid: e.target.value })}
-                placeholder="04:35:28:92:6B:1C:90"
-              />
-              {nfcSoportado && (
-                <button
-                  type="button"
-                  onClick={escanearUid}
-                  disabled={escaneando || enviando}
-                  className="btn btn-secondary"
-                >
-                  {escaneando ? 'Acerca tag…' : 'Escanear tag'}
-                </button>
-              )}
-            </div>
-            {!nfcSoportado && (
-              <p className="login-hint" style={{ marginTop: '0.5rem', textAlign: 'left' }}>
-                Para escanear el UID directamente, abre esta página en un Android con Chrome.
-                Mientras tanto puedes copiar el UID a mano.
-              </p>
-            )}
-          </div>
-
-          <div className="section">
-            <div className="label">{t('usuarios.modulosPermitidos')}</div>
-            <div className="modulos-acciones">
-              <button
-                type="button"
-                onClick={toggleSeleccionarTodos}
-                className="btn btn-secondary btn-sm"
-              >
-                {todosSeleccionados ? t('usuarios.deseleccionarTodos') : t('usuarios.seleccionarTodos')}
-              </button>
-              <button
-                type="button"
-                onClick={aplicarSegunRol}
-                className="btn btn-secondary btn-sm"
-              >
-                {t('usuarios.segunRol')}
-              </button>
-            </div>
-            <div className="modulos-grid">
-              {MODULOS.map((m) => {
-                const activo = form.allowedModules.includes(m.id)
-                return (
-                  <label
-                    key={m.id}
-                    className={`modulo-card ${activo ? 'activo' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={activo}
-                      onChange={() => toggleModulo(m.id)}
-                    />
-                    <span>{t(m.labelKey)}</span>
-                  </label>
-                )
-              })}
-            </div>
-          </div>
-
-          {error && (
-            <div className="alerta alerta-error">
-              <IconAlert /><span>{error}</span>
-            </div>
-          )}
-
-          {exito && (
-            <div className="alerta alerta-exito">
-              <IconCheck /><span>{exito}</span>
-            </div>
-          )}
-
-          <div className="form-acciones">
-            {editandoId && (
-              <button
-                type="button"
-                onClick={cancelarEdicion}
-                className="btn btn-secondary btn-large"
-              >
-                {t('usuarios.cancelarEdicion')}
-              </button>
-            )}
-            <button type="submit" disabled={enviando} className="btn btn-primary btn-large">
-              {enviando ? 'Guardando…' : editandoId ? t('usuarios.guardarCambios') : 'Agregar usuario'}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div className="card">
-        <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
-          Usuarios registrados ({usuariosFiltrados.length})
-        </h2>
-
-        <div className="lista-toolbar lista-toolbar-filtros">
-          <div className="search-box">
-            <IconSearch className="icon-search" />
-            <input
-              type="text"
-              placeholder={t('usuarios.buscarPlaceholder')}
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
-          <div className="filtro-campo">
-            <label>{t('usuarios.filtrarPorRol')}</label>
-            <select value={rolFiltro} onChange={(e) => setRolFiltro(e.target.value)}>
-              <option value="todos">{t('usuarios.todosLosRoles')}</option>
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-          </div>
+      {toast && (
+        <div className={`alerta alerta-${toast.tipo} usuarios-toast`}>
+          <IconCheck /><span>{toast.texto}</span>
         </div>
+      )}
 
-        {usuariosFiltrados.length === 0 ? (
-          <div className="empty">
-            <p>{t('common.sinResultados')}</p>
-          </div>
-        ) : (
-          <div className="tabla-wrap">
-          <table className="tabla-pedidos">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Rol</th>
-                <th>Email</th>
-                <th>Login</th>
-                <th>{t('usuarios.modulosAccesos')}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosFiltrados.map((u) => {
-                const modsUsuario = sanearModulos(u.allowedModules)
-                const modsOrdenados = MODULOS.filter((m) => modsUsuario.includes(m.id))
-                const visibles = modsOrdenados.slice(0, 3)
-                const restantes = modsOrdenados.slice(3)
-                return (
-                <tr key={u.id} className={editandoId === u.id ? 'editando' : ''}>
-                  <td data-label="Nombre">
-                    <strong>{u.nombre || '—'}</strong>
-                  </td>
-                  <td data-label="Rol">
-                    <span className={`nav-rol-badge rol-${u.rol}`}>{labelRol(u.rol)}</span>
-                  </td>
-                  <td data-label="Email">
-                    {u.email || <span className="tag-empty">—</span>}
-                  </td>
-                  <td data-label="Login">
-                    <div className="tags-celda">
-                      {u.tienePin && <span className="tag tag-grb">PIN</span>}
-                      {u.tieneNfc && <span className="tag tag-gra">NFC</span>}
-                      {!u.tienePin && !u.tieneNfc && <span className="tag-empty">—</span>}
-                    </div>
-                  </td>
-                  <td data-label={t('usuarios.modulosAccesos')}>
-                    <div className="tags-celda">
-                      {visibles.map((m) => (
-                        <span key={m.id} className="tag tag-modulo">{t(m.labelKey)}</span>
-                      ))}
-                      {restantes.length > 0 && (
-                        <span
-                          className="tag tag-mas"
-                          title={restantes.map((m) => t(m.labelKey)).join(', ')}
-                        >
-                          +{restantes.length}
-                        </span>
-                      )}
-                      {modsOrdenados.length === 0 && <span className="tag-empty">—</span>}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="acciones">
-                      <button
-                        onClick={() => editarUsuario(u)}
-                        className="btn btn-secondary btn-sm"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => eliminar(u)}
-                        disabled={eliminandoId === u.id}
-                        className="btn btn-danger btn-sm"
-                      >
-                        <IconTrash />
-                        {eliminandoId === u.id ? '…' : 'Eliminar'}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )})}
-            </tbody>
-          </table>
+      <UsuariosStats usuarios={usuarios} />
+
+      <UsuariosToolbar
+        busqueda={busqueda}
+        onBusquedaChange={setBusqueda}
+        rolFiltro={rolFiltro}
+        onRolFiltroChange={setRolFiltro}
+        onAgregar={() => solicitarAbrir(null)}
+      />
+
+      <UsuariosTabla
+        usuariosPagina={usuariosPagina}
+        totalFiltrado={usuariosFiltrados.length}
+        totalUsuarios={usuarios.length}
+        pagina={paginaSegura}
+        totalPaginas={totalPaginas}
+        porPagina={POR_PAGINA}
+        onPaginaChange={setPagina}
+        onEditar={(u) => solicitarAbrir(u)}
+        onEliminarClick={setUsuarioAEliminar}
+        eliminandoId={eliminandoId}
+        onAgregarClick={() => solicitarAbrir(null)}
+        onLimpiarFiltros={limpiarFiltros}
+        hayFiltrosActivos={hayFiltrosActivos}
+      />
+
+      <UsuarioDrawer
+        abierto={drawerAbierto}
+        titulo={editandoUsuario ? t('usuarios.editarUsuario') : t('usuarios.agregarUsuario')}
+        subtitulo={editandoUsuario ? (editandoUsuario.nombre || editandoUsuario.email) : null}
+        editando={Boolean(editandoUsuario)}
+        enviando={enviando}
+        onSubmit={manejarSubmit}
+        onSolicitarCierre={solicitarCierre}
+        focoInicialRef={nombreInputRef}
+        bloqueado={descartarPendiente}
+      >
+        <UsuarioForm
+          form={form}
+          onChange={setForm}
+          editando={Boolean(editandoUsuario)}
+          nfcSoportado={nfcSoportado}
+          escaneando={escaneando}
+          onEscanear={escanearUid}
+          errorModulos={errorModulos}
+          nombreInputRef={nombreInputRef}
+        />
+
+        {error && (
+          <div className="alerta alerta-error">
+            <IconAlert /><span>{error}</span>
           </div>
         )}
-      </div>
-      </div>
+      </UsuarioDrawer>
+
+      {descartarPendiente && (
+        <ConfirmarDialog
+          titulo={t('usuarios.descartarCambiosTitulo')}
+          texto={t('usuarios.descartarCambiosTexto')}
+          labelCancelar={t('usuarios.seguirEditando')}
+          labelConfirmar={t('usuarios.descartarCambios')}
+          peligroso
+          onConfirmar={confirmarDescartar}
+          onCancelar={cancelarDescartar}
+        />
+      )}
+
+      {usuarioAEliminar && (
+        <ConfirmarDialog
+          titulo={t('usuarios.confirmarEliminarTitulo', { nombre: usuarioAEliminar.nombre || usuarioAEliminar.email || '' })}
+          texto={t('usuarios.confirmarEliminarTexto')}
+          labelCancelar={t('common.cancelar')}
+          labelConfirmar={t('usuarios.eliminarUsuario')}
+          peligroso
+          cargando={eliminandoId === usuarioAEliminar.id}
+          error={errorEliminar}
+          onConfirmar={confirmarEliminar}
+          onCancelar={() => { setUsuarioAEliminar(null); setErrorEliminar('') }}
+        />
+      )}
     </main>
   )
 }

@@ -1509,7 +1509,197 @@ select.select-dueno {
 }
 
 .tag-modulo { background: var(--primary-light); color: var(--primary-hover); }
-.tag-mas { background: var(--border); color: var(--text-muted); cursor: help; }
+.tag-mas { background: var(--border); color: var(--text-muted); cursor: pointer; border: none; font: inherit; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ─── Usuarios (rediseño: tarjetas + barra + tabla ancha + drawer) ───── */
+
+.usuarios-stats.metricas-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.metrica-usuarios-total .metrica-icono { background: var(--primary-light); color: var(--primary); }
+.metrica-usuarios-admin .metrica-icono { background: var(--red-light); color: var(--red-dark); }
+.metrica-usuarios-surtidor .metrica-icono { background: var(--green-light); color: var(--green-dark); }
+.metrica-usuarios-capturista .metrica-icono { background: #ede9fe; color: #6d28d9; }
+
+@media (max-width: 900px) {
+  .usuarios-stats.metricas-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .usuarios-stats.metricas-grid { grid-template-columns: 1fr; }
+}
+
+.usuarios-toast { margin-bottom: 1.25rem; }
+
+.usuarios-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.usuarios-buscador { flex: 2 1 280px; min-width: 220px; }
+.usuarios-buscador input { width: 100%; height: 2.6rem; border-radius: 8px; border: 1px solid var(--border); padding: 0 0.9rem; font-size: 0.9rem; }
+.usuarios-filtro-rol { flex: 1 1 180px; min-width: 160px; }
+.usuarios-filtro-rol select { height: 2.6rem; }
+.usuarios-btn-agregar { flex-shrink: 0; margin-left: auto; white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .usuarios-toolbar { flex-direction: column; align-items: stretch; }
+  .usuarios-buscador, .usuarios-filtro-rol, .usuarios-btn-agregar { flex-basis: auto; margin-left: 0; width: 100%; }
+}
+
+.usuarios-tabla-card { width: 100%; }
+
+.celda-email-texto {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  max-width: 16rem;
+}
+
+.acciones-compactas { justify-content: flex-end; }
+.btn-icono-editar { color: var(--primary); }
+.btn-icono-editar:hover { background: var(--primary-light); border-color: var(--primary); }
+.btn-icono-eliminar { color: var(--red); border-color: #fecaca; }
+.btn-icono-eliminar:hover { background: var(--red-light); color: var(--red-dark); border-color: var(--red); }
+
+.modulos-mas-wrap { position: relative; display: inline-flex; }
+.modulos-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  background: var(--black);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+}
+
+/* ─── Secciones del formulario (drawer) ───────────────── */
+
+.form-seccion { margin-bottom: 1.75rem; }
+.form-seccion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.form-seccion-titulo {
+  margin: 0 0 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.form-seccion-header .form-seccion-titulo { margin-bottom: 0; }
+.modulos-contador { margin: 0.7rem 0 0; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+
+/* ─── Drawer lateral (crear/editar usuario) ───────────── */
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.28);
+  z-index: 300;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeInUp 0.15s ease-out;
+}
+.drawer-panel {
+  width: 440px;
+  max-width: 100%;
+  height: 100%;
+  background: var(--card);
+  box-shadow: -8px 0 24px rgba(15, 15, 15, 0.12);
+  border-left: 1px solid var(--border);
+  animation: drawerEntrar 0.22s ease-out;
+}
+@keyframes drawerEntrar {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.drawer-form { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.drawer-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-header h2 { margin: 0; font-size: 1.2rem; }
+.drawer-subtitulo { margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+.drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 1.4rem; }
+.drawer-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.4rem;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+.drawer-btn-cancelar { flex: 0 1 40%; }
+.drawer-btn-principal { flex: 1 1 60%; }
+
+@media (max-width: 640px) {
+  .drawer-panel { width: 100%; }
+}
+@media (min-width: 641px) and (max-width: 1024px) {
+  .drawer-panel { width: 60%; min-width: 380px; }
+}
+
+/* ─── Confirmaciones pequeñas (descartar cambios / eliminar usuario) ── */
+
+.confirmar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.45);
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  animation: fadeInUp 0.15s ease-out;
+}
+.confirmar-dialog {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 400px;
+  padding: 1.5rem;
+}
+.confirmar-dialog h3 { margin: 0 0 0.6rem; font-size: 1.05rem; }
+.confirmar-dialog p { margin: 0 0 1.25rem; color: var(--text-muted); font-size: 0.9rem; }
+.confirmar-acciones { display: flex; gap: 0.75rem; }
+.confirmar-acciones .btn { flex: 1; }
+
+.spinner-sm {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.btn-secondary .spinner-sm { border-color: var(--border); border-top-color: var(--text-muted); }
+
+.modal-close:disabled { opacity: 0.4; cursor: not-allowed; }
+.modal-close:disabled:hover { background: #fff; color: var(--text-muted); }
 
 /* ─── Modal genérico (Novedades, etc.) ────────────────── */
 
