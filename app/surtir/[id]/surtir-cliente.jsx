@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconArrowLeft } from '../../components/icons'
 import PanelSurtido from '../panel-surtido'
 
@@ -10,6 +11,7 @@ import PanelSurtido from '../panel-surtido'
 // lógica real de surtido vive en PanelSurtido, la misma que usa la vista
 // unificada de /surtir — para no duplicar el módulo en dos versiones.
 export default function SurtirCliente({ pedido, rol }) {
+  const { t } = useTranslation()
   const router = useRouter()
   const [, startTransition] = useTransition()
 
@@ -17,7 +19,7 @@ export default function SurtirCliente({ pedido, rol }) {
     <main className="surtir-standalone-page">
       <div className="surtir-standalone-volver">
         <Link href="/surtir" className="btn btn-secondary btn-sm">
-          <IconArrowLeft /> Volver
+          <IconArrowLeft /> {t('common.volver')}
         </Link>
       </div>
       <PanelSurtido

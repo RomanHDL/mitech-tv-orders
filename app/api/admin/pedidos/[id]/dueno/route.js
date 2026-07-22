@@ -3,24 +3,26 @@ import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
 import { getRol, getUsuario } from '@/lib/auth'
 import { registrarEvento } from '@/lib/eventos'
+import { getServerT } from '@/lib/i18n-server'
 
 // Reasigna el dueño de un pedido. Solo admin.
 // Body: { userId: string | null }
 export async function PATCH(req, { params }) {
+  const t = await getServerT()
   if ((await getRol()) !== 'admin') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    return NextResponse.json({ error: t('apiComun.noAutorizado') }, { status: 403 })
   }
 
   const { id } = await params
   if (!ObjectId.isValid(id)) {
-    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    return NextResponse.json({ error: t('apiComun.idInvalido') }, { status: 400 })
   }
 
   let body
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+    return NextResponse.json({ error: t('apiComun.jsonInvalido') }, { status: 400 })
   }
 
   const { userId } = body
@@ -31,18 +33,18 @@ export async function PATCH(req, { params }) {
     { projection: { numeroPedido: 1, pedidoNombre: 1, condiciones: 1, creadoPorNombre: 1 } }
   )
   if (!pedido) {
-    return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
+    return NextResponse.json({ error: t('apiPedidos.pedidoNoEncontrado') }, { status: 404 })
   }
 
   let cambios
   let nuevoDuenoNombre = null
   if (userId) {
     if (typeof userId !== 'string' || !ObjectId.isValid(userId)) {
-      return NextResponse.json({ error: 'userId inválido' }, { status: 400 })
+      return NextResponse.json({ error: t('apiPedidos.userIdInvalido') }, { status: 400 })
     }
     const usuario = await db.collection('usuarios').findOne({ _id: new ObjectId(userId) })
     if (!usuario) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+      return NextResponse.json({ error: t('usuarios.usuarioNoEncontrado') }, { status: 404 })
     }
     nuevoDuenoNombre = usuario.nombre || null
     cambios = {

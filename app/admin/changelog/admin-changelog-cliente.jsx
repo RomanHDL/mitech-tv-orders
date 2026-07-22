@@ -1,15 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   CHANGELOG_CATEGORIAS,
   CHANGELOG_PRIORIDADES,
-  CATEGORIA_LABEL,
-  PRIORIDAD_LABEL,
+  categoriaLabel,
+  prioridadLabel,
 } from '@/lib/changelog'
 import { IconAlert, IconPlus, IconTrash } from '../../components/icons'
 
 export default function AdminChangelogCliente() {
+  const { t } = useTranslation()
   const [entradas, setEntradas] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -27,7 +29,7 @@ export default function AdminChangelogCliente() {
     try {
       const res = await fetch('/api/changelog')
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al cargar')
+      if (!res.ok) throw new Error(data.error || t('changelogAdmin.errorCargar'))
       setEntradas(data.entradas || [])
     } catch (err) {
       setError(err.message)
@@ -57,7 +59,7 @@ export default function AdminChangelogCliente() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al guardar')
+      if (!res.ok) throw new Error(data.error || t('changelogAdmin.errorGuardar'))
       setVersion('')
       setTitulo('')
       setCategoria('feature')
@@ -72,12 +74,12 @@ export default function AdminChangelogCliente() {
   }
 
   const eliminar = async (id, tituloEntrada) => {
-    if (!confirm(`¿Eliminar la entrada "${tituloEntrada}"? Esta acción no se puede deshacer.`)) return
+    if (!confirm(t('changelogAdmin.eliminarConfirm', { titulo: tituloEntrada }))) return
     setEliminandoId(id)
     try {
       const res = await fetch(`/api/changelog/${id}`, { method: 'DELETE' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'No se pudo eliminar')
+      if (!res.ok) throw new Error(data.error || t('changelogAdmin.errorEliminar'))
       await cargar()
     } catch (err) {
       setError(err.message)
@@ -90,57 +92,57 @@ export default function AdminChangelogCliente() {
     <div className="usuarios-grid">
       <div className="card">
         <div className="section-header">
-          <h2>Nueva entrada</h2>
+          <h2>{t('changelogAdmin.nuevaEntrada')}</h2>
         </div>
         <form onSubmit={enviar}>
           <div className="section">
-            <label className="label" htmlFor="cl-version">Versión (semver)</label>
+            <label className="label" htmlFor="cl-version">{t('changelogAdmin.versionLabel')}</label>
             <input
               id="cl-version"
               type="text"
               value={version}
               onChange={(e) => setVersion(e.target.value)}
-              placeholder="Ej. 1.2.0"
+              placeholder={t('changelogAdmin.versionPlaceholder')}
               required
             />
           </div>
           <div className="section">
-            <label className="label" htmlFor="cl-titulo">Título</label>
+            <label className="label" htmlFor="cl-titulo">{t('changelogAdmin.tituloLabel')}</label>
             <input
               id="cl-titulo"
               type="text"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Ej. Nuevo módulo de condiciones por SKU"
+              placeholder={t('changelogAdmin.tituloPlaceholder')}
               required
             />
           </div>
           <div className="section">
-            <label className="label" htmlFor="cl-categoria">Categoría</label>
+            <label className="label" htmlFor="cl-categoria">{t('changelogAdmin.categoriaLabel')}</label>
             <select id="cl-categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
               {CHANGELOG_CATEGORIAS.map((c) => (
-                <option key={c} value={c}>{CATEGORIA_LABEL[c]}</option>
+                <option key={c} value={c}>{categoriaLabel(t, c)}</option>
               ))}
             </select>
           </div>
           <div className="section">
-            <label className="label" htmlFor="cl-prioridad">Prioridad</label>
+            <label className="label" htmlFor="cl-prioridad">{t('changelogAdmin.prioridadLabel')}</label>
             <select id="cl-prioridad" value={prioridad} onChange={(e) => setPrioridad(e.target.value)}>
               {CHANGELOG_PRIORIDADES.map((p) => (
-                <option key={p} value={p}>{PRIORIDAD_LABEL[p]}</option>
+                <option key={p} value={p}>{prioridadLabel(t, p)}</option>
               ))}
             </select>
           </div>
           <div className="section">
             <label className="label" htmlFor="cl-items">
-              Detalles <span className="label-help">(uno por línea)</span>
+              {t('changelogAdmin.detallesLabel')} <span className="label-help">{t('changelogAdmin.detallesHelp')}</span>
             </label>
             <textarea
               id="cl-items"
               rows={5}
               value={itemsTexto}
               onChange={(e) => setItemsTexto(e.target.value)}
-              placeholder={'Agregado X\nCorregido Y'}
+              placeholder={t('changelogAdmin.detallesPlaceholder')}
             />
           </div>
 
@@ -153,44 +155,44 @@ export default function AdminChangelogCliente() {
 
           <button type="submit" disabled={enviando} className="btn btn-primary btn-large">
             <IconPlus />
-            {enviando ? 'Publicando…' : 'Publicar entrada'}
+            {enviando ? t('changelogAdmin.publicando') : t('changelogAdmin.publicarEntrada')}
           </button>
         </form>
       </div>
 
       <div className="card">
         <div className="section-header">
-          <h2>Entradas publicadas</h2>
+          <h2>{t('changelogAdmin.entradasPublicadas')}</h2>
           <span className="count">{entradas.length}</span>
         </div>
         {cargando ? (
-          <p>Cargando…</p>
+          <p>{t('changelogAdmin.cargando')}</p>
         ) : entradas.length === 0 ? (
           <div className="empty">
-            <p>Sin entradas todavía.</p>
+            <p>{t('changelogAdmin.sinEntradas')}</p>
           </div>
         ) : (
           <div className="tabla-wrap">
             <table className="tabla-pedidos">
               <thead>
                 <tr>
-                  <th>Versión</th>
-                  <th>Título</th>
-                  <th>Categoría</th>
-                  <th>Prioridad</th>
+                  <th>{t('changelogAdmin.colVersion')}</th>
+                  <th>{t('changelogAdmin.colTitulo')}</th>
+                  <th>{t('changelogAdmin.colCategoria')}</th>
+                  <th>{t('changelogAdmin.colPrioridad')}</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {entradas.map((e) => (
                   <tr key={e._id}>
-                    <td data-label="Versión">v{e.version}</td>
-                    <td data-label="Título">{e.titulo}</td>
-                    <td data-label="Categoría">
-                      <span className={`tag tag-cat-${e.categoria}`}>{CATEGORIA_LABEL[e.categoria]}</span>
+                    <td data-label={t('changelogAdmin.colVersion')}>v{e.version}</td>
+                    <td data-label={t('changelogAdmin.colTitulo')}>{e.titulo}</td>
+                    <td data-label={t('changelogAdmin.colCategoria')}>
+                      <span className={`tag tag-cat-${e.categoria}`}>{categoriaLabel(t, e.categoria)}</span>
                     </td>
-                    <td data-label="Prioridad">
-                      <span className={`tag tag-pri-${e.prioridad}`}>{PRIORIDAD_LABEL[e.prioridad]}</span>
+                    <td data-label={t('changelogAdmin.colPrioridad')}>
+                      <span className={`tag tag-pri-${e.prioridad}`}>{prioridadLabel(t, e.prioridad)}</span>
                     </td>
                     <td>
                       <button
@@ -200,7 +202,7 @@ export default function AdminChangelogCliente() {
                         className="btn btn-danger btn-sm"
                       >
                         <IconTrash />
-                        {eliminandoId === e._id ? '…' : 'Eliminar'}
+                        {eliminandoId === e._id ? t('changelogAdmin.eliminando') : t('changelogAdmin.eliminar')}
                       </button>
                     </td>
                   </tr>

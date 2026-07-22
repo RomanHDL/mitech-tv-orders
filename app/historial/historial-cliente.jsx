@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   IconActivity,
   IconAlert,
@@ -22,50 +23,45 @@ import TablaEventos from './tabla-eventos'
 import PanelDetalle from './panel-detalle'
 import { calcularRango } from './eventos-helpers'
 import { exportarEventosExcel } from './exportar-historial'
+import { estadoLabel, tipoEventoLabel, ESTADOS_OPERATIVOS, TIPOS_EVENTO } from '@/lib/catalogos'
+import { formatearNumero } from '@/lib/intl-format'
 
-const ESTADOS_FILTRO = [
-  { valor: 'todos', label: 'Todos' },
-  { valor: 'PENDIENTE', label: 'Pendiente' },
-  { valor: 'EN_PROCESO', label: 'En proceso' },
-  { valor: 'TERMINADO', label: 'Surtido terminado' },
-  { valor: 'CARGANDO', label: 'Cargando' },
-  { valor: 'LISTO_SALIDA', label: 'Listo para salida' },
-  { valor: 'DESPACHADO', label: 'Despachado' },
-  { valor: 'CANCELADO', label: 'Cancelado' },
-]
+function getEstadosFiltro(t) {
+  return [
+    { valor: 'todos', label: t('historial.todos') },
+    ...ESTADOS_OPERATIVOS.map((v) => ({ valor: v, label: estadoLabel(t, v) })),
+  ]
+}
 
-const TIPOS_FILTRO = [
-  { valor: 'todos', label: 'Todos' },
-  { valor: 'CREACION', label: 'Creación' },
-  { valor: 'CAMBIO_ESTADO', label: 'Cambio de estado' },
-  { valor: 'EDICION', label: 'Edición' },
-  { valor: 'SURTIDO', label: 'Surtido' },
-  { valor: 'CARGA', label: 'Carga' },
-  { valor: 'DESPACHO', label: 'Despacho' },
-  { valor: 'CANCELACION', label: 'Cancelación' },
-  { valor: 'CAMBIO_DUENO', label: 'Cambio de dueño' },
-  { valor: 'CAMBIO_CANTIDADES', label: 'Cambio de cantidades' },
-  { valor: 'OTRO', label: 'Otro' },
-]
+function getTiposFiltro(t) {
+  return [
+    { valor: 'todos', label: t('historial.todos') },
+    ...TIPOS_EVENTO.map((v) => ({ valor: v, label: tipoEventoLabel(t, v) })),
+  ]
+}
 
-const CATEGORIAS = [
-  { valor: 'todos', label: 'Todos', Icono: IconClipboardList },
-  { valor: 'cambios_estado', label: 'Cambios de estado', Icono: IconActivity },
-  { valor: 'ediciones', label: 'Ediciones', Icono: IconPencil },
-  { valor: 'despachos', label: 'Despachos', Icono: IconTruck },
-  { valor: 'cancelaciones', label: 'Cancelaciones', Icono: IconBan },
-  { valor: 'creaciones', label: 'Creaciones', Icono: IconPlus },
-  { valor: 'otros', label: 'Otros', Icono: IconMoreHorizontal },
-]
+function getCategorias(t) {
+  return [
+    { valor: 'todos', label: t('historial.categoriaTodos'), Icono: IconClipboardList },
+    { valor: 'cambios_estado', label: t('historial.categoriaCambiosEstado'), Icono: IconActivity },
+    { valor: 'ediciones', label: t('historial.categoriaEdiciones'), Icono: IconPencil },
+    { valor: 'despachos', label: t('historial.categoriaDespachos'), Icono: IconTruck },
+    { valor: 'cancelaciones', label: t('historial.categoriaCancelaciones'), Icono: IconBan },
+    { valor: 'creaciones', label: t('historial.categoriaCreaciones'), Icono: IconPlus },
+    { valor: 'otros', label: t('historial.categoriaOtros'), Icono: IconMoreHorizontal },
+  ]
+}
 
-const RANGOS_RAPIDOS = [
-  { valor: 'hoy', label: 'Hoy' },
-  { valor: '7d', label: 'Últimos 7 días' },
-  { valor: '30d', label: 'Últimos 30 días' },
-  { valor: 'mes', label: 'Este mes' },
-  { valor: 'mesAnterior', label: 'Mes anterior' },
-  { valor: 'personalizado', label: 'Personalizado' },
-]
+function getRangosRapidos(t) {
+  return [
+    { valor: 'hoy', label: t('historial.rangoHoy') },
+    { valor: '7d', label: t('historial.rango7d') },
+    { valor: '30d', label: t('historial.rango30d') },
+    { valor: 'mes', label: t('historial.rangoEsteMes') },
+    { valor: 'mesAnterior', label: t('historial.rangoMesAnterior') },
+    { valor: 'personalizado', label: t('historial.rangoPersonalizado') },
+  ]
+}
 
 const POR_PAGINA_OPCIONES = [8, 15, 25, 50, 100]
 
@@ -92,6 +88,11 @@ function TarjetaMetrica({ tipo, valor, titulo, desc }) {
 }
 
 export default function HistorialCliente({ rol }) {
+  const { t, i18n } = useTranslation()
+  const ESTADOS_FILTRO = getEstadosFiltro(t)
+  const TIPOS_FILTRO = getTiposFiltro(t)
+  const CATEGORIAS = getCategorias(t)
+  const RANGOS_RAPIDOS = getRangosRapidos(t)
   const [busqueda, setBusqueda] = useState('')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
@@ -139,7 +140,7 @@ export default function HistorialCliente({ rol }) {
 
     fetch(`/api/eventos?${params}`, { signal: controller.signal })
       .then((r) => {
-        if (!r.ok) throw new Error('No se pudo cargar el historial')
+        if (!r.ok) throw new Error(t('historial.errorCarga'))
         return r.json()
       })
       .then((data) => {
@@ -186,7 +187,7 @@ export default function HistorialCliente({ rol }) {
   async function manejarExcel() {
     setExportando(true)
     try {
-      await exportarEventosExcel({ busqueda, desde, hasta, estadoFiltro, tipoFiltro, usuarioFiltro, condicionFiltro, categoria })
+      await exportarEventosExcel({ busqueda, desde, hasta, estadoFiltro, tipoFiltro, usuarioFiltro, condicionFiltro, categoria }, t, i18n.language)
     } catch (err) {
       setErrorEventos(err.message)
     } finally {
@@ -208,32 +209,32 @@ export default function HistorialCliente({ rol }) {
     <>
       <div className="historial-encabezado">
         <div>
-          <h1>Historial de pedidos</h1>
-          <p className="subtitle">Consulta movimientos, cambios y eventos de los pedidos</p>
+          <h1>{t('historial.titulo')}</h1>
+          <p className="subtitle">{t('historial.subtitulo')}</p>
         </div>
         <div className="historial-encabezado-acciones">
           <button type="button" className="btn btn-secondary" onClick={manejarExcel} disabled={exportando}>
-            <IconExcel className="icono-verde" /> {exportando ? 'Exportando…' : 'Exportar Excel'}
+            <IconExcel className="icono-verde" /> {exportando ? t('historial.exportando') : t('historial.exportarExcel')}
           </button>
           <button type="button" className="btn btn-secondary" onClick={manejarPdf}>
-            <IconPdf className="icono-rojo" /> Descargar PDF
+            <IconPdf className="icono-rojo" /> {t('historial.descargarPdf')}
           </button>
-          <button type="button" className="btn btn-secondary btn-icono-solo" title="Más opciones" aria-label="Más opciones">
+          <button type="button" className="btn btn-secondary btn-icono-solo" title={t('historial.masOpciones')} aria-label={t('historial.masOpciones')}>
             <IconMoreHorizontal />
           </button>
         </div>
       </div>
 
       <div className="metricas-grid">
-        <TarjetaMetrica tipo="total" valor={metricas ? metricas.movimientosTotales : '—'} titulo="Movimientos totales" desc="Todos los eventos registrados" />
-        <TarjetaMetrica tipo="despachados" valor={metricas ? metricas.pedidosDespachados : '—'} titulo="Pedidos despachados" desc="Completados y enviados" />
-        <TarjetaMetrica tipo="terminados" valor={metricas ? metricas.pedidosTerminados : '—'} titulo="Pedidos terminados" desc="Surtido finalizado" />
-        <TarjetaMetrica tipo="cancelados" valor={metricas ? metricas.pedidosCancelados : '—'} titulo="Pedidos cancelados" desc="Cancelaciones registradas" />
+        <TarjetaMetrica tipo="total" valor={metricas ? metricas.movimientosTotales : '—'} titulo={t('historial.statMovimientosTitulo')} desc={t('historial.statMovimientosDesc')} />
+        <TarjetaMetrica tipo="despachados" valor={metricas ? metricas.pedidosDespachados : '—'} titulo={t('historial.statDespachadosTitulo')} desc={t('historial.statDespachadosDesc')} />
+        <TarjetaMetrica tipo="terminados" valor={metricas ? metricas.pedidosTerminados : '—'} titulo={t('historial.statTerminadosTitulo')} desc={t('historial.statTerminadosDesc')} />
+        <TarjetaMetrica tipo="cancelados" valor={metricas ? metricas.pedidosCancelados : '—'} titulo={t('historial.statCanceladosTitulo')} desc={t('historial.statCanceladosDesc')} />
         <TarjetaMetrica
           tipo="enSurtido"
           valor={metricas ? metricas.pedidosEnSurtido : '—'}
-          titulo="Pedidos en surtido"
-          desc="Actualmente en preparación"
+          titulo={t('historial.statEnSurtidoTitulo')}
+          desc={t('historial.statEnSurtidoDesc')}
         />
       </div>
 
@@ -243,46 +244,46 @@ export default function HistorialCliente({ rol }) {
             <IconSearch className="icon-search" />
             <input
               type="text"
-              placeholder="Buscar por número, nombre, SKU o usuario…"
+              placeholder={t('historial.buscarPlaceholder')}
               value={busqueda}
               onChange={(e) => { setBusqueda(e.target.value); setPagina(1) }}
             />
           </div>
 
           <div className="filtro-campo">
-            <label>Desde</label>
+            <label>{t('historial.desde')}</label>
             <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setRangoActivo(null); setPagina(1) }} />
           </div>
           <div className="filtro-campo">
-            <label>Hasta</label>
+            <label>{t('historial.hasta')}</label>
             <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setRangoActivo(null); setPagina(1) }} />
           </div>
 
           <div className="filtro-campo">
-            <label>Estado</label>
+            <label>{t('historial.estado')}</label>
             <select value={estadoFiltro} onChange={(e) => { setEstadoFiltro(e.target.value); setPagina(1) }}>
               {ESTADOS_FILTRO.map((o) => <option key={o.valor} value={o.valor}>{o.label}</option>)}
             </select>
           </div>
 
           <div className="filtro-campo">
-            <label>Tipo de evento</label>
+            <label>{t('historial.tipoEvento')}</label>
             <select value={tipoFiltro} onChange={(e) => { setTipoFiltro(e.target.value); setPagina(1) }}>
               {TIPOS_FILTRO.map((o) => <option key={o.valor} value={o.valor}>{o.label}</option>)}
             </select>
           </div>
 
           <div className="lista-toolbar-acciones">
-            <button type="button" onClick={limpiarFiltros} className="btn btn-secondary">Limpiar</button>
+            <button type="button" onClick={limpiarFiltros} className="btn btn-secondary">{t('historial.limpiar')}</button>
             <button type="button" onClick={manejarExcel} disabled={exportando} className="btn btn-excel">
-              <IconExcel /> Excel
+              <IconExcel /> {t('historial.excel')}
             </button>
             <button
               type="button"
               className={`btn btn-secondary ${masFiltrosAbierto ? 'activo' : ''}`}
               onClick={() => setMasFiltrosAbierto((v) => !v)}
             >
-              <IconFilter /> Más filtros
+              <IconFilter /> {t('historial.masFiltros')}
             </button>
           </div>
         </div>
@@ -290,16 +291,16 @@ export default function HistorialCliente({ rol }) {
         {masFiltrosAbierto && (
           <div className="historial-filtros-fila historial-filtros-extra">
             <div className="filtro-campo">
-              <label>Usuario</label>
+              <label>{t('historial.usuario')}</label>
               <select value={usuarioFiltro} onChange={(e) => { setUsuarioFiltro(e.target.value); setPagina(1) }}>
-                <option value="todos">Todos</option>
+                <option value="todos">{t('historial.todos')}</option>
                 {opciones.usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
               </select>
             </div>
             <div className="filtro-campo">
-              <label>Condición</label>
+              <label>{t('historial.condicion')}</label>
               <select value={condicionFiltro} onChange={(e) => { setCondicionFiltro(e.target.value); setPagina(1) }}>
-                <option value="todos">Todos</option>
+                <option value="todos">{t('historial.todos')}</option>
                 {opciones.condiciones.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
@@ -307,7 +308,7 @@ export default function HistorialCliente({ rol }) {
         )}
 
         <div className="historial-rangos-rapidos">
-          <span className="historial-rangos-titulo"><IconCalendar /> RANGOS RÁPIDOS</span>
+          <span className="historial-rangos-titulo"><IconCalendar /> {t('historial.rangosRapidos').toUpperCase()}</span>
           <div className="historial-rangos-botones">
             {RANGOS_RAPIDOS.map((r) => (
               <button
@@ -350,13 +351,17 @@ export default function HistorialCliente({ rol }) {
           {!cargandoEventos && !errorEventos && (
             <div className="paginacion">
               <span className="paginacion-info">
-                Mostrando {total === 0 ? 0 : (pagina - 1) * porPagina + 1} a {Math.min(pagina * porPagina, total)} de {total.toLocaleString('es-MX')} registros
+                {t('historial.mostrandoRegistros', {
+                  desde: total === 0 ? 0 : (pagina - 1) * porPagina + 1,
+                  hasta: Math.min(pagina * porPagina, total),
+                  total: formatearNumero(total, i18n.language),
+                })}
               </span>
               <div className="paginacion-botones">
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina(1)} disabled={pagina <= 1}>«</button>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina <= 1}>Anterior</button>
-                <span className="paginacion-actual">Página {pagina} de {totalPaginas}</span>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={pagina >= totalPaginas}>Siguiente</button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina <= 1}>{t('pedidos.anterior')}</button>
+                <span className="paginacion-actual">{t('pedidos.pagina', { actual: pagina, total: totalPaginas })}</span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={pagina >= totalPaginas}>{t('pedidos.siguiente')}</button>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina(totalPaginas)} disabled={pagina >= totalPaginas}>»</button>
               </div>
               <select
@@ -364,7 +369,7 @@ export default function HistorialCliente({ rol }) {
                 value={porPagina}
                 onChange={(e) => { setPorPagina(Number(e.target.value)); setPagina(1) }}
               >
-                {POR_PAGINA_OPCIONES.map((n) => <option key={n} value={n}>{n} por página</option>)}
+                {POR_PAGINA_OPCIONES.map((n) => <option key={n} value={n}>{t('historial.porPagina', { n })}</option>)}
               </select>
             </div>
           )}

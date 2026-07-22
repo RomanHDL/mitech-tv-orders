@@ -27,7 +27,7 @@ export default function ManualCliente() {
           setSeleccion({ catSlug: primera.slug, pageSlug: primeraPagina.slug })
         }
       })
-      .catch(() => setError('No se pudo cargar el índice del manual.'))
+      .catch(() => setError(t('manual.errorCargarIndice')))
       .finally(() => setCargando(false))
   }, [])
 
@@ -80,7 +80,7 @@ export default function ManualCliente() {
         <div className="empty">
           <IconDocument />
           <h3>{t('manual.sinContenido')}</h3>
-          <p>Un admin puede agregar categorías y páginas desde /admin/manual.</p>
+          <p>{t('manual.adminAgregarHint')}</p>
         </div>
       </div>
     )

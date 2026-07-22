@@ -1,10 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import PedidoForm from '../../../components/pedido-form'
 
 export default function EditarCliente({ pedido }) {
   const router = useRouter()
+  const { t } = useTranslation()
 
   const enviar = async (data) => {
     const res = await fetch(`/api/pedidos/${pedido.id}`, {
@@ -14,7 +16,7 @@ export default function EditarCliente({ pedido }) {
     })
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}))
-      throw new Error(errData.error || 'Error al guardar')
+      throw new Error(errData.error || t('pedidoForm.errorGuardarPedido'))
     }
     router.push('/pedidos')
     router.refresh()
@@ -22,9 +24,9 @@ export default function EditarCliente({ pedido }) {
 
   return (
     <PedidoForm
-      titulo={`Editar pedido: ${pedido.pedidoNombre}`}
-      subtitulo="Las cantidades surtidas se preservan donde el TV (marca, pulgadas, modelo, unidad) coincida."
-      submitLabel="Guardar cambios"
+      titulo={t('pedidoForm.editarPedidoTitulo', { nombre: pedido.pedidoNombre })}
+      subtitulo={t('pedidoForm.editarSubtitulo')}
+      submitLabel={t('usuarios.guardarCambios')}
       cancelHref="/pedidos"
       initialData={{
         numeroPedido: pedido.numeroPedido,

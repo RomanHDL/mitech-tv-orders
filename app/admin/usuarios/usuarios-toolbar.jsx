@@ -3,11 +3,7 @@
 import { useTranslation } from 'react-i18next'
 import { IconPlus, IconSearch } from '../../components/icons'
 
-const ROLES = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'capturista', label: 'Capturista' },
-  { value: 'surtidor', label: 'Surtidor' },
-]
+const ROLES = ['admin', 'capturista', 'surtidor']
 
 export default function UsuariosToolbar({ busqueda, onBusquedaChange, rolFiltro, onRolFiltroChange, onAgregar }) {
   const { t } = useTranslation()
@@ -28,7 +24,7 @@ export default function UsuariosToolbar({ busqueda, onBusquedaChange, rolFiltro,
         <select value={rolFiltro} onChange={(e) => onRolFiltroChange(e.target.value)} aria-label={t('usuarios.filtrarPorRol')}>
           <option value="todos">{t('usuarios.todosLosRoles')}</option>
           {ROLES.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
+            <option key={r} value={r}>{t(`usuarios.rol${r.charAt(0).toUpperCase()}${r.slice(1)}`)}</option>
           ))}
         </select>
       </div>

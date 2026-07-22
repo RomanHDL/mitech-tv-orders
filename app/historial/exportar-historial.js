@@ -6,7 +6,7 @@ import { etiquetaEstado, etiquetaTipo, formatearFechaHora } from './eventos-help
 // cada fila con los totales ACTUALES del pedido (solicitado/surtido/
 // pendiente/unidad) vía /api/eventos/pedido/:id — solo para los pedidos
 // distintos que aparecen en el resultado, nunca uno por fila repetida.
-export async function exportarEventosExcel(filtros) {
+export async function exportarEventosExcel(filtros, t, lang) {
   const params = new URLSearchParams({
     q: filtros.busqueda || '',
     desde: filtros.desde || '',
@@ -19,7 +19,7 @@ export async function exportarEventosExcel(filtros) {
     todos: '1',
   })
   const res = await fetch(`/api/eventos?${params}`)
-  if (!res.ok) throw new Error('No se pudo obtener el historial para exportar')
+  if (!res.ok) throw new Error(t('historial.errorCarga'))
   const { eventos } = await res.json()
 
   const idsUnicos = [...new Set(eventos.map((e) => e.pedidoId))]
@@ -39,20 +39,20 @@ export async function exportarEventosExcel(filtros) {
   )
 
   const encabezados = [
-    'Fecha y hora', 'Número de pedido', 'Pedido', 'Evento',
-    'Estado anterior', 'Estado nuevo', 'Usuario', 'Detalle', 'Condición',
-    'Solicitado', 'Surtido', 'Pendiente', 'Unidad', 'Observación',
+    t('historial.colFechaHora'), t('historial.colNumeroPedido'), t('historial.colPedido'), t('historial.colEvento'),
+    t('historial.colEstadoAnterior'), t('historial.colEstadoNuevo'), t('historial.colUsuario'), t('historial.colDetalle'), t('historial.colCondicion'),
+    t('common.solicitado'), t('common.surtido'), t('common.pendiente'), t('historial.colUnidad'), t('historial.colObservacion'),
   ]
 
   const filas = eventos.map((e) => {
     const p = totalesPorPedido.get(e.pedidoId)
     return [
-      formatearFechaHora(e.creadoEn),
+      formatearFechaHora(e.creadoEn, lang),
       e.numeroPedido || '',
       e.pedidoNombre || '',
-      `${etiquetaTipo(e.tipo)}: ${e.detalle}`,
-      e.estadoAnterior ? etiquetaEstado(e.estadoAnterior) : '—',
-      e.estadoNuevo ? etiquetaEstado(e.estadoNuevo) : '—',
+      `${etiquetaTipo(t, e.tipo)}: ${e.detalle}`,
+      e.estadoAnterior ? etiquetaEstado(t, e.estadoAnterior) : '—',
+      e.estadoNuevo ? etiquetaEstado(t, e.estadoNuevo) : '—',
       e.usuarioNombre || '',
       e.detalle || '',
       (e.condiciones || []).join(' / '),

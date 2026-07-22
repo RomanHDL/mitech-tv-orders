@@ -350,36 +350,32 @@ export default function PedidoForm({
     e.preventDefault()
     setError('')
 
-    if (!numeroPedido.trim()) return setError('Falta el número de pedido')
-    if (!pedidoNombre.trim()) return setError('Falta el nombre del pedido')
-    if (!fechaLimite) return setError('Falta la fecha límite')
-    if (tvs.length === 0) return setError('Agrega al menos una televisión')
+    if (!numeroPedido.trim()) return setError(t('pedidoForm.numeroFalta'))
+    if (!pedidoNombre.trim()) return setError(t('pedidoForm.nombreFalta'))
+    if (!fechaLimite) return setError(t('pedidoForm.fechaFalta'))
+    if (tvs.length === 0) return setError(t('pedidoForm.agregaAlMenos'))
 
     for (const [i, tv] of tvs.entries()) {
-      if (!MARCAS.includes(tv.marca)) return setError(`TV #${i + 1}: marca inválida`)
-      if (!PULGADAS.includes(Number(tv.pulgadas))) return setError(`TV #${i + 1}: pulgadas inválidas`)
+      if (!MARCAS.includes(tv.marca)) return setError(t('pedidoForm.marcaInvalida', { n: i + 1 }))
+      if (!PULGADAS.includes(Number(tv.pulgadas))) return setError(t('pedidoForm.pulgadasInvalidas', { n: i + 1 }))
       if (!tv.condiciones?.length || tv.condiciones.some((c) => !CONDICIONES.includes(c))) {
-        return setError(`TV #${i + 1}: falta condición`)
+        return setError(t('pedidoForm.faltaCondicion', { n: i + 1 }))
       }
       if (!SKU_REGEX.test(tv.modelo || '')) {
-        return setError(`TV #${i + 1}: captura el modelo / SKU (mín. 3 letras o números)`)
+        return setError(t('pedidoForm.capturaModelo', { n: i + 1 }))
       }
       if (!tv.sinLimite && (!Number(tv.cantidad) || Number(tv.cantidad) < 1)) {
-        return setError(`TV #${i + 1}: cantidad inválida`)
+        return setError(t('pedidoForm.cantidadInvalida', { n: i + 1 }))
       }
     }
 
     if (limite > 0) {
       const haySinLimite = tvs.some((tv) => tv.sinLimite)
       if (totalUnidades > limite) {
-        return setError(
-          `La suma de cantidades (${totalUnidades}) excede la cantidad total del pedido (${limite}).`
-        )
+        return setError(t('pedidoForm.sumaExcede', { suma: totalUnidades, limite }))
       }
       if (totalUnidades < limite && !haySinLimite) {
-        return setError(
-          `La suma de cantidades (${totalUnidades}) no coincide con la cantidad total del pedido (${limite}).`
-        )
+        return setError(t('pedidoForm.sumaNoCoincide', { suma: totalUnidades, limite }))
       }
     }
 
@@ -424,9 +420,9 @@ export default function PedidoForm({
           <h1 className="pedido-nuevo-titulo">{tituloFinal}</h1>
           <p className="pedido-nuevo-subtitulo">{subtituloFinal}</p>
         </div>
-        <button type="button" className="btn-ayuda" title="¿Necesitas ayuda?">
+        <button type="button" className="btn-ayuda" title={t('pedidoForm.necesitasAyuda')}>
           <IconHelp />
-          <span>¿Necesitas ayuda?</span>
+          <span>{t('pedidoForm.necesitasAyuda')}</span>
         </button>
       </div>
 
@@ -435,8 +431,8 @@ export default function PedidoForm({
           <header className="card-seccion-header">
             <span className="card-seccion-icono"><IconClipboardList /></span>
             <div>
-              <h2 className="card-seccion-titulo">Información general</h2>
-              <p className="card-seccion-desc">Datos base del pedido</p>
+              <h2 className="card-seccion-titulo">{t('pedidoForm.infoGeneral')}</h2>
+              <p className="card-seccion-desc">{t('pedidoForm.datosBasePedido')}</p>
             </div>
           </header>
 
@@ -448,7 +444,7 @@ export default function PedidoForm({
                 type="text"
                 value={numeroPedido}
                 onChange={(e) => setNumeroPedido(e.target.value)}
-                placeholder="Ej. 12345"
+                placeholder={t('pedidoForm.placeholderNumeroPedido')}
                 required
               />
             </div>
@@ -460,7 +456,7 @@ export default function PedidoForm({
                 type="text"
                 value={pedidoNombre}
                 onChange={(e) => setPedidoNombre(e.target.value)}
-                placeholder="Ej. Pedido Jesica"
+                placeholder={t('pedidoForm.placeholderNombrePedido')}
                 required
               />
             </div>
@@ -488,13 +484,13 @@ export default function PedidoForm({
                 step="1"
                 value={cantidadTotal}
                 onChange={(e) => setCantidadTotal(e.target.value)}
-                placeholder="Ej. 100"
+                placeholder={t('pedidoForm.placeholderCantidadTotal')}
               />
               {limite > 0 && (
                 <div className={`limite-resumen ${pedidoCerrado ? 'lleno' : ''} ${pedidoExcedido ? 'excedido' : ''}`}>
                   <div className="limite-info">
                     <span className="limite-numero">
-                      {totalUnidades} <span className="limite-de">de</span> {limite}
+                      {totalUnidades} <span className="limite-de">{t('pedidoForm.limiteDe')}</span> {limite}
                     </span>
                     <span className="limite-pct">{progresoLimite}%</span>
                   </div>
@@ -502,11 +498,11 @@ export default function PedidoForm({
                     <div className="progreso-fill" style={{ width: `${progresoLimite}%` }} />
                   </div>
                   {pedidoCerrado && !pedidoExcedido && (
-                    <div className="limite-mensaje">Pedido completo · no se pueden agregar más TVs</div>
+                    <div className="limite-mensaje">{t('pedidoForm.pedidoCompletoNoAgregar')}</div>
                   )}
                   {pedidoExcedido && (
                     <div className="limite-mensaje error">
-                      Excedido por {totalUnidades - limite}. Reduce cantidades o aumenta el total.
+                      {t('pedidoForm.excedidoPor', { n: totalUnidades - limite })}
                     </div>
                   )}
                 </div>
@@ -519,8 +515,8 @@ export default function PedidoForm({
           <header className="card-seccion-header">
             <span className="card-seccion-icono"><IconExcel /></span>
             <div>
-              <h2 className="card-seccion-titulo">Importar pedido</h2>
-              <p className="card-seccion-desc">Pega texto, sube un Excel o una foto</p>
+              <h2 className="card-seccion-titulo">{t('pedidoForm.importarPedido')}</h2>
+              <p className="card-seccion-desc">{t('pedidoForm.importarDesc')}</p>
             </div>
           </header>
           <ImportarPedidoPanel onImportar={importarTvs} disabled={pedidoCerrado} />
@@ -530,11 +526,11 @@ export default function PedidoForm({
           <header className="card-seccion-header card-televisiones-header">
             <span className="card-seccion-icono"><IconClipboardList /></span>
             <div>
-              <h2 className="card-seccion-titulo">Televisiones</h2>
-              <p className="card-seccion-desc">Agrega las TVs que incluye este pedido.</p>
+              <h2 className="card-seccion-titulo">{t('pedidoForm.televisiones')}</h2>
+              <p className="card-seccion-desc">{t('pedidoForm.televisionesDesc')}</p>
             </div>
             <span className="card-televisiones-contador">
-              {tvs.length} {tvs.length === 1 ? 'televisión' : 'televisiones'}
+              {t('pedidoForm.contadorTv', { count: tvs.length })}
             </span>
           </header>
 
@@ -544,14 +540,14 @@ export default function PedidoForm({
               onClick={agregarTv}
               className="btn btn-primary"
               disabled={pedidoCerrado}
-              title={pedidoCerrado ? 'Pedido completo (límite alcanzado)' : undefined}
+              title={pedidoCerrado ? t('pedidoForm.pedidoCompletoLimite') : undefined}
             >
               <IconPlus />
               {pedidoCerrado ? t('pedidoForm.pedidoCompleto') : t('pedidoForm.agregarTelevision')}
             </button>
 
-            <div className="tv-condicion-activa" role="group" aria-label="Condición activa">
-              <span className="tv-condicion-activa-label">Condición activa</span>
+            <div className="tv-condicion-activa" role="group" aria-label={t('pedidoForm.condicionActivaLabel')}>
+              <span className="tv-condicion-activa-label">{t('pedidoForm.condicionActivaLabel')}</span>
               {CONDICIONES_FRECUENTES.map((c) => (
                 <button
                   key={c}
@@ -559,7 +555,7 @@ export default function PedidoForm({
                   className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} ${condicionActiva === c ? 'activa' : ''}`}
                   onClick={() => setCondicionActiva(c)}
                   aria-pressed={condicionActiva === c}
-                  title={`Las próximas televisiones que agregues tomarán la condición ${c}`}
+                  title={t('pedidoForm.condicionTooltip', { c })}
                 >
                   <span className="tv-condicion-chip-dot" aria-hidden="true" />
                   {c}
@@ -575,13 +571,13 @@ export default function PedidoForm({
                   onClick={() => setMasCondicionesAbierto((v) => !v)}
                   aria-expanded={masCondicionesAbierto}
                   aria-haspopup="listbox"
-                  title="Ver más condiciones disponibles"
+                  title={t('pedidoForm.verMasCondiciones')}
                 >
                   {condicionEsExtra && <span className="tv-condicion-chip-dot" aria-hidden="true" />}
                   {condicionEsExtra ? condicionActiva : (
                     <>
-                      <span className="tv-condicion-mas-texto-completo">Más condiciones</span>
-                      <span className="tv-condicion-mas-texto-corto">Más</span>
+                      <span className="tv-condicion-mas-texto-completo">{t('pedidoForm.masCondicionesCompleto')}</span>
+                      <span className="tv-condicion-mas-texto-corto">{t('pedidoForm.masCondicionesCorto')}</span>
                     </>
                   )}
                   <IconChevronDown />
@@ -601,7 +597,7 @@ export default function PedidoForm({
                           setCondicionActiva(c)
                           setMasCondicionesAbierto(false)
                         }}
-                        title={`Las próximas televisiones que agregues tomarán la condición ${c}`}
+                        title={t('pedidoForm.condicionTooltip', { c })}
                       >
                         <span className="tv-condicion-chip-dot" aria-hidden="true" />
                         {c}
@@ -617,7 +613,7 @@ export default function PedidoForm({
               className={`tv-toolbar-toggle ${palletPorDefecto ? 'activa' : ''}`}
               onClick={() => setPalletPorDefecto((v) => !v)}
               aria-pressed={palletPorDefecto}
-              title="Las próximas televisiones que agregues serán tipo Pallet"
+              title={t('pedidoForm.palletTooltip')}
             >
               <IconBox />
               {t('pedidoForm.pallet')}
@@ -628,7 +624,7 @@ export default function PedidoForm({
               className={`tv-toolbar-toggle ${sinLimitePorDefecto ? 'activa' : ''}`}
               onClick={() => setSinLimitePorDefecto((v) => !v)}
               aria-pressed={sinLimitePorDefecto}
-              title="Las próximas televisiones que agregues serán Sin límite"
+              title={t('pedidoForm.sinLimiteTooltip')}
             >
               <span aria-hidden="true">∞</span>
               {t('pedidoForm.sinLimite')}
@@ -642,9 +638,9 @@ export default function PedidoForm({
           {tvs.length === 0 ? (
             <div className="empty tv-empty-state">
               <IconClipboardList width={48} height={48} />
-              <h3>No has agregado televisiones.</h3>
+              <h3>{t('pedidoForm.sinTelevisiones')}</h3>
               <button type="button" className="btn btn-primary" onClick={agregarTv}>
-                <IconPlus /> Agregar primera televisión
+                <IconPlus /> {t('pedidoForm.agregarPrimera')}
               </button>
             </div>
           ) : (
@@ -654,12 +650,12 @@ export default function PedidoForm({
                   <thead>
                     <tr>
                       <th className="tv-col-num">#</th>
-                      <th>SKU / Modelo</th>
-                      <th>Marca</th>
-                      <th>Pulgada</th>
-                      <th>Cantidad</th>
-                      <th>Tipo</th>
-                      <th className="tv-col-condicion">Condición</th>
+                      <th>{t('pedidoForm.colSkuModelo')}</th>
+                      <th>{t('common.marca')}</th>
+                      <th>{t('pedidoForm.colPulgada')}</th>
+                      <th>{t('pedidoForm.colCantidad')}</th>
+                      <th>{t('pedidoForm.colTipo')}</th>
+                      <th className="tv-col-condicion">{t('pedidoForm.condicion')}</th>
                       <th className="tv-col-acciones"></th>
                     </tr>
                   </thead>
@@ -676,15 +672,15 @@ export default function PedidoForm({
                       return (
                         <tr key={i} className={esPallet ? 'es-pallet' : ''}>
                           <td className="tv-col-num" data-label="#">{i + 1}</td>
-                          <td data-label="SKU / Modelo">
+                          <td data-label={t('pedidoForm.colSkuModelo')}>
                             <input
                               ref={(el) => { if (el) inputRefs.current[i] = el }}
                               type="text"
                               value={tv.modelo}
                               onChange={(e) => updateSku(i, e.target.value)}
-                              placeholder="SKU / Modelo"
+                              placeholder={t('pedidoForm.colSkuModelo')}
                               pattern="[A-Za-z0-9]{3,20}"
-                              title="Código del modelo tal como viene en el pedido"
+                              title={t('pedidoForm.skuTooltip')}
                               minLength={3}
                               maxLength={20}
                               aria-invalid={tv.modelo && !skuOk ? 'true' : undefined}
@@ -692,20 +688,20 @@ export default function PedidoForm({
                             />
                             {tv.modelosAlternativos?.length > 0 && (
                               <div className="tv-alt-hint">
-                                También válido: {tv.modelosAlternativos.join(', ')}
+                                {t('common.tambienValido', { lista: tv.modelosAlternativos.join(', ') })}
                               </div>
                             )}
                           </td>
-                          <td data-label="Marca">
+                          <td data-label={t('common.marca')}>
                             <input
                               list="marcas-list"
                               value={tv.marca}
                               onChange={(e) => updateTv(i, 'marca', e.target.value)}
-                              placeholder="Marca"
+                              placeholder={t('common.marca')}
                               required
                             />
                           </td>
-                          <td data-label="Pulgada">
+                          <td data-label={t('pedidoForm.colPulgada')}>
                             <select
                               value={tv.pulgadas}
                               onChange={(e) => updateTv(i, 'pulgadas', e.target.value)}
@@ -717,11 +713,11 @@ export default function PedidoForm({
                               ))}
                             </select>
                           </td>
-                          <td data-label="Cantidad">
+                          <td data-label={t('pedidoForm.colCantidad')}>
                             {esSinLimite ? (
                               <div
                                 className="cantidad-sin-limite"
-                                aria-label={limite > 0 ? `Cantidad total del pedido: ${limite}` : 'Cantidad sin límite'}
+                                aria-label={limite > 0 ? t('pedidoForm.cantidadTotalPedidoAria', { n: limite }) : t('pedidoForm.cantidadSinLimiteAria')}
                               >
                                 {limite > 0 ? (
                                   <span className="cantidad-sin-limite-numero">{limite}</span>
@@ -736,19 +732,19 @@ export default function PedidoForm({
                                 max={maxCantidad}
                                 value={tv.cantidad}
                                 onChange={(e) => updateCantidad(i, e.target.value)}
-                                placeholder={esPallet ? 'Pallets' : 'Cant.'}
+                                placeholder={esPallet ? t('pedidoForm.pallets') : t('pedidoForm.placeholderCant')}
                                 required
                               />
                             )}
                           </td>
-                          <td data-label="Tipo">
-                            <div className="tv-segment" role="group" aria-label="Tipo de televisión">
+                          <td data-label={t('pedidoForm.colTipo')}>
+                            <div className="tv-segment" role="group" aria-label={t('pedidoForm.tipoTelevisionAria')}>
                               <button
                                 type="button"
                                 className={`tv-segment-btn ${esPallet ? 'activo' : ''}`}
                                 onClick={() => togglePallet(i)}
                                 aria-pressed={esPallet}
-                                title="Marcar como pallet"
+                                title={t('pedidoForm.marcarPalletTitle')}
                               >
                                 <IconBox /> {t('pedidoForm.pallet')}
                               </button>
@@ -757,13 +753,13 @@ export default function PedidoForm({
                                 className={`tv-segment-btn ${esSinLimite ? 'activo' : ''}`}
                                 onClick={() => toggleSinLimiteTv(i)}
                                 aria-pressed={esSinLimite}
-                                title="Marcar como sin límite"
+                                title={t('pedidoForm.marcarSinLimiteTitle')}
                               >
                                 <span aria-hidden="true">∞</span> {t('pedidoForm.sinLimite')}
                               </button>
                             </div>
                           </td>
-                          <td className="tv-col-condicion" data-label="Condición">
+                          <td className="tv-col-condicion" data-label={t('pedidoForm.condicion')}>
                             <button
                               type="button"
                               ref={(el) => { condicionBtnRefs.current[i] = el }}
@@ -771,7 +767,7 @@ export default function PedidoForm({
                               onClick={() => setFilaCondicionAbierta((prev) => (prev === i ? null : i))}
                               aria-expanded={filaCondicionAbierta === i}
                               aria-haspopup="listbox"
-                              title="Editar condición(es) de esta televisión"
+                              title={t('pedidoForm.editarCondicionTitle')}
                             >
                               <span className="tv-fila-condicion-resumen">
                                 {(tv.condiciones || []).slice(0, 2).map((c) => (
@@ -790,14 +786,14 @@ export default function PedidoForm({
                               <IconChevronDown />
                             </button>
                           </td>
-                          <td className="tv-col-acciones" data-label="Acciones">
+                          <td className="tv-col-acciones" data-label={t('historial.colAcciones')}>
                             <div className="tv-acciones-fila">
                               <button
                                 type="button"
                                 onClick={() => duplicarTv(i)}
                                 className="btn-icono"
-                                aria-label={`Duplicar TV ${i + 1}`}
-                                title="Duplicar fila"
+                                aria-label={t('pedidoForm.duplicarTvAria', { n: i + 1 })}
+                                title={t('pedidoForm.duplicarFilaTitle')}
                                 disabled={pedidoCerrado}
                               >
                                 <IconCopy />
@@ -806,8 +802,8 @@ export default function PedidoForm({
                                 type="button"
                                 onClick={() => moverArriba(i)}
                                 className="btn-icono"
-                                aria-label={`Mover TV ${i + 1} arriba`}
-                                title="Mover arriba"
+                                aria-label={t('pedidoForm.moverArribaAria', { n: i + 1 })}
+                                title={t('pedidoForm.moverArribaTitle')}
                                 disabled={i === 0}
                               >
                                 <IconArrowUp />
@@ -816,8 +812,8 @@ export default function PedidoForm({
                                 type="button"
                                 onClick={() => moverAbajo(i)}
                                 className="btn-icono"
-                                aria-label={`Mover TV ${i + 1} abajo`}
-                                title="Mover abajo"
+                                aria-label={t('pedidoForm.moverAbajoAria', { n: i + 1 })}
+                                title={t('pedidoForm.moverAbajoTitle')}
                                 disabled={i === tvs.length - 1}
                               >
                                 <IconArrowDown />
@@ -827,7 +823,7 @@ export default function PedidoForm({
                                   type="button"
                                   onClick={() => eliminarTv(i)}
                                   className="btn-icono btn-icono-eliminar"
-                                  aria-label={`Quitar TV ${i + 1}`}
+                                  aria-label={t('pedidoForm.quitarAria', { n: i + 1 })}
                                   title={t('pedidoForm.quitar')}
                                 >
                                   <IconTrash />
@@ -889,7 +885,7 @@ export default function PedidoForm({
                   <strong className="tv-footer-numero">{piezas}</strong>
                 </div>
                 <div className="tv-footer-item">
-                  <span className="tv-footer-label">Cantidad total</span>
+                  <span className="tv-footer-label">{t('pedidoForm.cantidadTotalCorta')}</span>
                   <strong className="tv-footer-numero">{totalUnidades}</strong>
                 </div>
                 <div className="tv-footer-item">
@@ -902,7 +898,7 @@ export default function PedidoForm({
         </section>
 
         <aside className="card card-pedido-seccion card-resumen-sticky">
-          <h2 className="card-seccion-titulo">Resumen del pedido</h2>
+          <h2 className="card-seccion-titulo">{t('pedidoForm.resumenPedido')}</h2>
 
           <div className="resumen-lista">
             <div className="resumen-fila resumen-fila-modelos">
@@ -928,7 +924,7 @@ export default function PedidoForm({
               </div>
             )}
             <div className="resumen-fila resumen-fila-total">
-              <span className="resumen-fila-label">Cantidad total</span>
+              <span className="resumen-fila-label">{t('pedidoForm.cantidadTotalCorta')}</span>
               <strong className="resumen-fila-numero">{totalUnidades}</strong>
             </div>
           </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Diálogo de confirmación pequeño y genérico — lo reutilizan tanto
 // "descartar cambios sin guardar" como "eliminar usuario", para no duplicar
@@ -9,13 +10,14 @@ export default function ConfirmarDialog({
   titulo,
   texto,
   labelConfirmar,
-  labelCancelar = 'Cancelar',
+  labelCancelar,
   peligroso = false,
   cargando = false,
   error = '',
   onConfirmar,
   onCancelar,
 }) {
+  const { t } = useTranslation()
   const botonCancelarRef = useRef(null)
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function ConfirmarDialog({
             onClick={onCancelar}
             disabled={cargando}
           >
-            {labelCancelar}
+            {labelCancelar || t('common.cancelar')}
           </button>
           <button
             type="button"

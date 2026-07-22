@@ -1,12 +1,13 @@
 // Helpers puros compartidos entre la tabla, el panel lateral y las
 // exportaciones del módulo de Historial — sin JSX, para poder importarse
 // también desde exportar-historial.js (Excel) sin arrastrar componentes.
-import { ESTADO_LABEL, TIPO_EVENTO_LABEL } from '@/lib/catalogos'
+import { estadoLabel, tipoEventoLabel } from '@/lib/catalogos'
+import { localeDe } from '@/lib/intl-format'
 
-export function formatearFechaHora(fechaIso) {
+export function formatearFechaHora(fechaIso, lang = 'es-MX') {
   if (!fechaIso) return '—'
   try {
-    return new Intl.DateTimeFormat('es-MX', {
+    return new Intl.DateTimeFormat(localeDe(lang), {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit', hour12: true,
       timeZone: 'America/Mexico_City',
@@ -16,13 +17,14 @@ export function formatearFechaHora(fechaIso) {
   }
 }
 
-export function etiquetaEstado(estado) {
+// `t` viene del hook useTranslation (cliente) o de getServerT() (servidor).
+export function etiquetaEstado(t, estado) {
   if (!estado) return '—'
-  return ESTADO_LABEL[estado] || estado
+  return estadoLabel(t, estado)
 }
 
-export function etiquetaTipo(tipo) {
-  return TIPO_EVENTO_LABEL[tipo] || tipo
+export function etiquetaTipo(t, tipo) {
+  return tipoEventoLabel(t, tipo)
 }
 
 // Clave visual (icono + color) del círculo de la primera columna — un solo

@@ -3,13 +3,14 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconAlert, IconCheck, IconMessage } from './icons'
+import { localeDe } from '@/lib/intl-format'
 
 const MAX = 2000
 
-function fmtFecha(iso) {
+function fmtFecha(iso, lang = 'es-MX') {
   if (!iso) return null
   try {
-    return new Intl.DateTimeFormat('es-MX', {
+    return new Intl.DateTimeFormat(localeDe(lang), {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
       timeZone: 'America/Mexico_City',
@@ -27,7 +28,7 @@ const ComentariosPedido = forwardRef(function ComentariosPedido({
   titulo = null,
   placeholder = null,
 }, ref) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [valor, setValor] = useState(comentariosIniciales || '')
   const [estado, setEstado] = useState('idle') // idle | guardando | guardado | error
   const [error, setError] = useState('')
@@ -56,7 +57,7 @@ const ComentariosPedido = forwardRef(function ComentariosPedido({
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo guardar')
+        throw new Error(data.error || t('comentarios.errorGuardar'))
       }
       const data = await res.json().catch(() => ({}))
       ultimoGuardado.current = texto
@@ -93,7 +94,7 @@ const ComentariosPedido = forwardRef(function ComentariosPedido({
     },
   }))
 
-  const fechaTxt = fmtFecha(metaActualizado)
+  const fechaTxt = fmtFecha(metaActualizado, i18n.language)
 
   return (
     <section className="comentarios-pedido">
@@ -113,13 +114,13 @@ const ComentariosPedido = forwardRef(function ComentariosPedido({
             {estado === 'guardado' && (
               <>
                 <IconCheck width={14} height={14} />
-                Guardado
+                {t('comentarios.guardado')}
               </>
             )}
             {estado === 'error' && (
               <>
                 <IconAlert width={14} height={14} />
-                Error
+                {t('comentarios.error')}
               </>
             )}
           </span>

@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import ComentariosPedido from '../components/comentarios-pedido'
 import StepperEtapas from './stepper-etapas'
-import { ESTADO_LABEL } from '@/lib/catalogos'
+import { estadoLabel } from '@/lib/catalogos'
+import { localeDe } from '@/lib/intl-format'
 import {
   IconArrowLeft,
   IconArrowRight,
@@ -17,31 +19,32 @@ function tagClase(c) {
   return `tag tag-${c.toLowerCase()}`
 }
 
-function formatearFechaLimite(iso) {
+function formatearFechaLimite(iso, lang) {
   if (!iso) return '—'
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
   const fecha = new Date(y, m - 1, d)
-  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
+  return new Intl.DateTimeFormat(localeDe(lang), { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
 }
 
 // Estado por partida — misma convención que la exportación a Excel de la lista.
+// Devuelve un código estable (no traducido) — el llamador decide el texto.
 function estadoPartida(tv) {
   const surt = tv.cantidadSurtida || 0
-  if (tv.sinLimite) return surt > 0 ? 'Parcial' : 'Pendiente'
+  if (tv.sinLimite) return surt > 0 ? 'parcial' : 'pendiente'
   const cant = tv.cantidad || 0
-  if (surt >= cant && cant > 0) return 'Completo'
-  return surt > 0 ? 'Parcial' : 'Pendiente'
+  if (surt >= cant && cant > 0) return 'completo'
+  return surt > 0 ? 'parcial' : 'pendiente'
 }
 
 // Próxima etapa accionable desde el estado actual (null si no hay ninguna,
 // ej. ya DESPACHADO). CANCELADO se maneja aparte con su propio botón.
-function proximaEtapa(estado) {
+function proximaEtapa(t, estado) {
   if (estado === 'PENDIENTE' || estado === 'EN_PROCESO' || estado === 'TERMINADO') {
-    return { destino: 'CARGANDO', label: 'Iniciar carga' }
+    return { destino: 'CARGANDO', label: t('pedidoDetalle.iniciarCarga') }
   }
-  if (estado === 'CARGANDO') return { destino: 'LISTO_SALIDA', label: 'Marcar listo para salida' }
-  if (estado === 'LISTO_SALIDA') return { destino: 'DESPACHADO', label: 'Confirmar despacho' }
+  if (estado === 'CARGANDO') return { destino: 'LISTO_SALIDA', label: t('pedidoDetalle.marcarListoSalida') }
+  if (estado === 'LISTO_SALIDA') return { destino: 'DESPACHADO', label: t('pedidoDetalle.confirmarDespachoBtn') }
   return null
 }
 
@@ -55,6 +58,7 @@ export default function PedidoDetalleModal({
   onSiguiente,
   onCambiado,
 }) {
+  const { t, i18n } = useTranslation()
   const [seccionAbierta, setSeccionAbierta] = useState('articulos')
   const [comentarios, setComentarios] = useState(null)
   const [cargandoComentarios, setCargandoComentarios] = useState(true)
@@ -64,7 +68,7 @@ export default function PedidoDetalleModal({
 
   const estado = resumen.estado || 'PENDIENTE'
   const puedeAvanzarEtapa = rol === 'admin' || rol === 'surtidor'
-  const siguiente = proximaEtapa(estado)
+  const siguiente = proximaEtapa(t, estado)
   const puedeCancelar = estado !== 'DESPACHADO' && estado !== 'CANCELADO'
 
   async function avanzarEtapa(destino) {
@@ -72,21 +76,19 @@ export default function PedidoDetalleModal({
     let razon = null
 
     if (destino === 'DESPACHADO') {
-      if (!confirm('¿Confirmas que este pedido ya salió de las instalaciones?')) return
+      if (!confirm(t('pedidoDetalle.confirmarDespacho'))) return
       if (resumen.pendiente > 0) {
         if (rol !== 'admin') {
-          setErrorEstado('No se puede despachar con unidades pendientes.')
+          setErrorEstado(t('pedidoDetalle.noDespacharPendiente'))
           return
         }
-        razon = window.prompt(
-          'Este pedido tiene unidades pendientes. Escribe la razón para despachar de todos modos:'
-        )
+        razon = window.prompt(t('pedidoDetalle.razonDespachoPendiente'))
         if (!razon || !razon.trim()) return
       }
     }
 
     if (destino === 'CANCELADO') {
-      if (!confirm('¿Confirmas que quieres cancelar este pedido?')) return
+      if (!confirm(t('pedidoDetalle.confirmarCancelar'))) return
     }
 
     setCambiandoEstado(true)
@@ -98,7 +100,7 @@ export default function PedidoDetalleModal({
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo cambiar el estado')
+        throw new Error(data.error || t('pedidoDetalle.errorCambiarEstado'))
       }
       onCambiado?.()
     } catch (err) {
@@ -177,9 +179,9 @@ export default function PedidoDetalleModal({
       <div className="modal modal-pedido-detalle" ref={modalRef}>
         <div className="modal-header">
           <div className="modal-pedido-titulo">
-            <h2>Pedido: #{resumen.numeroPedido || '—'}</h2>
+            <h2>{t('pedidoDetalle.pedidoPrefijo', { numero: resumen.numeroPedido || '—' })}</h2>
             <span className={`badge-estado-op estado-${estado.toLowerCase().replace('_', '-')}`}>
-              {ESTADO_LABEL[estado]}
+              {estadoLabel(t, estado)}
             </span>
           </div>
 
@@ -187,10 +189,10 @@ export default function PedidoDetalleModal({
             <Link
               href={`/pedidos/${resumen.id}/imprimir`}
               className="btn btn-secondary btn-sm"
-              title="Imprimir"
+              title={t('common.imprimir')}
             >
               <IconPrinter />
-              Imprimir
+              {t('common.imprimir')}
             </Link>
 
             <div className="modal-pedido-nav">
@@ -199,8 +201,8 @@ export default function PedidoDetalleModal({
                 className="btn-icono"
                 onClick={onAnterior}
                 disabled={posicion <= 1}
-                aria-label="Pedido anterior"
-                title="Pedido anterior"
+                aria-label={t('pedidoDetalle.pedidoAnterior')}
+                title={t('pedidoDetalle.pedidoAnterior')}
               >
                 <IconArrowLeft />
               </button>
@@ -210,14 +212,14 @@ export default function PedidoDetalleModal({
                 className="btn-icono"
                 onClick={onSiguiente}
                 disabled={posicion >= total}
-                aria-label="Pedido siguiente"
-                title="Pedido siguiente"
+                aria-label={t('pedidoDetalle.pedidoSiguiente')}
+                title={t('pedidoDetalle.pedidoSiguiente')}
               >
                 <IconArrowRight />
               </button>
             </div>
 
-            <button type="button" className="modal-close" onClick={onClose} aria-label="Cerrar">
+            <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.cerrar')}>
               <IconClose />
             </button>
           </div>
@@ -227,15 +229,15 @@ export default function PedidoDetalleModal({
           <div className="pedido-datos-generales">
             <div className="pedido-datos-col">
               <div className="dato-linea">
-                <span className="dato-label">Pedido</span>
+                <span className="dato-label">{t('historial.colPedido')}</span>
                 <span className="dato-valor">{resumen.pedidoNombre}</span>
               </div>
               <div className="dato-linea">
-                <span className="dato-label">Responsable</span>
+                <span className="dato-label">{t('pedidoDetalle.responsable')}</span>
                 <span className="dato-valor">{resumen.creadoPorNombre || '—'}</span>
               </div>
               <div className="dato-linea">
-                <span className="dato-label">Condiciones</span>
+                <span className="dato-label">{t('pedidoForm.condiciones')}</span>
                 <div className="tags-celda">
                   {resumen.condiciones.length > 0
                     ? resumen.condiciones.map((c) => <span key={c} className={tagClase(c)}>{c}</span>)
@@ -246,35 +248,35 @@ export default function PedidoDetalleModal({
 
             <div className="pedido-datos-col">
               <div className="dato-linea">
-                <span className="dato-label">Fecha de creación</span>
+                <span className="dato-label">{t('historial.fechaCreacion')}</span>
                 <span className="dato-valor">{resumen.fechaFmt || '—'}</span>
               </div>
               <div className="dato-linea">
-                <span className="dato-label">Fecha límite</span>
-                <span className="dato-valor">{formatearFechaLimite(resumen.fechaLimite)}</span>
+                <span className="dato-label">{t('pedidoForm.fechaLimite')}</span>
+                <span className="dato-valor">{formatearFechaLimite(resumen.fechaLimite, i18n.language)}</span>
               </div>
             </div>
 
             <div className="pedido-datos-col pedido-datos-col-totales">
               <div className="dato-linea">
-                <span className="dato-label">Solicitado</span>
+                <span className="dato-label">{t('common.solicitado')}</span>
                 <span className="dato-valor dato-valor-grande">{resumen.totalTvs}</span>
               </div>
               <div className="dato-linea">
-                <span className="dato-label">Surtido</span>
+                <span className="dato-label">{t('common.surtido')}</span>
                 <span className="dato-valor dato-valor-grande">{resumen.totalSurtido}</span>
               </div>
               <div className="dato-linea">
-                <span className="dato-label">Pendiente</span>
+                <span className="dato-label">{t('common.pendiente')}</span>
                 {resumen.pendiente > 0
                   ? <span className="pill pill-pendiente">{resumen.pendiente}</span>
-                  : <span className="pill pill-completo">Completo</span>}
+                  : <span className="pill pill-completo">{t('common.completo')}</span>}
               </div>
             </div>
           </div>
 
           <div className="pedido-ciclo">
-            <h3 className="pedido-ciclo-titulo">Ciclo del pedido</h3>
+            <h3 className="pedido-ciclo-titulo">{t('pedidoDetalle.cicloTitulo')}</h3>
             <StepperEtapas estado={estado} />
 
             {puedeAvanzarEtapa && (siguiente || puedeCancelar) && (
@@ -296,7 +298,7 @@ export default function PedidoDetalleModal({
                     onClick={() => avanzarEtapa('CANCELADO')}
                     disabled={cambiandoEstado}
                   >
-                    Cancelar pedido
+                    {t('pedidoDetalle.cancelarPedido')}
                   </button>
                 )}
               </div>
@@ -312,9 +314,9 @@ export default function PedidoDetalleModal({
               <ul className="pedido-ciclo-historial">
                 {resumen.historialEstados.map((h, i) => (
                   <li key={i}>
-                    <strong>{ESTADO_LABEL[h.estadoNuevo] || h.estadoNuevo}</strong>
+                    <strong>{estadoLabel(t, h.estadoNuevo)}</strong>
                     {' — '}
-                    {h.usuarioNombre || 'usuario'}
+                    {h.usuarioNombre || t('pedidoDetalle.usuarioDesconocido')}
                     {h.observacion ? ` · ${h.observacion}` : ''}
                   </li>
                 ))}
@@ -328,7 +330,7 @@ export default function PedidoDetalleModal({
               className={`acordeon-franja acordeon-franja-articulos ${seccionAbierta === 'articulos' ? 'abierta' : ''}`}
               onClick={() => toggleSeccion('articulos')}
             >
-              <span className="acordeon-titulo">1. Artículos ({tvs.length})</span>
+              <span className="acordeon-titulo">{t('pedidoDetalle.seccionArticulos', { n: tvs.length })}</span>
               <span className="acordeon-simbolo">
                 <IconChevronDown className={seccionAbierta === 'articulos' ? 'rotado' : ''} />
               </span>
@@ -336,19 +338,19 @@ export default function PedidoDetalleModal({
             {seccionAbierta === 'articulos' && (
               <div className="acordeon-contenido">
                 {tvs.length === 0 ? (
-                  <p className="acordeon-vacio">Este pedido no tiene artículos.</p>
+                  <p className="acordeon-vacio">{t('pedidoDetalle.sinArticulos')}</p>
                 ) : (
                   <div className="tabla-wrap">
                     <table className="tabla-pedidos tabla-pedidos-densa tabla-items-modal">
                       <thead>
                         <tr>
-                          <th>SKU</th>
-                          <th>Condición</th>
-                          <th>Solicitada</th>
-                          <th>Surtida</th>
-                          <th>Pendiente</th>
+                          <th>{t('pedidoDetalle.colSku')}</th>
+                          <th>{t('pedidoForm.condicion')}</th>
+                          <th>{t('pedidoDetalle.colSolicitada')}</th>
+                          <th>{t('pedidoDetalle.colSurtida')}</th>
+                          <th>{t('common.pendiente')}</th>
                           <th>%</th>
-                          <th>Estado</th>
+                          <th>{t('pedidoDetalle.colEstado')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -358,37 +360,37 @@ export default function PedidoDetalleModal({
                           const pct = tv.sinLimite
                             ? null
                             : (tv.cantidad > 0 ? Math.round((surt / tv.cantidad) * 100) : 0)
-                          const estado = estadoPartida(tv)
+                          const estadoFila = estadoPartida(tv)
                           return (
                             <tr key={i}>
-                              <td data-label="SKU">
+                              <td data-label={t('pedidoDetalle.colSku')}>
                                 <span className="sku-celda">
                                   {tv.marca} {tv.pulgadas}″ {tv.modelo}
                                 </span>
                                 {tv.modelosAlternativos?.length > 0 && (
                                   <div className="tv-alt-hint">
-                                    También válido: {tv.modelosAlternativos.join(', ')}
+                                    {t('common.tambienValido', { lista: tv.modelosAlternativos.join(', ') })}
                                   </div>
                                 )}
                               </td>
-                              <td data-label="Condición">
+                              <td data-label={t('pedidoForm.condicion')}>
                                 <div className="tags-celda">
                                   {(tv.condiciones || []).map((c) => (
                                     <span key={c} className={tagClase(c)}>{c}</span>
                                   ))}
                                 </div>
                               </td>
-                              <td data-label="Solicitada">
-                                {tv.sinLimite ? 'Sin límite' : tv.cantidad}
+                              <td data-label={t('pedidoDetalle.colSolicitada')}>
+                                {tv.sinLimite ? t('pedidoForm.sinLimite') : tv.cantidad}
                               </td>
-                              <td data-label="Surtida">{surt}</td>
-                              <td data-label="Pendiente">
+                              <td data-label={t('pedidoDetalle.colSurtida')}>{surt}</td>
+                              <td data-label={t('common.pendiente')}>
                                 {pendiente === null ? '—' : pendiente}
                               </td>
                               <td data-label="%">{pct === null ? '—' : `${pct}%`}</td>
-                              <td data-label="Estado">
-                                <span className={`badge-progreso ${estado === 'Completo' ? 'completo' : estado === 'Parcial' ? 'parcial' : 'pendiente'}`}>
-                                  {estado}
+                              <td data-label={t('pedidoDetalle.colEstado')}>
+                                <span className={`badge-progreso ${estadoFila}`}>
+                                  {t(`common.${estadoFila}`)}
                                 </span>
                               </td>
                             </tr>
@@ -408,7 +410,7 @@ export default function PedidoDetalleModal({
               className={`acordeon-franja acordeon-franja-comentarios ${seccionAbierta === 'comentarios' ? 'abierta' : ''}`}
               onClick={() => toggleSeccion('comentarios')}
             >
-              <span className="acordeon-titulo">2. Comentarios</span>
+              <span className="acordeon-titulo">{t('pedidoDetalle.seccionComentarios')}</span>
               <span className="acordeon-simbolo">
                 <IconChevronDown className={seccionAbierta === 'comentarios' ? 'rotado' : ''} />
               </span>
@@ -416,7 +418,7 @@ export default function PedidoDetalleModal({
             {seccionAbierta === 'comentarios' && (
               <div className="acordeon-contenido">
                 {cargandoComentarios ? (
-                  <p className="acordeon-vacio">Cargando comentarios…</p>
+                  <p className="acordeon-vacio">{t('pedidoDetalle.cargandoComentarios')}</p>
                 ) : (
                   <ComentariosPedido
                     pedidoId={resumen.id}

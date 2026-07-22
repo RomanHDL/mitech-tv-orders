@@ -65,12 +65,6 @@ const LINKS_POR_ROL = {
   ],
 }
 
-const ROL_LABEL = {
-  admin: 'Admin',
-  capturista: 'Capturista',
-  surtidor: 'Surtidor',
-}
-
 export default function Nav({ rol, email, nombre, allowedModules }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -167,7 +161,7 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
               onClick={() => setMenuUsuarioAbierto((v) => !v)}
               aria-haspopup="true"
               aria-expanded={menuUsuarioAbierto}
-              aria-label="Menú de usuario"
+              aria-label={t('usuarios.menuUsuario')}
             >
               <span className="nav-avatar">{inicial}</span>
               <IconChevronDown width={14} height={14} />
@@ -177,7 +171,7 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
               <div className="nav-usuario-menu" role="menu">
                 <div className="nav-usuario-menu-header">
                   {displayName && <div className="nav-usuario-menu-nombre">{displayName}</div>}
-                  <span className={`nav-rol-badge rol-${rol}`}>{ROL_LABEL[rol]}</span>
+                  <span className={`nav-rol-badge rol-${rol}`}>{t(`usuarios.rol${rol.charAt(0).toUpperCase()}${rol.slice(1)}`)}</span>
                 </div>
                 <button onClick={logout} className="nav-usuario-menu-salir" type="button" role="menuitem">
                   {t('nav.salir')}
@@ -190,7 +184,7 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
             type="button"
             className="nav-hamburguesa"
             onClick={() => setMenuMovilAbierto((v) => !v)}
-            aria-label="Menú"
+            aria-label={t('usuarios.menu')}
             aria-expanded={menuMovilAbierto}
           >
             {menuMovilAbierto ? <IconClose /> : <IconMenu />}

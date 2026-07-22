@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { unidadLabel } from '@/lib/catalogos'
+import { unidadLabel, estadoLabel } from '@/lib/catalogos'
 import { calcularTotales, diasHastaLimite, normalizeOrderStatus } from '@/lib/estado-pedido'
+import { getServerT, getServerLang } from '@/lib/i18n-server'
+import { localeDe } from '@/lib/intl-format'
 import PrintButton from './print-button'
 import FitToPage from './fit-to-page'
 import './imprimir.css'
@@ -33,10 +35,10 @@ function agruparPorMarca(televisiones) {
   })
 }
 
-function formatearSubtotal(pallets, piezas) {
+function formatearSubtotal(t, pallets, piezas) {
   const partes = []
-  if (pallets > 0) partes.push(`${pallets} ${pallets === 1 ? 'PALLET' : 'PALLETS'}`)
-  if (piezas > 0) partes.push(`${piezas} ${piezas === 1 ? 'PIEZA' : 'PIEZAS'}`)
+  if (pallets > 0) partes.push(`${pallets} ${(pallets === 1 ? t('imprimir.pallet') : t('imprimir.palletPlural')).toUpperCase()}`)
+  if (piezas > 0) partes.push(`${piezas} ${(piezas === 1 ? t('imprimir.pieza') : t('imprimir.piezaPlural')).toUpperCase()}`)
   return partes.join(' · ')
 }
 
@@ -54,11 +56,11 @@ function decidirColumnas(lineas) {
   return 'cols-1'
 }
 
-function formatearFechaLimite(iso) {
+function formatearFechaLimite(iso, lang) {
   if (!iso) return null
   const [y, m, d] = String(iso).split('-').map(Number)
   if (!y || !m || !d) return iso
-  return new Date(y, m - 1, d).toLocaleDateString('es-MX', {
+  return new Date(y, m - 1, d).toLocaleDateString(localeDe(lang), {
     day: '2-digit', month: 'long', year: 'numeric',
   })
 }
@@ -66,26 +68,28 @@ function formatearFechaLimite(iso) {
 // Igual que en la lista/historial: los estados finales (Cargando, Listo para
 // salida, Despachado, Cancelado, Surtido terminado) nunca deben mostrar
 // "Vencido" — el pedido ya avanzó, la fecha límite dejó de importar.
-function tiempoRestante(estado, dias, pendiente) {
-  if (estado === 'DESPACHADO') return { texto: 'DESPACHADO', tono: 'verde' }
-  if (estado === 'LISTO_SALIDA') return { texto: 'LISTO PARA SALIDA', tono: 'verde' }
-  if (estado === 'CARGANDO') return { texto: 'CARGANDO', tono: 'amarillo' }
-  if (estado === 'TERMINADO') return { texto: 'SURTIDO TERMINADO', tono: 'verde' }
-  if (estado === 'CANCELADO') return { texto: 'CANCELADO', tono: 'rojo' }
+function tiempoRestante(t, estado, dias, pendiente) {
+  if (estado === 'DESPACHADO') return { texto: estadoLabel(t, 'DESPACHADO').toUpperCase(), tono: 'verde' }
+  if (estado === 'LISTO_SALIDA') return { texto: estadoLabel(t, 'LISTO_SALIDA').toUpperCase(), tono: 'verde' }
+  if (estado === 'CARGANDO') return { texto: estadoLabel(t, 'CARGANDO').toUpperCase(), tono: 'amarillo' }
+  if (estado === 'TERMINADO') return { texto: estadoLabel(t, 'TERMINADO').toUpperCase(), tono: 'verde' }
+  if (estado === 'CANCELADO') return { texto: estadoLabel(t, 'CANCELADO').toUpperCase(), tono: 'rojo' }
 
   if (dias === null) return null
-  if (dias < 0 && pendiente > 0) return { texto: `VENCIDO HACE ${Math.abs(dias)} D`, tono: 'rojo' }
+  if (dias < 0 && pendiente > 0) return { texto: t('imprimir.vencidoHace', { count: Math.abs(dias) }), tono: 'rojo' }
   if (dias < 0) return null
-  if (dias === 0) return { texto: 'ENTREGA HOY', tono: 'rojo' }
-  if (dias === 1) return { texto: 'ENTREGA MAÑANA', tono: 'amarillo' }
-  if (dias <= 3) return { texto: `${dias} DÍAS`, tono: 'amarillo' }
-  return { texto: `${dias} DÍAS`, tono: 'verde' }
+  if (dias === 0) return { texto: t('imprimir.entregaHoy'), tono: 'rojo' }
+  if (dias === 1) return { texto: t('imprimir.entregaManana'), tono: 'amarillo' }
+  if (dias <= 3) return { texto: t('imprimir.diasFaltantes', { count: dias }), tono: 'amarillo' }
+  return { texto: t('imprimir.diasFaltantes', { count: dias }), tono: 'verde' }
 }
 
 export default async function ImprimirPage({ params }) {
   const { id } = await params
   const pedido = await obtenerPedido(id)
   if (!pedido) notFound()
+  const t = await getServerT()
+  const lang = await getServerLang()
 
   const grupos = agruparPorMarca(pedido.televisiones)
   const totalPallets = pedido.televisiones.reduce(
@@ -100,22 +104,22 @@ export default async function ImprimirPage({ params }) {
       ? pedido.cantidadTotal
       : null
   const totalLineas = grupos.reduce((s, g) => s + g.items.length + 1, 0)
-  const fechaFmt = new Date(pedido.fecha).toLocaleDateString('es-MX', {
+  const fechaFmt = new Date(pedido.fecha).toLocaleDateString(localeDe(lang), {
     day: '2-digit', month: 'long', year: 'numeric',
   })
-  const fechaLimiteFmt = formatearFechaLimite(pedido.fechaLimite)
+  const fechaLimiteFmt = formatearFechaLimite(pedido.fechaLimite, lang)
   const { progresoPct, pendiente } = calcularTotales(pedido)
   const estado = normalizeOrderStatus({ progresoPct, estadoOperativo: pedido.estadoOperativo || null })
   const dias = diasHastaLimite(pedido.fechaLimite)
-  const tiempo = tiempoRestante(estado, dias, pendiente)
-  const generadoFmt = new Date().toLocaleString('es-MX', {
+  const tiempo = tiempoRestante(t, estado, dias, pendiente)
+  const generadoFmt = new Date().toLocaleString(localeDe(lang), {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })
 
   const colsClass = decidirColumnas(totalLineas)
   const multInicial = estimarMultiplicador(totalLineas)
-  const totalLabel = formatearSubtotal(totalPallets, totalPiezas)
+  const totalLabel = formatearSubtotal(t, totalPallets, totalPiezas)
   const pedidoCorto = String(pedido._id).slice(-6).toUpperCase()
 
   return (
@@ -142,18 +146,18 @@ export default async function ImprimirPage({ params }) {
           {/* Fila de info: 4 datos en columnas */}
           <div className="info-grid">
             <div className="info-cell">
-              <div className="info-label">Fecha creación</div>
+              <div className="info-label">{t('pedidos.colFechaCreacion')}</div>
               <div className="info-value">{fechaFmt}</div>
             </div>
             {fechaLimiteFmt && (
               <div className="info-cell">
-                <div className="info-label">Fecha límite</div>
+                <div className="info-label">{t('pedidoForm.fechaLimite')}</div>
                 <div className="info-value">{fechaLimiteFmt}</div>
               </div>
             )}
             {tiempo && (
               <div className="info-cell">
-                <div className="info-label">Tiempo restante</div>
+                <div className="info-label">{t('imprimir.tiempoRestante')}</div>
                 <div className={`info-value info-tiempo tono-${tiempo.tono}`}>
                   {tiempo.texto}
                 </div>
@@ -161,7 +165,7 @@ export default async function ImprimirPage({ params }) {
             )}
             {pedido.creadoPorNombre && (
               <div className="info-cell">
-                <div className="info-label">Capturó</div>
+                <div className="info-label">{t('imprimir.capturo')}</div>
                 <div className="info-value">{pedido.creadoPorNombre}</div>
               </div>
             )}
@@ -169,7 +173,7 @@ export default async function ImprimirPage({ params }) {
 
           {pedido.condiciones?.length > 0 && (
             <div className="condiciones-banda">
-              <span className="condiciones-label">CONDICIONES</span>
+              <span className="condiciones-label">{t('imprimir.condicionesLabel')}</span>
               {pedido.condiciones.map((c) => (
                 <span key={c} className={`condicion-chip cond-${c.toLowerCase()}`}>
                   {c}
@@ -180,7 +184,7 @@ export default async function ImprimirPage({ params }) {
 
           {typeof pedido.comentarios === 'string' && pedido.comentarios.trim() && (
             <div className="comentarios-banda">
-              <span className="comentarios-banda-label">COMENTARIOS DEL ENVÍO</span>
+              <span className="comentarios-banda-label">{t('imprimir.comentariosLabel')}</span>
               <p className="comentarios-banda-texto">{pedido.comentarios}</p>
             </div>
           )}
@@ -194,7 +198,7 @@ export default async function ImprimirPage({ params }) {
             <section key={marca} className="marca-bloque">
               <div className="marca-header">
                 <h2 className="marca-titulo">{marca.toUpperCase()}</h2>
-                <span className="marca-subtotal">{formatearSubtotal(pallets, piezas)}</span>
+                <span className="marca-subtotal">{formatearSubtotal(t, pallets, piezas)}</span>
               </div>
               <ul>
                 {items.map((tv, i) => (
@@ -208,16 +212,16 @@ export default async function ImprimirPage({ params }) {
                       </span>
                     )}
                     <span className="col-cantidad">
-                      {tv.sinLimite ? 'S/L' : tv.cantidad}
+                      {tv.sinLimite ? t('imprimir.sinLimiteAbrev') : tv.cantidad}
                     </span>
                     <span className="col-unidad">
-                      {tv.sinLimite ? '' : unidadLabel(tv.cantidad, tv.unidad, true)}
+                      {tv.sinLimite ? '' : unidadLabel(t, tv.cantidad, tv.unidad, true)}
                     </span>
                     <span className="col-modelo">
                       {tv.modelo ? tv.modelo : <span className="modelo-vacio">—</span>}
                       {tv.modelosAlternativos?.length > 0 && (
-                        <span className="modelo-alt-hint" title={`También válido: ${tv.modelosAlternativos.join(', ')}`}>
-                          {' '}(+{tv.modelosAlternativos.length} SKU{tv.modelosAlternativos.length === 1 ? '' : 's'} alt.)
+                        <span className="modelo-alt-hint" title={t('common.tambienValido', { lista: tv.modelosAlternativos.join(', ') })}>
+                          {t('imprimir.skusAlt', { count: tv.modelosAlternativos.length })}
                         </span>
                       )}
                     </span>
@@ -235,35 +239,35 @@ export default async function ImprimirPage({ params }) {
             {cantidadTotalPedido !== null ? (
               <div className="resumen-cell">
                 <div className="resumen-numero">{cantidadTotalPedido}</div>
-                <div className="resumen-label">Total del pedido</div>
+                <div className="resumen-label">{t('imprimir.totalPedido')}</div>
               </div>
             ) : (
               <div className="resumen-cell">
                 <div className="resumen-numero">{totalPiezas}</div>
-                <div className="resumen-label">{totalPiezas === 1 ? 'Pieza' : 'Piezas'}</div>
+                <div className="resumen-label">{totalPiezas === 1 ? t('imprimir.pieza') : t('imprimir.piezaPlural')}</div>
               </div>
             )}
             {totalPallets > 0 && (
               <div className="resumen-cell">
                 <div className="resumen-numero">{totalPallets}</div>
-                <div className="resumen-label">{totalPallets === 1 ? 'Pallet' : 'Pallets'}</div>
+                <div className="resumen-label">{totalPallets === 1 ? t('imprimir.pallet') : t('imprimir.palletPlural')}</div>
               </div>
             )}
             <div className="resumen-cell">
               <div className="resumen-numero">{totalModelos}</div>
-              <div className="resumen-label">{totalModelos === 1 ? 'Modelo' : 'Modelos'}</div>
+              <div className="resumen-label">{totalModelos === 1 ? t('imprimir.modelo') : t('pedidoForm.modelos')}</div>
             </div>
             <div className="resumen-cell">
               <div className="resumen-numero">{grupos.length}</div>
-              <div className="resumen-label">{grupos.length === 1 ? 'Marca' : 'Marcas'}</div>
+              <div className="resumen-label">{grupos.length === 1 ? t('common.marca') : t('pedidoForm.marcas')}</div>
             </div>
           </div>
         </section>
 
         {/* Pie de página */}
         <footer className="pie">
-          Generado {generadoFmt} · {totalLabel} · {totalModelos} modelos · {grupos.length}{' '}
-          {grupos.length === 1 ? 'marca' : 'marcas'}
+          {t('imprimir.generadoPrefijo', { fecha: generadoFmt })} · {totalLabel} · {totalModelos} {t('imprimir.modeloFooter')} · {grupos.length}{' '}
+          {grupos.length === 1 ? t('imprimir.marcaFooterSingular') : t('imprimir.marcaFooterPlural')}
         </footer>
       </div>
     </main>

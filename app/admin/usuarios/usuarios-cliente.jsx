@@ -174,18 +174,18 @@ export default function UsuariosCliente({ usuarios }) {
           if (event.serialNumber) {
             setForm((prev) => ({ ...prev, nfcUid: event.serialNumber }))
           } else {
-            setError('No se pudo leer el UID del tag')
+            setError(t('usuarios.errorLeerUid'))
           }
           setEscaneando(false)
         },
         { once: true }
       )
       reader.addEventListener('readingerror', () => {
-        setError('Error al leer el tag NFC')
+        setError(t('usuarios.errorLeerNfc'))
         setEscaneando(false)
       })
     } catch (err) {
-      setError(err.message || 'No se pudo iniciar el escaneo')
+      setError(err.message || t('usuarios.errorIniciarEscaneo'))
       setEscaneando(false)
     }
   }
@@ -201,11 +201,11 @@ export default function UsuariosCliente({ usuarios }) {
     const nfcUid = form.nfcUid.trim()
     const idEditando = editandoUsuario?.id || null
 
-    if (!nombre) return setError('Falta el nombre')
-    if (!email && !nfcUid) return setError('Necesita al menos email+PIN o tag NFC')
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError('Email inválido')
-    if (email && !pin && !idEditando) return setError('Si pones email también necesita PIN')
-    if (pin && !/^\d{6,}$/.test(pin)) return setError('PIN debe ser mínimo 6 dígitos numéricos')
+    if (!nombre) return setError(t('usuarios.errorFaltaNombre'))
+    if (!email && !nfcUid) return setError(t('usuarios.errorFaltaEmailOnfc'))
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError(t('usuarios.errorEmailInvalido'))
+    if (email && !pin && !idEditando) return setError(t('usuarios.errorFaltaPin'))
+    if (pin && !/^\d{6,}$/.test(pin)) return setError(t('usuarios.errorPinCorto'))
     const allowedModules = sanearModulos(form.allowedModules)
     if (allowedModules.length === 0) return setErrorModulos(t('usuarios.debeSeleccionarModulo'))
 
@@ -224,7 +224,7 @@ export default function UsuariosCliente({ usuarios }) {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo guardar')
+        throw new Error(data.error || t('usuarios.errorGuardar'))
       }
 
       setToast({ tipo: 'exito', texto: idEditando ? t('usuarios.usuarioActualizado') : t('usuarios.usuarioCreado') })
@@ -246,10 +246,10 @@ export default function UsuariosCliente({ usuarios }) {
       const res = await fetch(`/api/usuarios/${u.id}`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo eliminar')
+        throw new Error(data.error || t('usuarios.errorEliminar'))
       }
       setUsuarioAEliminar(null)
-      setToast({ tipo: 'exito', texto: 'Usuario eliminado correctamente' })
+      setToast({ tipo: 'exito', texto: t('usuarios.usuarioEliminado') })
       startTransition(() => router.refresh())
     } catch (err) {
       setErrorEliminar(err.message)
@@ -261,7 +261,7 @@ export default function UsuariosCliente({ usuarios }) {
   return (
     <main className="page-wide usuarios-page">
       <div className="page-header">
-        <h1>Usuarios</h1>
+        <h1>{t('usuarios.titulo')}</h1>
         <p className="subtitle">{t('usuarios.subtitulo')}</p>
       </div>
 

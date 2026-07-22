@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { requireModule } from '@/lib/auth'
 import { CHANGELOG_CATEGORIAS, CHANGELOG_PRIORIDADES, versionValida } from '@/lib/changelog'
+import { getServerT } from '@/lib/i18n-server'
 
 export async function GET() {
   const db = await getDb()
@@ -15,31 +16,32 @@ export async function GET() {
 // da acceso de solo lectura a capturista/surtidor, así que aquí se exige
 // además el rol admin.
 export async function POST(req) {
+  const t = await getServerT()
   const chk = await requireModule('changelog')
   if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
   if (chk.usuario.rol !== 'admin') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    return NextResponse.json({ error: t('apiComun.noAutorizado') }, { status: 403 })
   }
 
   let body
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+    return NextResponse.json({ error: t('apiComun.jsonInvalido') }, { status: 400 })
   }
   const { version, titulo, categoria, prioridad, items } = body
 
   if (!versionValida(version)) {
-    return NextResponse.json({ error: 'Usa formato semver: x.y.z' }, { status: 400 })
+    return NextResponse.json({ error: t('apiChangelog.usaSemver') }, { status: 400 })
   }
   if (typeof titulo !== 'string' || !titulo.trim()) {
-    return NextResponse.json({ error: 'Falta el título' }, { status: 400 })
+    return NextResponse.json({ error: t('apiChangelog.faltaTitulo') }, { status: 400 })
   }
   if (!CHANGELOG_CATEGORIAS.includes(categoria)) {
-    return NextResponse.json({ error: 'Categoría inválida' }, { status: 400 })
+    return NextResponse.json({ error: t('apiChangelog.categoriaInvalida') }, { status: 400 })
   }
   if (!CHANGELOG_PRIORIDADES.includes(prioridad)) {
-    return NextResponse.json({ error: 'Prioridad inválida' }, { status: 400 })
+    return NextResponse.json({ error: t('apiChangelog.prioridadInvalida') }, { status: 400 })
   }
   const itemsLimpios = Array.isArray(items)
     ? items.map((i) => String(i).trim()).filter(Boolean)
@@ -49,7 +51,7 @@ export async function POST(req) {
   const versionLimpia = version.trim()
   const existente = await db.collection('changelog_entries').findOne({ version: versionLimpia })
   if (existente) {
-    return NextResponse.json({ error: `Ya existe una entrada con la versión ${versionLimpia}` }, { status: 400 })
+    return NextResponse.json({ error: t('apiChangelog.versionYaExiste', { version: versionLimpia }) }, { status: 400 })
   }
 
   const result = await db.collection('changelog_entries').insertOne({

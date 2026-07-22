@@ -2,6 +2,9 @@ import { getDb } from '@/lib/mongodb'
 import { getUsuario } from '@/lib/auth'
 import { construirFiltroEventos, idsDePedidosDeCapturista } from '@/lib/eventos'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
+import { estadoLabel } from '@/lib/catalogos'
+import { getServerT, getServerLang } from '@/lib/i18n-server'
+import { localeDe, formatearNumero } from '@/lib/intl-format'
 import PrintButtonPdf from './print-button-pdf'
 import './exportar-pdf.css'
 
@@ -9,21 +12,12 @@ export const dynamic = 'force-dynamic'
 
 const LIMITE_REPORTE = 2000
 
-const ESTADO_LABEL_LOCAL = {
-  PENDIENTE: 'Pendiente', EN_PROCESO: 'En proceso', TERMINADO: 'Surtido terminado',
-  CARGANDO: 'Cargando', LISTO_SALIDA: 'Listo para salida', DESPACHADO: 'Despachado', CANCELADO: 'Cancelado',
-}
-
-function fmtFechaHora(iso) {
+function fmtFechaHora(iso, lang) {
   if (!iso) return '—'
-  return new Intl.DateTimeFormat('es-MX', {
+  return new Intl.DateTimeFormat(localeDe(lang), {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City',
   }).format(new Date(iso))
-}
-
-const ETIQUETA_FILTRO = {
-  estado: 'Estado', tipo: 'Tipo de evento', usuario: 'Usuario', condicion: 'Condición', categoria: 'Categoría',
 }
 
 // Reporte imprimible del historial — respeta exactamente los mismos filtros
@@ -33,6 +27,12 @@ export default async function ExportarHistorialPdf({ searchParams }) {
   const sp = await searchParams
   const usuario = await getUsuario()
   const db = await getDb()
+  const t = await getServerT()
+  const lang = await getServerLang()
+  const ETIQUETA_FILTRO = {
+    estado: t('historial.estado'), tipo: t('historial.tipoEvento'), usuario: t('historial.usuario'),
+    condicion: t('historial.condicion'), categoria: t('historial.categoria'),
+  }
 
   const filtro = construirFiltroEventos({
     busqueda: sp.q || '',
@@ -55,7 +55,7 @@ export default async function ExportarHistorialPdf({ searchParams }) {
     estado: sp.estado, tipo: sp.tipo, usuario: sp.usuario, condicion: sp.condicion, categoria: sp.categoria,
   }).filter(([, v]) => v && v !== 'todos')
 
-  const generadoFmt = new Intl.DateTimeFormat('es-MX', {
+  const generadoFmt = new Intl.DateTimeFormat(localeDe(lang), {
     day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
   }).format(new Date())
 
@@ -65,45 +65,45 @@ export default async function ExportarHistorialPdf({ searchParams }) {
       <div className="pdf-encabezado">
         <img src={LOGO_MITECH} alt="MiTechnologies" className="pdf-logo" />
         <div>
-          <h1>Historial de pedidos — Reporte</h1>
-          <p>Generado el {generadoFmt}</p>
+          <h1>{t('historial.reporteTitulo')}</h1>
+          <p>{t('historial.generadoEl', { fecha: generadoFmt })}</p>
         </div>
       </div>
 
       <div className="pdf-meta">
-        <div><strong>Rango de fechas:</strong> {sp.desde || '—'} a {sp.hasta || '—'}</div>
-        {sp.q && <div><strong>Búsqueda:</strong> "{sp.q}"</div>}
+        <div><strong>{t('historial.rangoFechas')}</strong> {sp.desde || '—'} a {sp.hasta || '—'}</div>
+        {sp.q && <div><strong>{t('historial.busqueda')}</strong> "{sp.q}"</div>}
         {filtrosActivos.length > 0 && (
           <div>
-            <strong>Filtros aplicados:</strong>{' '}
+            <strong>{t('historial.filtrosAplicados')}</strong>{' '}
             {filtrosActivos.map(([k, v]) => `${ETIQUETA_FILTRO[k]}: ${v}`).join(' · ')}
           </div>
         )}
-        <div><strong>Total de registros:</strong> {total.toLocaleString('es-MX')}{total > LIMITE_REPORTE ? ` (mostrando los primeros ${LIMITE_REPORTE})` : ''}</div>
+        <div><strong>{t('historial.totalRegistros')}</strong> {formatearNumero(total, lang)}{total > LIMITE_REPORTE ? t('historial.mostrandoPrimeros', { n: LIMITE_REPORTE }) : ''}</div>
       </div>
 
       <table className="pdf-tabla">
         <thead>
           <tr>
-            <th>Fecha y hora</th>
-            <th>N.º Pedido</th>
-            <th>Pedido</th>
-            <th>Evento</th>
-            <th>Estado anterior</th>
-            <th>Estado nuevo</th>
-            <th>Usuario</th>
-            <th>Detalle</th>
+            <th>{t('historial.colFechaHora')}</th>
+            <th>{t('historial.colNumeroPedido')}</th>
+            <th>{t('historial.colPedido')}</th>
+            <th>{t('historial.colEvento')}</th>
+            <th>{t('historial.colEstadoAnterior')}</th>
+            <th>{t('historial.colEstadoNuevo')}</th>
+            <th>{t('historial.colUsuario')}</th>
+            <th>{t('historial.colDetalle')}</th>
           </tr>
         </thead>
         <tbody>
           {eventos.map((e) => (
             <tr key={e._id.toString()}>
-              <td>{fmtFechaHora(e.creadoEn)}</td>
+              <td>{fmtFechaHora(e.creadoEn, lang)}</td>
               <td>{e.numeroPedido || '—'}</td>
               <td>{e.pedidoNombre || '—'}</td>
               <td>{e.detalle}</td>
-              <td>{e.estadoAnterior ? (ESTADO_LABEL_LOCAL[e.estadoAnterior] || e.estadoAnterior) : '—'}</td>
-              <td>{e.estadoNuevo ? (ESTADO_LABEL_LOCAL[e.estadoNuevo] || e.estadoNuevo) : '—'}</td>
+              <td>{e.estadoAnterior ? estadoLabel(t, e.estadoAnterior) : '—'}</td>
+              <td>{e.estadoNuevo ? estadoLabel(t, e.estadoNuevo) : '—'}</td>
               <td>{e.usuarioNombre || '—'}</td>
               <td>{e.detalle}{e.detalleSecundario ? ` — ${e.detalleSecundario}` : ''}</td>
             </tr>
@@ -111,7 +111,7 @@ export default async function ExportarHistorialPdf({ searchParams }) {
         </tbody>
       </table>
 
-      {eventos.length === 0 && <p className="pdf-vacio">No se encontraron eventos con los filtros seleccionados.</p>}
+      {eventos.length === 0 && <p className="pdf-vacio">{t('historial.sinEventosReporte')}</p>}
     </main>
   )
 }

@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { IconAlert, IconBox, IconCheckCircle, IconClipboardList, IconClock, IconRetry } from '../components/icons'
-import { ESTADO_LABEL } from '@/lib/catalogos'
+import { estadoLabel } from '@/lib/catalogos'
 import { diasHastaLimite, estaVencido } from '@/lib/estado-pedido'
+import { localeDe } from '@/lib/intl-format'
 import PanelSurtido from './panel-surtido'
 
 function claseSimple(pct) {
@@ -13,14 +15,15 @@ function claseSimple(pct) {
   return 'PENDIENTE'
 }
 
-function formatearFechaLimite(iso) {
+function formatearFechaLimite(iso, lang) {
   if (!iso) return ''
   const [y, m, d] = iso.split('-').map(Number)
   const fecha = new Date(y, m - 1, d)
-  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
+  return new Intl.DateTimeFormat(localeDe(lang), { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
 }
 
 export default function SurtirListaCliente({ pedidos, metricas, rol }) {
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [busqueda, setBusqueda] = useState('')
@@ -66,7 +69,7 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
     setErrorDetalle('')
     fetch(`/api/pedidos/${id}`)
       .then((r) => {
-        if (!r.ok) throw new Error('No se pudo cargar el pedido')
+        if (!r.ok) throw new Error(t('surtir.errorCargarPedido'))
         return r.json()
       })
       .then((d) => setPedidoDetalle({ ...d, id: d._id }))
@@ -102,8 +105,8 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
   return (
     <main className="surtir-page">
       <div className="page-header">
-        <h1>Surtir pedidos</h1>
-        <p className="subtitle">Prepara y completa los pedidos activos.</p>
+        <h1>{t('surtir.titulo')}</h1>
+        <p className="subtitle">{t('surtir.subtitulo')}</p>
       </div>
 
       <div className="metricas-grid surtir-metricas">
@@ -111,32 +114,32 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
           <span className="metrica-icono"><IconClipboardList /></span>
           <div>
             <div className="metrica-valor">{metricas.pedidosActivos}</div>
-            <div className="metrica-titulo">Pedidos activos</div>
-            <div className="metrica-desc">Con actividades en curso</div>
+            <div className="metrica-titulo">{t('surtir.statPedidosActivosTitulo')}</div>
+            <div className="metrica-desc">{t('surtir.statPedidosActivosDesc')}</div>
           </div>
         </div>
         <div className="metrica-card metrica-piezas-surtidas">
           <span className="metrica-icono"><IconBox /></span>
           <div>
             <div className="metrica-valor">{metricas.piezasSurtidasActivos}</div>
-            <div className="metrica-titulo">Piezas surtidas en activos</div>
-            <div className="metrica-desc">Total surtido en pedidos activos</div>
+            <div className="metrica-titulo">{t('surtir.statPiezasSurtidasTitulo')}</div>
+            <div className="metrica-desc">{t('surtir.statPiezasSurtidasDesc')}</div>
           </div>
         </div>
         <div className="metrica-card metrica-piezas-pendientes">
           <span className="metrica-icono"><IconClock /></span>
           <div>
             <div className="metrica-valor">{metricas.piezasPendientesActivos}</div>
-            <div className="metrica-titulo">Piezas pendientes en activos</div>
-            <div className="metrica-desc">Aún por surtir en pedidos activos</div>
+            <div className="metrica-titulo">{t('surtir.statPiezasPendientesTitulo')}</div>
+            <div className="metrica-desc">{t('surtir.statPiezasPendientesDesc')}</div>
           </div>
         </div>
         <div className="metrica-card metrica-completados-hoy">
           <span className="metrica-icono"><IconCheckCircle /></span>
           <div>
             <div className="metrica-valor">{metricas.completadosHoy}</div>
-            <div className="metrica-titulo">Completados hoy</div>
-            <div className="metrica-desc">Pedidos finalizados hoy</div>
+            <div className="metrica-titulo">{t('surtir.statCompletadosHoyTitulo')}</div>
+            <div className="metrica-desc">{t('surtir.statCompletadosHoyDesc')}</div>
           </div>
         </div>
       </div>
@@ -145,35 +148,35 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
         <div className="search-box surtir-buscador">
           <input
             type="text"
-            placeholder="Buscar pedido, número o SKU…"
+            placeholder={t('surtir.buscarPedidoPlaceholder')}
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
         <div className="filtro-campo">
-          <label>Estado</label>
+          <label>{t('historial.estado')}</label>
           <select value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
-            <option value="todos">Todos</option>
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="EN_PROCESO">En proceso</option>
-            <option value="TERMINADO">Surtido terminado</option>
+            <option value="todos">{t('historial.todos')}</option>
+            <option value="PENDIENTE">{estadoLabel(t, 'PENDIENTE')}</option>
+            <option value="EN_PROCESO">{estadoLabel(t, 'EN_PROCESO')}</option>
+            <option value="TERMINADO">{estadoLabel(t, 'TERMINADO')}</option>
           </select>
         </div>
         <div className="filtro-campo">
-          <label>Condición</label>
+          <label>{t('historial.condicion')}</label>
           <select value={condicionFiltro} onChange={(e) => setCondicionFiltro(e.target.value)}>
-            <option value="todos">Todas</option>
+            <option value="todos">{t('surtir.todasFem')}</option>
             {condicionesReales.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div className="filtro-campo">
-          <label>Vencimiento</label>
+          <label>{t('surtir.vencimiento')}</label>
           <select value={vencimientoFiltro} onChange={(e) => setVencimientoFiltro(e.target.value)}>
-            <option value="todos">Todos</option>
-            <option value="vencidos">Vencidos</option>
-            <option value="hoy">Hoy</option>
-            <option value="proximos">Próximos</option>
-            <option value="sinfecha">Sin fecha límite</option>
+            <option value="todos">{t('historial.todos')}</option>
+            <option value="vencidos">{t('pedidos.vencidos')}</option>
+            <option value="hoy">{t('historial.rangoHoy')}</option>
+            <option value="proximos">{t('surtir.proximos')}</option>
+            <option value="sinfecha">{t('surtir.sinFechaLimite')}</option>
           </select>
         </div>
       </div>
@@ -181,14 +184,14 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
       <div className="surtir-content">
         <div className="card surtir-panel-lista">
           <div className="surtir-lista-header">
-            <h3>Pedidos por surtir</h3>
+            <h3>{t('surtir.pedidosPorSurtir')}</h3>
             <span className="badge-contador">{filtrados.length}</span>
           </div>
 
           {filtrados.length === 0 ? (
             <div className="empty">
               <IconClipboardList width={40} height={40} />
-              <p>No hay pedidos que coincidan con los filtros.</p>
+              <p>{t('surtir.sinPedidosFiltro2')}</p>
             </div>
           ) : (
             <div className="surtir-lista-tarjetas">
@@ -212,16 +215,16 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
                       <div className={`progreso-fill ${estadoSimple === 'TERMINADO' ? 'completa' : ''}`} style={{ width: `${p.pct}%` }} />
                     </div>
                     <div className="surtir-tarjeta-cifras">
-                      <span>{p.totalSurtido} de {p.totalRequerido} surtidas</span>
-                      <span className="surtir-tarjeta-pendientes">{p.pendiente} pendientes</span>
+                      <span>{t('surtir.deSurtidas', { surt: p.totalSurtido, req: p.totalRequerido })}</span>
+                      <span className="surtir-tarjeta-pendientes">{t('surtir.pendientesTarjeta', { n: p.pendiente })}</span>
                       <span className="surtir-tarjeta-pct">{p.pct}%</span>
                     </div>
                     <div className="surtir-tarjeta-footer">
                       {p.fechaLimite && (
-                        <span className="chip-fecha-limite-mini">Límite: {formatearFechaLimite(p.fechaLimite)}</span>
+                        <span className="chip-fecha-limite-mini">{t('surtir.limiteFecha', { fecha: formatearFechaLimite(p.fechaLimite, i18n.language) })}</span>
                       )}
                       <span className={`badge-estado-op estado-${estadoSimple.toLowerCase().replace('_', '-')}`}>
-                        {ESTADO_LABEL[estadoSimple]}
+                        {estadoLabel(t, estadoSimple)}
                       </span>
                     </div>
                   </button>
@@ -229,14 +232,14 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
               })}
             </div>
           )}
-          <p className="surtir-lista-resumen">Mostrando {filtrados.length} de {filtrados.length} pedidos</p>
+          <p className="surtir-lista-resumen">{t('surtir.mostrandoPedidos', { n: filtrados.length, total: filtrados.length })}</p>
         </div>
 
         <div className="surtir-panel-detalle-wrap">
           {!seleccionadoId ? (
             <div className="card panel-detalle-vacio">
               <IconClipboardList width={40} height={40} />
-              <p>Selecciona un pedido para comenzar a surtirlo.</p>
+              <p>{t('surtir.seleccionaPedido')}</p>
             </div>
           ) : cargandoDetalle ? (
             <div className="card panel-surtido-skeleton">
@@ -249,7 +252,7 @@ export default function SurtirListaCliente({ pedidos, metricas, rol }) {
               <IconAlert width={32} height={32} />
               <p>{errorDetalle}</p>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => cargarDetalle(seleccionadoId)}>
-                <IconRetry /> Reintentar
+                <IconRetry /> {t('common.reintentar')}
               </button>
             </div>
           ) : pedidoDetalle ? (

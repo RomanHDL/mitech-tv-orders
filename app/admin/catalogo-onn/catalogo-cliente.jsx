@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import { PULGADAS } from '@/lib/catalogos'
 import { IconAlert, IconCheck, IconTrash, IconSearch } from '../../components/icons'
 
@@ -9,6 +10,7 @@ const limpiarModelo = (raw) =>
   String(raw || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 20).toUpperCase()
 
 export default function CatalogoOnnCliente({ items }) {
+  const { t } = useTranslation()
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [modelo, setModelo] = useState('')
@@ -30,8 +32,8 @@ export default function CatalogoOnnCliente({ items }) {
     setError('')
     setExito('')
     const m = limpiarModelo(modelo)
-    if (m.length < 3) return setError('Captura el código del modelo (mín. 3 caracteres)')
-    if (!pulgadas) return setError('Elige la pulgada')
+    if (m.length < 3) return setError(t('catalogoOnn.errorCodigoCorto'))
+    if (!pulgadas) return setError(t('catalogoOnn.errorElegirPulgada'))
     setEnviando(true)
     try {
       const res = await fetch('/api/admin/catalogo-onn', {
@@ -41,9 +43,9 @@ export default function CatalogoOnnCliente({ items }) {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo guardar')
+        throw new Error(data.error || t('catalogoOnn.errorGuardar'))
       }
-      setExito(`${m} → ${pulgadas}" agregado`)
+      setExito(t('catalogoOnn.exitoAgregado', { modelo: m, pulgadas }))
       setModelo('')
       setPulgadas('')
       startTransition(() => router.refresh())
@@ -66,7 +68,7 @@ export default function CatalogoOnnCliente({ items }) {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo actualizar')
+        throw new Error(data.error || t('catalogoOnn.errorActualizar'))
       }
       startTransition(() => router.refresh())
     } catch (err) {
@@ -77,14 +79,14 @@ export default function CatalogoOnnCliente({ items }) {
   }
 
   const eliminar = async (it) => {
-    if (!confirm(`¿Eliminar ${it.modelo} del catálogo?`)) return
+    if (!confirm(t('catalogoOnn.confirmarEliminar', { modelo: it.modelo }))) return
     setGuardandoId(it.id)
     setError('')
     try {
       const res = await fetch(`/api/admin/catalogo-onn/${it.id}`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo eliminar')
+        throw new Error(data.error || t('catalogoOnn.errorEliminar'))
       }
       startTransition(() => router.refresh())
     } catch (err) {
@@ -97,37 +99,34 @@ export default function CatalogoOnnCliente({ items }) {
   return (
     <main className="page-wide">
       <div className="page-header">
-        <h1>Catálogo ONN</h1>
-        <p className="subtitle">
-          Asocia cada código ONN con su pulgada. Al importar un pedido, los ONN de
-          esta lista se llenan solos.
-        </p>
+        <h1>{t('catalogoOnn.titulo')}</h1>
+        <p className="subtitle">{t('catalogoOnn.subtitulo')}</p>
       </div>
 
       <div className="usuarios-grid">
         <div className="card">
-          <h2 style={{ marginTop: 0 }}>Agregar código</h2>
+          <h2 style={{ marginTop: 0 }}>{t('catalogoOnn.agregarCodigo')}</h2>
           <form onSubmit={agregar}>
             <div className="section">
-              <label className="label" htmlFor="c-modelo">Código ONN</label>
+              <label className="label" htmlFor="c-modelo">{t('catalogoOnn.codigoLabel')}</label>
               <input
                 id="c-modelo"
                 type="text"
                 value={modelo}
                 onChange={(e) => setModelo(limpiarModelo(e.target.value))}
-                placeholder="Ej. 100012585"
+                placeholder={t('catalogoOnn.codigoPlaceholder')}
                 required
               />
             </div>
             <div className="section">
-              <label className="label" htmlFor="c-pulgadas">Pulgadas</label>
+              <label className="label" htmlFor="c-pulgadas">{t('catalogoOnn.pulgadasLabel')}</label>
               <select
                 id="c-pulgadas"
                 value={pulgadas}
                 onChange={(e) => setPulgadas(e.target.value)}
                 required
               >
-                <option value="">Elige pulgada</option>
+                <option value="">{t('catalogoOnn.elegirPulgada')}</option>
                 {PULGADAS.map((p) => (
                   <option key={p} value={p}>{p}"</option>
                 ))}
@@ -143,7 +142,7 @@ export default function CatalogoOnnCliente({ items }) {
 
             <div className="form-acciones">
               <button type="submit" disabled={enviando} className="btn btn-primary btn-large">
-                {enviando ? 'Guardando…' : 'Agregar al catálogo'}
+                {enviando ? t('catalogoOnn.guardando') : t('catalogoOnn.agregarAlCatalogo')}
               </button>
             </div>
           </form>
@@ -151,7 +150,7 @@ export default function CatalogoOnnCliente({ items }) {
 
         <div className="card">
           <h2 style={{ marginTop: 0, marginBottom: '0.8rem' }}>
-            Códigos guardados ({items.length})
+            {t('catalogoOnn.codigosGuardados', { n: items.length })}
           </h2>
           <div className="section">
             <div className="search-box">
@@ -160,23 +159,23 @@ export default function CatalogoOnnCliente({ items }) {
                 type="text"
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar código…"
+                placeholder={t('catalogoOnn.buscarCodigoPlaceholder')}
               />
             </div>
           </div>
           {filtrados.length === 0 ? (
-            <div className="empty"><p>{items.length === 0 ? 'No hay códigos todavía.' : 'Sin resultados.'}</p></div>
+            <div className="empty"><p>{items.length === 0 ? t('catalogoOnn.sinCodigos') : t('catalogoOnn.sinResultados')}</p></div>
           ) : (
             <div className="tabla-wrap">
               <table className="tabla-pedidos">
                 <thead>
-                  <tr><th>Código ONN</th><th>Pulgadas</th><th></th></tr>
+                  <tr><th>{t('catalogoOnn.colCodigo')}</th><th>{t('catalogoOnn.colPulgadas')}</th><th></th></tr>
                 </thead>
                 <tbody>
                   {filtrados.map((it) => (
                     <tr key={it.id}>
-                      <td data-label="Código"><strong>{it.modelo}</strong></td>
-                      <td data-label="Pulgadas">
+                      <td data-label={t('catalogoOnn.colCodigo')}><strong>{it.modelo}</strong></td>
+                      <td data-label={t('catalogoOnn.colPulgadas')}>
                         <select
                           value={it.pulgadas}
                           disabled={guardandoId === it.id}
@@ -195,7 +194,7 @@ export default function CatalogoOnnCliente({ items }) {
                             className="btn btn-danger btn-sm"
                           >
                             <IconTrash />
-                            {guardandoId === it.id ? '…' : 'Eliminar'}
+                            {guardandoId === it.id ? t('catalogoOnn.eliminando') : t('common.eliminar')}
                           </button>
                         </div>
                       </td>

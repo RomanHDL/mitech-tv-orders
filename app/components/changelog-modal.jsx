@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CATEGORIA_LABEL, PRIORIDAD_LABEL } from '@/lib/changelog'
+import { useTranslation } from 'react-i18next'
+import { categoriaLabel, prioridadLabel } from '@/lib/changelog'
 import { IconCheck, IconClose } from './icons'
 
 // Modal global de "novedades": se monta una vez en el layout raíz y consulta
 // si hay una entrada de changelog que este usuario aún no haya descartado.
 // No bloquea nada de la app si falla — silencioso ante error de red.
 export default function ChangelogModal({ rol }) {
+  const { t } = useTranslation()
   const [entrada, setEntrada] = useState(null)
   const [cerrando, setCerrando] = useState(false)
 
@@ -39,17 +41,17 @@ export default function ChangelogModal({ rol }) {
 
   return (
     <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) cerrar() }}>
-      <div className="modal changelog-modal" role="dialog" aria-modal="true" aria-label="Novedades">
+      <div className="modal changelog-modal" role="dialog" aria-modal="true" aria-label={t('changelog.novedadesTitulo')}>
         <div className="modal-header">
-          <h2>Novedades · v{entrada.version}</h2>
-          <button type="button" className="modal-close" onClick={cerrar} aria-label="Cerrar">
+          <h2>{t('changelog.novedadesVersion', { version: entrada.version })}</h2>
+          <button type="button" className="modal-close" onClick={cerrar} aria-label={t('common.cerrar')}>
             <IconClose />
           </button>
         </div>
         <div className="modal-body">
           <div className="changelog-modal-meta">
-            <span className={`tag tag-cat-${entrada.categoria}`}>{CATEGORIA_LABEL[entrada.categoria]}</span>
-            <span className={`tag tag-pri-${entrada.prioridad}`}>{PRIORIDAD_LABEL[entrada.prioridad]}</span>
+            <span className={`tag tag-cat-${entrada.categoria}`}>{categoriaLabel(t, entrada.categoria)}</span>
+            <span className={`tag tag-pri-${entrada.prioridad}`}>{prioridadLabel(t, entrada.prioridad)}</span>
           </div>
           <h3 className="changelog-modal-titulo">{entrada.titulo}</h3>
           {entrada.items?.length > 0 && (
@@ -61,7 +63,7 @@ export default function ChangelogModal({ rol }) {
           )}
           <button type="button" className="btn btn-primary btn-large" onClick={cerrar} disabled={cerrando}>
             <IconCheck />
-            Entendido
+            {t('common.entendido')}
           </button>
         </div>
       </div>

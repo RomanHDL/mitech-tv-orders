@@ -33,7 +33,7 @@ export default function LoginCliente() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo iniciar sesión')
+        throw new Error(data.error || t('login.errorLogin'))
       }
       const { rol, allowedModules } = await res.json()
       // Al primer módulo REAL que tenga permitido — nunca a una ruta fija
@@ -52,11 +52,11 @@ export default function LoginCliente() {
 
   const validarYEnviarManual = async ({ email: e, pin: p }) => {
     if (!p || !/^\d{6,}$/.test(p)) {
-      setError('El PIN debe ser mínimo 6 dígitos numéricos')
+      setError(t('login.errorPinCorto'))
       return
     }
     if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
-      setError('Email inválido')
+      setError(t('login.errorEmailInvalido'))
       return
     }
     await enviarLogin({ email: e, pin: p })
@@ -96,18 +96,18 @@ export default function LoginCliente() {
             return
           }
 
-          setError('Tag NFC sin información válida')
+          setError(t('login.errorTagSinInfo'))
           setScanning(false)
         },
         { once: true }
       )
 
       reader.addEventListener('readingerror', () => {
-        setError('Error al leer el tag NFC')
+        setError(t('login.errorLecturaNfc'))
         setScanning(false)
       })
     } catch (err) {
-      setError(`No se pudo iniciar el escaneo: ${err.message}`)
+      setError(t('login.errorEscaneo', { mensaje: err.message }))
       setScanning(false)
     }
   }
@@ -170,7 +170,7 @@ export default function LoginCliente() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@correo.com"
+                placeholder={t('login.emailPlaceholder')}
                 autoComplete="email"
                 disabled={loading || scanning}
               />
@@ -183,7 +183,7 @@ export default function LoginCliente() {
                 type="password"
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                placeholder="Mínimo 6 dígitos"
+                placeholder={t('login.pinPlaceholder')}
                 autoComplete="current-password"
                 inputMode="numeric"
                 pattern="\d{6,}"

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconClose } from '../../components/icons'
 
 const SELECTOR_FOCUSABLE =
@@ -23,6 +24,7 @@ export default function UsuarioDrawer({
   bloqueado = false,
   children,
 }) {
+  const { t } = useTranslation()
   const panelRef = useRef(null)
   const previoEnfocado = useRef(null)
 
@@ -99,7 +101,7 @@ export default function UsuarioDrawer({
               className="modal-close"
               onClick={() => puedeCerrar && onSolicitarCierre()}
               disabled={!puedeCerrar}
-              aria-label="Cerrar"
+              aria-label={t('common.cerrar')}
             >
               <IconClose />
             </button>
@@ -114,11 +116,13 @@ export default function UsuarioDrawer({
               onClick={onSolicitarCierre}
               disabled={!puedeCerrar}
             >
-              Cancelar
+              {t('common.cancelar')}
             </button>
             <button type="submit" className="btn btn-primary drawer-btn-principal" disabled={enviando}>
               {enviando && <span className="spinner-sm" aria-hidden="true" />}
-              {enviando ? (editando ? 'Guardando…' : 'Creando…') : (editando ? 'Guardar cambios' : 'Crear usuario')}
+              {enviando
+                ? (editando ? t('common.guardando') : t('usuarios.creando'))
+                : (editando ? t('usuarios.guardarCambios') : t('usuarios.crearUsuario'))}
             </button>
           </div>
         </form>

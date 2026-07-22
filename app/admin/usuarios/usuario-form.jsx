@@ -1,12 +1,9 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import ModulePermissionGrid from './modulo-permission-grid'
 
-const ROLES = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'capturista', label: 'Capturista' },
-  { value: 'surtidor', label: 'Surtidor' },
-]
+const ROLES = ['admin', 'capturista', 'surtidor']
 
 // Campos del formulario, sin <form> ni barra de acciones (esas viven en
 // UsuarioDrawer) — el mismo componente sirve para crear y editar, controlado
@@ -21,39 +18,40 @@ export default function UsuarioForm({
   errorModulos,
   nombreInputRef,
 }) {
+  const { t } = useTranslation()
   const set = (campo, valor) => onChange({ ...form, [campo]: valor })
 
   return (
     <>
       <div className="form-seccion">
-        <h3 className="form-seccion-titulo">Datos generales</h3>
+        <h3 className="form-seccion-titulo">{t('usuarios.datosGenerales')}</h3>
 
         <div className="section">
-          <label className="label" htmlFor="u-nombre">Nombre</label>
+          <label className="label" htmlFor="u-nombre">{t('usuarios.nombreLabel')}</label>
           <input
             id="u-nombre"
             ref={nombreInputRef}
             type="text"
             value={form.nombre}
             onChange={(e) => set('nombre', e.target.value)}
-            placeholder="Ej. Juan Pérez"
+            placeholder={t('usuarios.nombrePlaceholder')}
             required
           />
         </div>
 
         <div className="section">
-          <div className="label">Rol</div>
+          <div className="label">{t('usuarios.rolLabel')}</div>
           <div className="condiciones">
             {ROLES.map((r) => (
-              <label key={r.value} className={`condicion-chip ${form.rol === r.value ? 'activa' : ''}`}>
+              <label key={r} className={`condicion-chip ${form.rol === r ? 'activa' : ''}`}>
                 <input
                   type="radio"
                   name="rol"
-                  value={r.value}
-                  checked={form.rol === r.value}
+                  value={r}
+                  checked={form.rol === r}
                   onChange={(e) => set('rol', e.target.value)}
                 />
-                {r.label}
+                {t(`usuarios.rol${r.charAt(0).toUpperCase()}${r.slice(1)}`)}
               </label>
             ))}
           </div>
@@ -61,27 +59,27 @@ export default function UsuarioForm({
       </div>
 
       <div className="form-seccion">
-        <h3 className="form-seccion-titulo">Método de acceso</h3>
+        <h3 className="form-seccion-titulo">{t('usuarios.metodoAcceso')}</h3>
 
         <div className="section">
           <label className="label" htmlFor="u-email">
-            Email
-            <span className="label-help">opcional, para login con email + PIN</span>
+            {t('usuarios.emailLabel')}
+            <span className="label-help">{t('usuarios.emailHelp')}</span>
           </label>
           <input
             id="u-email"
             type="email"
             value={form.email}
             onChange={(e) => set('email', e.target.value)}
-            placeholder="usuario@correo.com"
+            placeholder={t('usuarios.emailPlaceholder')}
           />
         </div>
 
         <div className="section">
           <label className="label" htmlFor="u-pin">
-            PIN
+            {t('usuarios.pinLabel')}
             <span className="label-help">
-              {editando ? 'deja vacío para no cambiar el PIN' : 'mínimo 6 dígitos'}
+              {editando ? t('usuarios.pinHelpEditando') : t('usuarios.pinHelpNuevo')}
             </span>
           </label>
           <input
@@ -89,7 +87,7 @@ export default function UsuarioForm({
             type="text"
             value={form.pin}
             onChange={(e) => set('pin', e.target.value)}
-            placeholder={editando ? 'Solo si quieres cambiarlo' : '123456'}
+            placeholder={editando ? t('usuarios.pinPlaceholderEditando') : '123456'}
             inputMode="numeric"
             pattern="\d{6,}"
             autoComplete="new-password"
@@ -98,8 +96,8 @@ export default function UsuarioForm({
 
         <div className="section">
           <label className="label" htmlFor="u-nfc">
-            NFC UID
-            <span className="label-help">opcional, para login con tag NFC</span>
+            {t('usuarios.nfcUidLabel')}
+            <span className="label-help">{t('usuarios.nfcUidHelp')}</span>
           </label>
           <div className="usuario-nfc-input">
             <input
@@ -111,14 +109,13 @@ export default function UsuarioForm({
             />
             {nfcSoportado && (
               <button type="button" onClick={onEscanear} disabled={escaneando} className="btn btn-secondary">
-                {escaneando ? 'Acerca tag…' : 'Escanear tag'}
+                {escaneando ? t('usuarios.acercaTag') : t('usuarios.escanearTag')}
               </button>
             )}
           </div>
           {!nfcSoportado && (
             <p className="login-hint" style={{ marginTop: '0.5rem', textAlign: 'left' }}>
-              Para escanear el UID directamente, abre esta página en un Android con Chrome.
-              Mientras tanto puedes copiar el UID a mano.
+              {t('usuarios.nfcHintManual')}
             </p>
           )}
         </div>

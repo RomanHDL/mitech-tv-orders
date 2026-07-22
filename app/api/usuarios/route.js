@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { emailValido, normalizarEmail, normalizarUid, pinValido, requireModule } from '@/lib/auth'
 import { DEFAULT_MODULOS_POR_ROL, sanearModulos } from '@/lib/modulos'
+import { getServerT } from '@/lib/i18n-server'
 
 const ROLES = ['admin', 'capturista', 'surtidor']
 
@@ -41,6 +42,7 @@ export async function GET() {
 }
 
 export async function POST(req) {
+  const t = await getServerT()
   const chk = await requireModule('users')
   if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
 
@@ -48,7 +50,7 @@ export async function POST(req) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+    return NextResponse.json({ error: t('apiComun.jsonInvalido') }, { status: 400 })
   }
 
   const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : ''
@@ -58,26 +60,26 @@ export async function POST(req) {
   const nfcUid = typeof body.nfcUid === 'string' ? normalizarUid(body.nfcUid) : ''
 
   if (!nombre) {
-    return NextResponse.json({ error: 'Falta el nombre' }, { status: 400 })
+    return NextResponse.json({ error: t('usuarios.errorFaltaNombre') }, { status: 400 })
   }
   if (!ROLES.includes(rol)) {
-    return NextResponse.json({ error: 'Rol inválido' }, { status: 400 })
+    return NextResponse.json({ error: t('usuarios.rolInvalido') }, { status: 400 })
   }
   if (!email && !nfcUid) {
     return NextResponse.json(
-      { error: 'Necesita al menos email+PIN o tag NFC' },
+      { error: t('usuarios.errorFaltaEmailOnfc') },
       { status: 400 }
     )
   }
   if (email && !emailValido(email)) {
-    return NextResponse.json({ error: 'Email inválido' }, { status: 400 })
+    return NextResponse.json({ error: t('usuarios.errorEmailInvalido') }, { status: 400 })
   }
   if (email && !pin) {
-    return NextResponse.json({ error: 'Si pones email también necesita PIN' }, { status: 400 })
+    return NextResponse.json({ error: t('usuarios.errorFaltaPin') }, { status: 400 })
   }
   if (pin && !pinValido(pin)) {
     return NextResponse.json(
-      { error: 'PIN debe ser mínimo 6 dígitos numéricos' },
+      { error: t('usuarios.errorPinCorto') },
       { status: 400 }
     )
   }
@@ -90,18 +92,18 @@ export async function POST(req) {
     ? modulosEnviados
     : (Array.isArray(body.allowedModules) ? [] : DEFAULT_MODULOS_POR_ROL[rol] || [])
   if (allowedModules.length === 0) {
-    return NextResponse.json({ error: 'Debes seleccionar al menos un módulo' }, { status: 400 })
+    return NextResponse.json({ error: t('usuarios.debeSeleccionarModulo') }, { status: 400 })
   }
 
   const db = await getDb()
 
   if (email) {
     const dup = await db.collection('usuarios').findOne({ email })
-    if (dup) return NextResponse.json({ error: 'Ya existe un usuario con ese email' }, { status: 400 })
+    if (dup) return NextResponse.json({ error: t('usuarios.emailYaExiste') }, { status: 400 })
   }
   if (nfcUid) {
     const dup = await db.collection('usuarios').findOne({ nfcUid })
-    if (dup) return NextResponse.json({ error: 'Ya existe un usuario con ese tag NFC' }, { status: 400 })
+    if (dup) return NextResponse.json({ error: t('usuarios.nfcYaExiste') }, { status: 400 })
   }
 
   const doc = { nombre, rol, allowedModules, creado: new Date() }

@@ -1,7 +1,8 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import { ETAPAS } from '@/lib/estado-pedido'
-import { ESTADO_ORDEN } from '@/lib/catalogos'
+import { ESTADO_ORDEN, estadoLabel } from '@/lib/catalogos'
 import {
   IconActivity,
   IconBan,
@@ -26,11 +27,13 @@ const ICONOS = {
 // CANCELADO se muestra un badge rojo aparte en vez de la línea completa
 // (cancelar no es "una etapa más" del flujo normal).
 export default function StepperEtapas({ estado }) {
+  const { t } = useTranslation()
+
   if (estado === 'CANCELADO') {
     return (
       <div className="stepper-etapas stepper-etapas-cancelado">
         <span className="stepper-cancelado-badge">
-          <IconBan /> Cancelado
+          <IconBan /> {estadoLabel(t, 'CANCELADO')}
         </span>
       </div>
     )
@@ -50,7 +53,7 @@ export default function StepperEtapas({ estado }) {
               <span className="stepper-etapa-icono">
                 <Icono />
               </span>
-              <span className="stepper-etapa-label">{etapa.label}</span>
+              <span className="stepper-etapa-label">{estadoLabel(t, etapa.clave)}</span>
             </div>
             {i < ETAPAS.length - 1 && (
               <div className={`stepper-conector ${rank < rankActual ? 'completado' : ''}`} />

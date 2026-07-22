@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
 import {
   IconActivity,
   IconAlert,
@@ -47,13 +48,15 @@ export default function TablaEventos({
   pedidoSeleccionadoId,
   onSeleccionar,
 }) {
+  const { t, i18n } = useTranslation()
+
   if (error) {
     return (
       <div className="historial-tabla-vacio">
         <IconAlert width={32} height={32} />
         <p>{error}</p>
         <button type="button" className="btn btn-secondary btn-sm" onClick={onReintentar}>
-          <IconRetry /> Reintentar
+          <IconRetry /> {t('common.reintentar')}
         </button>
       </div>
     )
@@ -66,15 +69,15 @@ export default function TablaEventos({
           <thead>
             <tr>
               <th className="th-icono"></th>
-              <th>Fecha y hora</th>
-              <th>N.º Pedido</th>
-              <th>Pedido</th>
-              <th>Evento</th>
-              <th>Estado anterior</th>
-              <th>Estado nuevo</th>
-              <th>Usuario</th>
-              <th>Detalle</th>
-              <th>Acciones</th>
+              <th>{t('historial.colFechaHora')}</th>
+              <th>{t('historial.colNumeroPedido')}</th>
+              <th>{t('historial.colPedido')}</th>
+              <th>{t('historial.colEvento')}</th>
+              <th>{t('historial.colEstadoAnterior')}</th>
+              <th>{t('historial.colEstadoNuevo')}</th>
+              <th>{t('historial.colUsuario')}</th>
+              <th>{t('historial.colDetalle')}</th>
+              <th>{t('historial.colAcciones')}</th>
             </tr>
           </thead>
           <tbody>
@@ -95,7 +98,7 @@ export default function TablaEventos({
     return (
       <div className="historial-tabla-vacio">
         <IconClipboardList width={32} height={32} />
-        <p>No se encontraron eventos con los filtros seleccionados.</p>
+        <p>{t('historial.sinEventosFiltro')}</p>
       </div>
     )
   }
@@ -106,15 +109,15 @@ export default function TablaEventos({
         <thead>
           <tr>
             <th className="th-icono"></th>
-            <th>Fecha y hora</th>
-            <th>N.º Pedido</th>
-            <th>Pedido</th>
-            <th>Evento</th>
-            <th>Estado anterior</th>
-            <th>Estado nuevo</th>
-            <th>Usuario</th>
-            <th>Detalle</th>
-            <th>Acciones</th>
+            <th>{t('historial.colFechaHora')}</th>
+            <th>{t('historial.colNumeroPedido')}</th>
+            <th>{t('historial.colPedido')}</th>
+            <th>{t('historial.colEvento')}</th>
+            <th>{t('historial.colEstadoAnterior')}</th>
+            <th>{t('historial.colEstadoNuevo')}</th>
+            <th>{t('historial.colUsuario')}</th>
+            <th>{t('historial.colDetalle')}</th>
+            <th>{t('historial.colAcciones')}</th>
           </tr>
         </thead>
         <tbody>
@@ -127,8 +130,8 @@ export default function TablaEventos({
                 onClick={() => onSeleccionar(e.pedidoId)}
               >
                 <td className="td-icono"><CirculoEvento evento={e} /></td>
-                <td data-label="Fecha y hora"><span className="pedido-fecha">{formatearFechaHora(e.creadoEn)}</span></td>
-                <td data-label="N.º Pedido">
+                <td data-label={t('historial.colFechaHora')}><span className="pedido-fecha">{formatearFechaHora(e.creadoEn, i18n.language)}</span></td>
+                <td data-label={t('historial.colNumeroPedido')}>
                   <button
                     type="button"
                     className="link-numero-pedido"
@@ -137,33 +140,33 @@ export default function TablaEventos({
                     {e.numeroPedido || '—'}
                   </button>
                 </td>
-                <td data-label="Pedido">{e.pedidoNombre || '—'}</td>
-                <td data-label="Evento">{e.detalle || '—'}</td>
-                <td data-label="Estado anterior">
+                <td data-label={t('historial.colPedido')}>{e.pedidoNombre || '—'}</td>
+                <td data-label={t('historial.colEvento')}>{e.detalle || '—'}</td>
+                <td data-label={t('historial.colEstadoAnterior')}>
                   {e.estadoAnterior
-                    ? <span className={`badge-estado-op estado-${e.estadoAnterior.toLowerCase().replace('_', '-')}`}>{etiquetaEstado(e.estadoAnterior)}</span>
+                    ? <span className={`badge-estado-op estado-${e.estadoAnterior.toLowerCase().replace('_', '-')}`}>{etiquetaEstado(t, e.estadoAnterior)}</span>
                     : <span className="tag-empty">—</span>}
                 </td>
-                <td data-label="Estado nuevo">
+                <td data-label={t('historial.colEstadoNuevo')}>
                   {e.estadoNuevo
-                    ? <span className={`badge-estado-op estado-${e.estadoNuevo.toLowerCase().replace('_', '-')}`}>{etiquetaEstado(e.estadoNuevo)}</span>
+                    ? <span className={`badge-estado-op estado-${e.estadoNuevo.toLowerCase().replace('_', '-')}`}>{etiquetaEstado(t, e.estadoNuevo)}</span>
                     : <span className="tag-empty">—</span>}
                 </td>
-                <td data-label="Usuario">
+                <td data-label={t('historial.colUsuario')}>
                   <span className="evento-usuario"><IconUser /> {e.usuarioNombre || '—'}</span>
                 </td>
-                <td data-label="Detalle">
+                <td data-label={t('historial.colDetalle')}>
                   <div className="evento-detalle-celda">
                     <span>{e.detalle}</span>
                     {e.detalleSecundario && <span className="evento-detalle-sec">{e.detalleSecundario}</span>}
                   </div>
                 </td>
-                <td data-label="Acciones">
+                <td data-label={t('historial.colAcciones')}>
                   <button
                     type="button"
                     className="btn-icono"
-                    title="Ver detalle"
-                    aria-label="Ver detalle"
+                    title={t('historial.verDetalle')}
+                    aria-label={t('historial.verDetalle')}
                     onClick={(ev) => { ev.stopPropagation(); onSeleccionar(e.pedidoId) }}
                   >
                     <IconEye />

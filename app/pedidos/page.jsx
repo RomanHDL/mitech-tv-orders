@@ -2,12 +2,13 @@ import Link from 'next/link'
 import { getDb } from '@/lib/mongodb'
 import { getRol } from '@/lib/auth'
 import { calcularTotales, normalizeOrderStatus } from '@/lib/estado-pedido'
+import { getServerT } from '@/lib/i18n-server'
 import ListaCliente from './lista-cliente'
 import { IconDocument, IconPlus } from '../components/icons'
 
 export const dynamic = 'force-dynamic'
 
-async function obtenerUsuariosAsignables() {
+async function obtenerUsuariosAsignables(t) {
   const db = await getDb()
   const usuarios = await db.collection('usuarios')
     .find({ rol: { $in: ['admin', 'capturista'] } })
@@ -15,7 +16,7 @@ async function obtenerUsuariosAsignables() {
     .toArray()
   return usuarios.map((u) => ({
     id: u._id.toString(),
-    nombre: u.nombre || u.email || '(sin nombre)',
+    nombre: u.nombre || u.email || t('usuarios.sinNombre'),
     rol: u.rol,
   }))
 }
@@ -77,20 +78,21 @@ async function obtenerPedidos() {
 }
 
 export default async function ListaPage() {
+  const t = await getServerT()
   const [pedidos, rol, usuarios] = await Promise.all([
     obtenerPedidos(),
     getRol(),
-    obtenerUsuariosAsignables(),
+    obtenerUsuariosAsignables(t),
   ])
 
   return (
     <main className="page-wide">
       <div className="page-header">
-        <h1>Pedidos</h1>
+        <h1>{t('pedidos.titulo')}</h1>
         <p className="subtitle">
           {pedidos.length === 0
-            ? 'Aún no hay pedidos guardados.'
-            : `${pedidos.length} ${pedidos.length === 1 ? 'pedido' : 'pedidos'} en total`}
+            ? t('pedidos.sinPedidosGuardados')
+            : t('pedidos.totalConteo', { count: pedidos.length })}
         </p>
       </div>
 
@@ -98,11 +100,11 @@ export default async function ListaPage() {
         <div className="card">
           <div className="empty">
             <IconDocument />
-            <h3>No hay pedidos aún</h3>
-            <p>Crea tu primer pedido para comenzar.</p>
+            <h3>{t('pedidos.emptyTitulo')}</h3>
+            <p>{t('pedidos.emptyTexto')}</p>
             <Link href="/" className="btn btn-primary">
               <IconPlus />
-              Nuevo pedido
+              {t('nav.nuevoPedido')}
             </Link>
           </div>
         </div>

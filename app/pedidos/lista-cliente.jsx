@@ -22,8 +22,9 @@ import {
   IconTruck,
   IconTruckCheck,
 } from '../components/icons'
-import { ESTADO_LABEL } from '@/lib/catalogos'
+import { estadoLabel, ESTADOS_OPERATIVOS } from '@/lib/catalogos'
 import { cumplimientoTexto, estaVencido } from '@/lib/estado-pedido'
+import { localeDe, formatearNumero } from '@/lib/intl-format'
 import PedidoDetalleModal from './pedido-detalle-modal'
 
 const ESTADO_ICONO = {
@@ -52,22 +53,22 @@ function sanitizarNombrePestana(nombre, usados) {
   return final
 }
 
-function formatearFechaLimite(iso) {
+function formatearFechaLimite(iso, lang) {
   if (!iso) return '—'
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
   const fecha = new Date(y, m - 1, d)
-  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
+  return new Intl.DateTimeFormat(localeDe(lang), { day: '2-digit', month: 'short', year: 'numeric' }).format(fecha)
 }
 
 // Fecha de despacho, si el historial de estados registra esa transición
 // (nunca se inventa: si no hay entrada DESPACHADO, se deja vacío).
-function fechaDespacho(p) {
+function fechaDespacho(p, lang) {
   const historial = p.historialEstados || []
   const entrada = [...historial].reverse().find((h) => h.estadoNuevo === 'DESPACHADO')
   if (!entrada?.fecha) return ''
   try {
-    return new Intl.DateTimeFormat('es-MX', {
+    return new Intl.DateTimeFormat(localeDe(lang), {
       day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
       timeZone: 'America/Mexico_City',
     }).format(new Date(entrada.fecha))
@@ -76,32 +77,32 @@ function fechaDespacho(p) {
   }
 }
 
-function descargarPedidosXLSX(pedidos) {
+function descargarPedidosXLSX(pedidos, t, lang) {
   const wb = XLSX.utils.book_new()
 
   // --- Tab "Historial": resumen ordenado por fecha (más recientes primero) ---
   const historialEncabezados = [
-    'Número de pedido',
-    'Pedido',
-    'Fecha creación',
-    'Fecha límite',
-    'Cumplimiento',
-    'Dueño',
-    'Condiciones',
-    'Modelos',
-    'Solicitado',
-    'Surtido',
-    'Pendiente',
-    '% Surtido',
-    'Estado operativo',
-    'Vencido',
-    'Fecha despacho',
+    t('pedidos.colNumeroPedido'),
+    t('historial.colPedido'),
+    t('pedidos.colFechaCreacion'),
+    t('pedidoForm.fechaLimite'),
+    t('pedidos.colCumplimiento'),
+    t('historial.dueno'),
+    t('pedidoForm.condiciones'),
+    t('pedidoForm.modelos'),
+    t('common.solicitado'),
+    t('common.surtido'),
+    t('common.pendiente'),
+    t('pedidos.colPorcentajeSurtido'),
+    t('pedidos.colEstadoOperativo'),
+    t('pedidos.colVencido'),
+    t('pedidos.colFechaDespacho'),
   ]
   const historialFilas = pedidos.map((p) => {
     const tvs = p.televisiones || []
     // Nunca exportamos "Vencido" para un pedido ya terminado/cargando/listo/
     // despachado — cumplimientoTexto ya aplica esa prioridad.
-    const cumplimiento = cumplimientoTexto(p).texto
+    const cumplimiento = cumplimientoTexto(t, p).texto
     return [
       p.numeroPedido || '',
       p.pedidoNombre,
@@ -115,9 +116,9 @@ function descargarPedidosXLSX(pedidos) {
       p.totalSurtido,
       p.pendiente,
       `${p.progresoPct}%`,
-      ESTADO_LABEL[p.estado] || p.estado,
-      estaVencido(p) ? 'Sí' : 'No',
-      fechaDespacho(p),
+      estadoLabel(t, p.estado),
+      estaVencido(p) ? t('common.si') : t('common.no'),
+      fechaDespacho(p, lang),
     ]
   })
   const wsHistorial = XLSX.utils.aoa_to_sheet([historialEncabezados, ...historialFilas])
@@ -133,31 +134,31 @@ function descargarPedidosXLSX(pedidos) {
   for (const p of pedidos) {
     const tvs = p.televisiones || []
     const encabezadoInfo = [
-      ['Número de pedido', p.numeroPedido || ''],
-      ['Pedido', p.pedidoNombre],
-      ['Fecha creación', p.fechaFmt],
-      ['Fecha límite', p.fechaLimite || ''],
-      ['Cumplimiento', cumplimientoTexto(p).texto],
-      ['Estado operativo', ESTADO_LABEL[p.estado] || p.estado],
-      ['Dueño', p.creadoPorNombre || ''],
-      ['Condiciones', (p.condiciones || []).join(' / ')],
+      [t('pedidos.colNumeroPedido'), p.numeroPedido || ''],
+      [t('historial.colPedido'), p.pedidoNombre],
+      [t('pedidos.colFechaCreacion'), p.fechaFmt],
+      [t('pedidoForm.fechaLimite'), p.fechaLimite || ''],
+      [t('pedidos.colCumplimiento'), cumplimientoTexto(t, p).texto],
+      [t('pedidos.colEstadoOperativo'), estadoLabel(t, p.estado)],
+      [t('historial.dueno'), p.creadoPorNombre || ''],
+      [t('pedidoForm.condiciones'), (p.condiciones || []).join(' / ')],
       [],
     ]
     const detalleEncabezados = [
-      'Marca', 'Pulgadas', 'Modelo', 'Unidad',
-      'Cantidad requerida', 'Cantidad surtida', 'Estado',
+      t('common.marca'), t('common.pulgadas'), t('pedidoDetalle.colSku'), t('historial.colUnidad'),
+      t('pedidos.colCantidadRequerida'), t('pedidos.colCantidadSurtida'), t('pedidoDetalle.colEstado'),
     ]
     const detalleFilas = tvs.map((tv) => {
       const surt = tv.sinLimite
         ? (tv.cantidadSurtida || 0)
         : Math.min(tv.cantidad || 0, tv.cantidadSurtida || 0)
-      const cantidadLabel = tv.sinLimite ? 'Sin límite' : tv.cantidad
-      const estado = tv.sinLimite
-        ? (surt > 0 ? 'Parcial' : 'Pendiente')
+      const cantidadLabel = tv.sinLimite ? t('pedidoForm.sinLimite') : tv.cantidad
+      const estadoCodigo = tv.sinLimite
+        ? (surt > 0 ? 'parcial' : 'pendiente')
         : (surt >= tv.cantidad
-            ? 'Completo'
-            : surt > 0 ? 'Parcial' : 'Pendiente')
-      return [tv.marca, tv.pulgadas, tv.modelo, tv.unidad, cantidadLabel, surt, estado]
+            ? 'completo'
+            : surt > 0 ? 'parcial' : 'pendiente')
+      return [tv.marca, tv.pulgadas, tv.modelo, tv.unidad, cantidadLabel, surt, t(`common.${estadoCodigo}`)]
     })
 
     const ws = XLSX.utils.aoa_to_sheet([
@@ -211,7 +212,7 @@ const POR_PAGINA = 10
 
 export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
   const router = useRouter()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [eliminandoId, setEliminandoId] = useState(null)
   const [asignandoId, setAsignandoId] = useState(null)
   const [error, setError] = useState('')
@@ -315,7 +316,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo asignar dueño')
+        throw new Error(data.error || t('pedidos.errorAsignarDueno'))
       }
       startTransition(() => router.refresh())
     } catch (err) {
@@ -326,7 +327,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
   }
 
   const eliminar = async (id, nombre) => {
-    if (!confirm(`¿Eliminar el pedido "${nombre}"? Esta acción no se puede deshacer.`)) return
+    if (!confirm(t('pedidos.confirmarEliminarPedido', { nombre }))) return
 
     setError('')
     setEliminandoId(id)
@@ -334,7 +335,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
       const res = await fetch(`/api/pedidos/${id}`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo eliminar')
+        throw new Error(data.error || t('pedidos.errorEliminar'))
       }
       startTransition(() => router.refresh())
     } catch (err) {
@@ -388,14 +389,8 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
             onChange={(e) => { setEstadoFiltro(e.target.value); setPagina(1) }}
           >
             <option value="todos">{t('pedidos.todos')}</option>
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="EN_PROCESO">En proceso</option>
-            <option value="TERMINADO">Surtido terminado</option>
-            <option value="CARGANDO">Cargando</option>
-            <option value="LISTO_SALIDA">Listo para salida</option>
-            <option value="DESPACHADO">Despachado</option>
-            <option value="CANCELADO">Cancelado</option>
-            <option value="VENCIDOS">Vencidos</option>
+            {ESTADOS_OPERATIVOS.map((v) => <option key={v} value={v}>{estadoLabel(t, v)}</option>)}
+            <option value="VENCIDOS">{t('pedidos.vencidos')}</option>
           </select>
         </div>
 
@@ -442,13 +437,13 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
           </button>
           <button
             type="button"
-            onClick={() => descargarPedidosXLSX(pedidosFiltrados)}
+            onClick={() => descargarPedidosXLSX(pedidosFiltrados, t, i18n.language)}
             disabled={pedidosFiltrados.length === 0}
             className="btn btn-excel"
-            title="Descargar pedidos en Excel"
+            title={t('pedidos.descargarExcelTitle')}
           >
             <IconExcel />
-            Excel
+            {t('historial.excel')}
           </button>
           <Link href="/" className="btn btn-primary">
             <IconPlus />
@@ -466,18 +461,18 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
 
       <div className="lista-resumen-filtros">
         <span className={`filtros-aplicados ${appliedFiltersCount > 0 ? 'activo' : ''}`}>
-          Filtros aplicados ({appliedFiltersCount})
+          {t('pedidos.filtrosAplicados', { n: appliedFiltersCount })}
         </span>
         <span className="registros-info">
-          {pedidosFiltrados.length} {pedidosFiltrados.length === 1 ? 'registro' : 'registros'}
+          {t('pedidos.registros', { count: pedidosFiltrados.length })}
         </span>
       </div>
 
       {pedidosFiltrados.length === 0 ? (
         <div className="empty">
-          <p>No se encontraron pedidos con los filtros actuales.</p>
+          <p>{t('pedidos.sinPedidosFiltro')}</p>
           <button type="button" onClick={limpiarFiltros} className="btn btn-secondary btn-sm">
-            Limpiar filtros
+            {t('pedidos.limpiarFiltros')}
           </button>
         </div>
       ) : (
@@ -487,25 +482,25 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
           <thead>
             <tr>
               <th className="th-icono"></th>
-              <th>N° Pedido</th>
-              <th>Pedido</th>
-              <th>Fecha creación</th>
-              <th>Fecha límite</th>
-              <th>Cumplimiento</th>
-              {esAdmin && <th>Dueño</th>}
-              <th>Condiciones</th>
-              <th>Estado</th>
-              <th>Solicitado</th>
-              <th>Surtido</th>
-              <th>Pendiente</th>
-              <th>% Surtido</th>
-              <th>Etapa logística</th>
-              <th>Acciones</th>
+              <th>{t('pedidos.colNumeroPedido')}</th>
+              <th>{t('historial.colPedido')}</th>
+              <th>{t('pedidos.colFechaCreacion')}</th>
+              <th>{t('pedidoForm.fechaLimite')}</th>
+              <th>{t('pedidos.colCumplimiento')}</th>
+              {esAdmin && <th>{t('historial.dueno')}</th>}
+              <th>{t('pedidoForm.condiciones')}</th>
+              <th>{t('historial.estado')}</th>
+              <th>{t('common.solicitado')}</th>
+              <th>{t('common.surtido')}</th>
+              <th>{t('common.pendiente')}</th>
+              <th>{t('pedidos.colPorcentajeSurtido')}</th>
+              <th>{t('pedidos.colEtapaLogistica')}</th>
+              <th>{t('historial.colAcciones')}</th>
             </tr>
           </thead>
           <tbody>
             {pedidosPagina.map((p) => {
-              const cumplimiento = cumplimientoTexto(p)
+              const cumplimiento = cumplimientoTexto(t, p)
               const indiceGlobal = pedidosFiltrados.indexOf(p)
               const IconoEtapa = ESTADO_ICONO[p.estado] || IconClock
               const completo = p.estado === 'DESPACHADO' || (p.estado === 'TERMINADO' && p.progresoPct >= 100)
@@ -515,13 +510,13 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                     <Link
                       href={`/pedidos/${p.id}/imprimir`}
                       className="btn-icono"
-                      title="Imprimir"
-                      aria-label="Imprimir"
+                      title={t('common.imprimir')}
+                      aria-label={t('common.imprimir')}
                     >
                       <IconPrinter />
                     </Link>
                   </td>
-                  <td data-label="N° Pedido">
+                  <td data-label={t('pedidos.colNumeroPedido')}>
                     <button
                       type="button"
                       className="numero-pedido numero-pedido-link"
@@ -530,36 +525,36 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                       {p.numeroPedido || '—'}
                     </button>
                   </td>
-                  <td data-label="Pedido">
+                  <td data-label={t('historial.colPedido')}>
                     <div className="pedido-nombre">
                       {p.pedidoNombre}
                       {p.tienePallets && (
-                        <span className="badge-pallet" title="Incluye pallets">
-                          <IconBox /> Pallets
+                        <span className="badge-pallet" title={t('pedidos.incluyePallets')}>
+                          <IconBox /> {t('pedidoForm.pallets')}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td data-label="Fecha creación">
+                  <td data-label={t('pedidos.colFechaCreacion')}>
                     <div className="pedido-fecha">{p.fechaFmt}</div>
                   </td>
-                  <td data-label="Fecha límite">
-                    <div className="pedido-fecha">{formatearFechaLimite(p.fechaLimite)}</div>
+                  <td data-label={t('pedidoForm.fechaLimite')}>
+                    <div className="pedido-fecha">{formatearFechaLimite(p.fechaLimite, i18n.language)}</div>
                   </td>
-                  <td data-label="Cumplimiento">
+                  <td data-label={t('pedidos.colCumplimiento')}>
                     <span className={`tiempo-restante tr-${cumplimiento.clase}`}>
                       {cumplimiento.texto}
                     </span>
                   </td>
                   {esAdmin && (
-                    <td data-label="Dueño">
+                    <td data-label={t('historial.dueno')}>
                       <select
                         className="select-dueno"
                         value={p.creadoPor || ''}
                         disabled={asignandoId === p.id}
                         onChange={(e) => cambiarDueno(p.id, e.target.value)}
                       >
-                        <option value="">— sin dueño —</option>
+                        <option value="">{t('pedidos.sinDueno')}</option>
                         {usuarios.map((u) => (
                           <option key={u.id} value={u.id}>
                             {u.nombre} ({u.rol})
@@ -568,44 +563,44 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                       </select>
                     </td>
                   )}
-                  <td data-label="Condiciones">
+                  <td data-label={t('pedidoForm.condiciones')}>
                     <div className="tags-celda">
                       {p.condiciones.length > 0
                         ? p.condiciones.map((c) => <span key={c} className={tagClass(c)}>{c}</span>)
                         : <span className="tag-empty">—</span>}
                     </div>
                   </td>
-                  <td data-label="Estado">
+                  <td data-label={t('historial.estado')}>
                     <span className={`badge-estado-op estado-${p.estado.toLowerCase().replace('_', '-')}`}>
-                      {ESTADO_LABEL[p.estado]}
+                      {estadoLabel(t, p.estado)}
                     </span>
                   </td>
-                  <td data-label="Solicitado">
+                  <td data-label={t('common.solicitado')}>
                     <span className="numero-grande">{p.totalTvs}</span>
                   </td>
-                  <td data-label="Surtido">
+                  <td data-label={t('common.surtido')}>
                     <span className="numero-grande">{p.totalSurtido}</span>
                   </td>
-                  <td data-label="Pendiente">
+                  <td data-label={t('common.pendiente')}>
                     {p.pendiente > 0
                       ? <span className="pill pill-pendiente">{p.pendiente}</span>
-                      : <span className="pill pill-completo">Completo</span>}
+                      : <span className="pill pill-completo">{t('common.completo')}</span>}
                   </td>
-                  <td data-label="% Surtido">
+                  <td data-label={t('pedidos.colPorcentajeSurtido')}>
                     <BarraProgreso pct={p.progresoPct} />
                   </td>
-                  <td data-label="Etapa logística">
+                  <td data-label={t('pedidos.colEtapaLogistica')}>
                     <span className={`etapa-chip estado-${p.estado.toLowerCase().replace('_', '-')}`}>
                       <IconoEtapa />
-                      {ESTADO_LABEL[p.estado]}
+                      {estadoLabel(t, p.estado)}
                     </span>
                   </td>
-                  <td data-label="Acciones">
+                  <td data-label={t('historial.colAcciones')}>
                     <div className="acciones">
                       {esAdmin && (
                         <>
                           <Link href={`/pedidos/${p.id}/editar`} className="btn btn-secondary btn-sm">
-                            Editar
+                            {t('common.editar')}
                           </Link>
                           <button
                             onClick={() => eliminar(p.id, p.pedidoNombre)}
@@ -613,7 +608,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                             className="btn btn-danger btn-sm"
                           >
                             <IconTrash />
-                            {eliminandoId === p.id ? '…' : 'Eliminar'}
+                            {eliminandoId === p.id ? '…' : t('common.eliminar')}
                           </button>
                         </>
                       )}
@@ -628,7 +623,11 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
 
         <div className="paginacion">
           <span className="paginacion-info">
-            {(paginaSegura - 1) * POR_PAGINA + 1}–{Math.min(paginaSegura * POR_PAGINA, pedidosFiltrados.length)} de {pedidosFiltrados.length}
+            {t('pedidos.rangoPaginacion', {
+              desde: (paginaSegura - 1) * POR_PAGINA + 1,
+              hasta: Math.min(paginaSegura * POR_PAGINA, pedidosFiltrados.length),
+              total: pedidosFiltrados.length,
+            })}
           </span>
           <div className="paginacion-botones">
             <button

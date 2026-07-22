@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { unidadLabel, ESTADO_LABEL } from '@/lib/catalogos'
+import { unidadLabel, estadoLabel } from '@/lib/catalogos'
 import { normalizeOrderStatus } from '@/lib/estado-pedido'
+import { localeDe } from '@/lib/intl-format'
 import ComentariosPedido from '../components/comentarios-pedido'
 import StepperEtapas from '../pedidos/stepper-etapas'
 import {
@@ -17,12 +18,12 @@ import {
 
 // Próxima etapa accionable — mismo helper que el modal de detalle de /pedidos
 // y que la vista standalone de /surtir/[id] (una sola fuente de verdad).
-function proximaEtapa(estado) {
+function proximaEtapa(t, estado) {
   if (estado === 'PENDIENTE' || estado === 'EN_PROCESO' || estado === 'TERMINADO') {
-    return { destino: 'CARGANDO', label: 'Iniciar carga' }
+    return { destino: 'CARGANDO', label: t('pedidoDetalle.iniciarCarga') }
   }
-  if (estado === 'CARGANDO') return { destino: 'LISTO_SALIDA', label: 'Marcar listo para salida' }
-  if (estado === 'LISTO_SALIDA') return { destino: 'DESPACHADO', label: 'Confirmar despacho' }
+  if (estado === 'CARGANDO') return { destino: 'LISTO_SALIDA', label: t('pedidoDetalle.marcarListoSalida') }
+  if (estado === 'LISTO_SALIDA') return { destino: 'DESPACHADO', label: t('pedidoDetalle.confirmarDespachoBtn') }
   return null
 }
 
@@ -52,12 +53,12 @@ function escribirRespaldo(pedidoId, mapa) {
   }
 }
 
-function formatearHora(fecha) {
-  return new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true }).format(fecha)
+function formatearHora(fecha, lang) {
+  return new Intl.DateTimeFormat(localeDe(lang), { hour: '2-digit', minute: '2-digit', hour12: true }).format(fecha)
 }
 
 export default function PanelSurtido({ pedido, rol, onCambiado, standalone = false }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [tvs, setTvs] = useState(pedido.televisiones)
   const [pendientesSync, setPendientesSync] = useState(() => new Set())
   const [erroresPorIdx, setErroresPorIdx] = useState(() => new Set())
@@ -147,7 +148,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
   const estado = normalizeOrderStatus({ progresoPct: progreso, estadoOperativo: pedido.estadoOperativo })
   const esAdmin = rol === 'admin'
   const esSurtidor = rol === 'surtidor'
-  const siguienteEtapa = proximaEtapa(estado)
+  const siguienteEtapa = proximaEtapa(t, estado)
   // "Iniciar carga" y "Cancelar pedido" son exclusivas de admin (regla de
   // negocio explícita); el resto de transiciones (listo para salida,
   // despacho) las sigue pudiendo mover el surtidor, igual que antes.
@@ -191,7 +192,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         if (seqPorIdx.current[idx] !== miSeq) return // superada por otra petición más nueva
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
-          throw new Error(data.error || 'No se pudo guardar')
+          throw new Error(data.error || t('surtir.errorGuardar'))
         }
         setPendientesSync((prev) => { const n = new Set(prev); n.delete(idx); return n })
         setErroresPorIdx((prev) => { const n = new Set(prev); n.delete(idx); return n })
@@ -204,7 +205,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         if (seqPorIdx.current[idx] !== miSeq) return
         setErroresPorIdx((prev) => new Set(prev).add(idx))
       })
-  }, [pedido.id])
+  }, [pedido.id, t])
 
   // Ref espejo de `tvs` para que `actualizar` (memoizado con deps estables)
   // siempre lea el valor más reciente sin tener que reconstruirse.
@@ -238,17 +239,17 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
     setErrorEstado('')
     let razon = null
     if (destino === 'DESPACHADO') {
-      if (!confirm('¿Confirmas que este pedido ya salió de las instalaciones?')) return
+      if (!confirm(t('pedidoDetalle.confirmarDespacho'))) return
       if (pendienteCantidad > 0) {
         if (rol !== 'admin') {
-          setErrorEstado('No se puede despachar con unidades pendientes.')
+          setErrorEstado(t('pedidoDetalle.noDespacharPendiente'))
           return
         }
-        razon = window.prompt('Este pedido tiene unidades pendientes. Escribe la razón para despachar de todos modos:')
+        razon = window.prompt(t('pedidoDetalle.razonDespachoPendiente'))
         if (!razon || !razon.trim()) return
       }
     }
-    if (destino === 'CANCELADO' && !confirm('¿Confirmas que quieres cancelar este pedido?')) return
+    if (destino === 'CANCELADO' && !confirm(t('pedidoDetalle.confirmarCancelar'))) return
 
     setCambiandoEstado(true)
     try {
@@ -259,7 +260,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'No se pudo cambiar el estado')
+        throw new Error(data.error || t('pedidoDetalle.errorCambiarEstado'))
       }
       onCambiado?.()
     } catch (err) {
@@ -283,15 +284,15 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
   const hayCambiosSinSincronizar = pendientesSync.size > 0 || erroresPorIdx.size > 0
   const puedeFinalizar = pendienteCantidad === 0 && !hayCambiosSinSincronizar
   let motivoBloqueoFinalizar = ''
-  if (pendienteCantidad > 0) motivoBloqueoFinalizar = `No puedes finalizar el surtido. Aún faltan ${pendienteCantidad} piezas.`
-  else if (hayCambiosSinSincronizar) motivoBloqueoFinalizar = 'Espera a que los cambios terminen de guardarse.'
+  if (pendienteCantidad > 0) motivoBloqueoFinalizar = t('surtir.noFinalizarFaltan', { n: pendienteCantidad })
+  else if (hayCambiosSinSincronizar) motivoBloqueoFinalizar = t('surtir.esperaGuardado')
 
   async function finalizarSurtido() {
     if (!puedeFinalizar) {
       alert(motivoBloqueoFinalizar)
       return
     }
-    if (!confirm('¿Confirmas que el surtido de este pedido está completo y quieres finalizarlo?')) return
+    if (!confirm(t('surtir.confirmarFinalizar'))) return
     setFinalizando(true)
     try {
       // El estado ya es "TERMINADO" automáticamente al llegar a 100% (se
@@ -319,15 +320,15 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
           )}
         </div>
         <div className="panel-surtido-meta">
-          <span>Solicitado por: <strong>{pedido.creadoPorNombre || '—'}</strong></span>
+          <span>{t('surtir.solicitadoPor')} <strong>{pedido.creadoPorNombre || '—'}</strong></span>
           {pedido.condiciones.length > 0 && (
             <span className="panel-surtido-meta-condicion">
-              Condición:
+              {t('surtir.condicionDosPuntos')}
               {pedido.condiciones.map((c) => <span key={c} className={`tag tag-${c.toLowerCase()}`}>{c}</span>)}
             </span>
           )}
-          <span className={`badge-estado-op estado-${estado.toLowerCase().replace('_', '-')}`}>{ESTADO_LABEL[estado]}</span>
-          {pedido.fechaLimite && <span className="chip-fecha-limite">Límite: {formatearFechaLimiteCorta(pedido.fechaLimite)}</span>}
+          <span className={`badge-estado-op estado-${estado.toLowerCase().replace('_', '-')}`}>{estadoLabel(t, estado)}</span>
+          {pedido.fechaLimite && <span className="chip-fecha-limite">{t('surtir.limiteFecha', { fecha: formatearFechaLimiteCorta(pedido.fechaLimite, i18n.language) })}</span>}
         </div>
       </div>
 
@@ -342,7 +343,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
             )}
             {puedeCancelar && (
               <button type="button" className="btn btn-danger btn-sm" onClick={() => avanzarEtapa('CANCELADO')} disabled={cambiandoEstado}>
-                Cancelar pedido
+                {t('pedidoDetalle.cancelarPedido')}
               </button>
             )}
           </div>
@@ -353,27 +354,27 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
       <div className="barra-autoguardado">
         <span className="barra-autoguardado-icono"><IconCheck /></span>
         <div className="barra-autoguardado-texto">
-          <strong>Guardado automático activado</strong>
-          <span>Los cambios se guardan automáticamente.</span>
+          <strong>{t('surtir.autoguardadoActivado')}</strong>
+          <span>{t('surtir.autoguardadoDesc')}</span>
         </div>
         <span className={`badge-autoguardado estado-${estadoGlobal}`}>
-          {estadoGlobal === 'guardando' && 'Guardando…'}
-          {estadoGlobal === 'guardado' && 'Guardado'}
-          {estadoGlobal === 'error' && 'Error al guardar'}
-          {estadoGlobal === 'sinconexion' && 'Sin conexión'}
+          {estadoGlobal === 'guardando' && t('common.guardando')}
+          {estadoGlobal === 'guardado' && t('surtir.guardado')}
+          {estadoGlobal === 'error' && t('surtir.errorAlGuardar')}
+          {estadoGlobal === 'sinconexion' && t('surtir.sinConexion')}
         </span>
         <span className="barra-autoguardado-hora">
-          {ultimoGuardado ? `Último guardado: ${formatearHora(ultimoGuardado)}` : 'Sin cambios guardados aún'}
+          {ultimoGuardado ? t('surtir.ultimoGuardado', { hora: formatearHora(ultimoGuardado, i18n.language) }) : t('surtir.sinGuardados')}
         </span>
         <button type="button" className="btn btn-secondary btn-sm" onClick={guardarProgresoManual}>
-          Guardar progreso
+          {t('surtir.guardarProgreso')}
         </button>
       </div>
 
       <div className="resumen-surtido">
         <div className="resumen-surtido-progreso">
           <div className="resumen-surtido-titulo-fila">
-            <span>{totalSurtido} de {totalRequerido} piezas surtidas</span>
+            <span>{t('surtir.piezasSurtidas', { surt: totalSurtido, req: totalRequerido })}</span>
             <span className="resumen-surtido-pct">{progreso}%</span>
           </div>
           <div className="progreso-track">
@@ -382,15 +383,15 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         </div>
         <div className="resumen-surtido-cifras">
           <div className="resumen-cifra resumen-solicitadas">
-            <span className="dato-label">Solicitadas</span>
+            <span className="dato-label">{t('surtir.solicitadas')}</span>
             <span className="dato-valor-grande">{totalRequerido}</span>
           </div>
           <div className="resumen-cifra resumen-surtidas">
-            <span className="dato-label">Surtidas</span>
+            <span className="dato-label">{t('surtir.surtidas')}</span>
             <span className="dato-valor-grande">{totalSurtido}</span>
           </div>
           <div className="resumen-cifra resumen-pendientes">
-            <span className="dato-label">Pendientes</span>
+            <span className="dato-label">{t('surtir.pendientes2')}</span>
             <span className="dato-valor-grande">{pendienteCantidad}</span>
           </div>
         </div>
@@ -402,24 +403,24 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         comentariosIniciales={pedido.comentarios || ''}
         actualizadoIso={pedido.comentariosActualizado}
         actualizadoPorNombre={pedido.comentariosActualizadoPorNombre}
-        titulo="Comentarios del pedido"
-        placeholder="Escribe notas, avances, incidencias o instrucciones sobre este pedido…"
+        titulo={t('surtir.comentariosPedidoTitulo')}
+        placeholder={t('surtir.comentariosPedidoPlaceholder')}
       />
 
       <div className="tabla-wrap">
         <table className="tabla-pedidos tabla-pedidos-densa tabla-surtido">
           <thead>
             <tr>
-              <th>SKU/LPN</th>
-              <th>Marca</th>
-              <th>Modelo</th>
-              <th>Pulgadas</th>
-              <th>Condición</th>
-              <th>Solicitado</th>
-              <th>Surtido</th>
-              <th>Pendiente</th>
-              <th>Progreso</th>
-              <th>Acción</th>
+              <th>{t('surtir.colSkuLpn')}</th>
+              <th>{t('common.marca')}</th>
+              <th>{t('surtir.colModelo')}</th>
+              <th>{t('common.pulgadas')}</th>
+              <th>{t('pedidoForm.condicion')}</th>
+              <th>{t('common.solicitado')}</th>
+              <th>{t('common.surtido')}</th>
+              <th>{t('common.pendiente')}</th>
+              <th>{t('surtir.colProgreso')}</th>
+              <th>{t('surtir.colAccion')}</th>
             </tr>
           </thead>
           <tbody>
@@ -434,22 +435,22 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
               const claseFila = completo ? 'fila-surtido-completo' : enProgreso ? 'fila-surtido-parcial' : 'fila-surtido-pendiente'
               const condTv = tv.condiciones?.join(' ') || ''
               const descTv = `${tv.marca} ${tv.pulgadas}"${condTv ? ' ' + condTv : ''}${tv.modelo ? ' ' + tv.modelo : ''}`
-              const unidadTxt = unidadLabel(tv.cantidad || 1, tv.unidad)
+              const unidadTxt = unidadLabel(t, tv.cantidad || 1, tv.unidad)
 
               return (
                 <tr key={idx} className={claseFila}>
-                  <td data-label="SKU/LPN"><span className="sku-celda">{tv.modelo || '—'}</span></td>
-                  <td data-label="Marca">{tv.marca}</td>
-                  <td data-label="Modelo">
+                  <td data-label={t('surtir.colSkuLpn')}><span className="sku-celda">{tv.modelo || '—'}</span></td>
+                  <td data-label={t('common.marca')}>{tv.marca}</td>
+                  <td data-label={t('surtir.colModelo')}>
                     {tv.modelo || '—'}
                     {tv.modelosAlternativos?.length > 0 && (
                       <div className="tv-alt-hint">
-                        También válido: {tv.modelosAlternativos.join(', ')}
+                        {t('common.tambienValido', { lista: tv.modelosAlternativos.join(', ') })}
                       </div>
                     )}
                   </td>
-                  <td data-label="Pulgadas">{tv.pulgadas}&quot;</td>
-                  <td data-label="Condición">
+                  <td data-label={t('common.pulgadas')}>{tv.pulgadas}&quot;</td>
+                  <td data-label={t('pedidoForm.condicion')}>
                     {tv.condiciones?.length ? (
                       <div className="tags-celda">
                         {tv.condiciones.map((c) => (
@@ -458,10 +459,10 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
                       </div>
                     ) : '—'}
                   </td>
-                  <td data-label="Solicitado">{esSinLimite ? 'Sin límite' : tv.cantidad}</td>
-                  <td data-label="Surtido">{surtida}</td>
-                  <td data-label="Pendiente">{pendienteTv === null ? '—' : pendienteTv}</td>
-                  <td data-label="Progreso">
+                  <td data-label={t('common.solicitado')}>{esSinLimite ? t('pedidoForm.sinLimite') : tv.cantidad}</td>
+                  <td data-label={t('common.surtido')}>{surtida}</td>
+                  <td data-label={t('common.pendiente')}>{pendienteTv === null ? '—' : pendienteTv}</td>
+                  <td data-label={t('surtir.colProgreso')}>
                     {pctTv === null ? '—' : (
                       <div className="barra-progreso-celda">
                         <div className="barra-progreso-track">
@@ -471,7 +472,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
                       </div>
                     )}
                   </td>
-                  <td data-label="Acción">
+                  <td data-label={t('surtir.colAccion')}>
                     <div className="controles-cantidad">
                       <button
                         type="button"
@@ -489,7 +490,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
                         max={esSinLimite ? undefined : tv.cantidad}
                         value={surtida}
                         onChange={(e) => actualizar(idx, e.target.value, { descripcion: descTv })}
-                        aria-label="Cantidad surtida"
+                        aria-label={t('surtir.cantidadSurtidaLabel')}
                         className="controles-cantidad-input"
                       />
                       <button
@@ -507,13 +508,13 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
                         className="btn-mini-action btn-listo"
                         onClick={() => {
                           if (esSinLimite) return
-                          if (confirm(`¿Marcar como surtidas las ${tv.cantidad - surtida} ${unidadTxt} restantes de ${descTv}?`)) {
+                          if (confirm(t('surtir.confirmarMarcarSurtidas', { cantidad: tv.cantidad - surtida, unidad: unidadTxt, desc: descTv }))) {
                             actualizar(idx, tv.cantidad, { inmediato: true })
                           }
                         }}
                         disabled={completo || esSinLimite}
-                        aria-label="Completar"
-                        title="Completar: marca este artículo como 100% surtido"
+                        aria-label={t('surtir.completar')}
+                        title={t('surtir.completarTitle')}
                       >
                         <IconCheck />
                       </button>
@@ -521,13 +522,13 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
                         type="button"
                         className="btn-mini-action btn-reset btn-reset-separado"
                         onClick={() => {
-                          if (confirm('¿Restablecer la cantidad surtida de este artículo a 0?')) {
+                          if (confirm(t('surtir.confirmarRestablecer'))) {
                             actualizar(idx, 0, { inmediato: true })
                           }
                         }}
                         disabled={surtida === 0}
                         aria-label={t('surtir.reiniciar')}
-                        title="Restablecer a 0"
+                        title={t('surtir.restablecerA0')}
                       >
                         <IconRefresh />
                       </button>
@@ -542,27 +543,27 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
 
       <div className="barra-sticky-surtido">
         <div className="barra-sticky-izquierda">
-          <span className="barra-sticky-titulo">Guardado automático activado</span>
-          <span className="barra-sticky-hora">{ultimoGuardado ? `Último guardado: ${formatearHora(ultimoGuardado)}` : '—'}</span>
+          <span className="barra-sticky-titulo">{t('surtir.autoguardadoActivado')}</span>
+          <span className="barra-sticky-hora">{ultimoGuardado ? t('surtir.ultimoGuardado', { hora: formatearHora(ultimoGuardado, i18n.language) }) : '—'}</span>
           <span className={`badge-autoguardado estado-${estadoGlobal}`}>
-            {estadoGlobal === 'guardando' && 'Guardando…'}
-            {estadoGlobal === 'guardado' && 'Guardado'}
-            {estadoGlobal === 'error' && 'Error al guardar'}
-            {estadoGlobal === 'sinconexion' && 'Sin conexión'}
+            {estadoGlobal === 'guardando' && t('common.guardando')}
+            {estadoGlobal === 'guardado' && t('surtir.guardado')}
+            {estadoGlobal === 'error' && t('surtir.errorAlGuardar')}
+            {estadoGlobal === 'sinconexion' && t('surtir.sinConexion')}
           </span>
         </div>
         <div className="barra-sticky-derecha">
           <button type="button" className="btn btn-secondary" onClick={guardarProgresoManual}>
-            Guardar progreso
+            {t('surtir.guardarProgreso')}
           </button>
           <button
             type="button"
             className="btn btn-primary"
             onClick={finalizarSurtido}
             disabled={!puedeFinalizar || finalizando}
-            title={puedeFinalizar ? 'Finalizar surtido' : motivoBloqueoFinalizar}
+            title={puedeFinalizar ? t('surtir.finalizarSurtido') : motivoBloqueoFinalizar}
           >
-            <IconCheck /> Finalizar surtido
+            <IconCheck /> {t('surtir.finalizarSurtido')}
           </button>
         </div>
       </div>
@@ -570,9 +571,9 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
   )
 }
 
-function formatearFechaLimiteCorta(iso) {
+function formatearFechaLimiteCorta(iso, lang) {
   if (!iso) return '—'
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
-  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(y, m - 1, d))
+  return new Intl.DateTimeFormat(localeDe(lang), { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(y, m - 1, d))
 }

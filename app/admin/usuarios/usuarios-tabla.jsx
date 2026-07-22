@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { IconClipboardList, IconPencil, IconPlus, IconTrash } from '../../components/icons'
 import { MODULOS, sanearModulos } from '@/lib/modulos'
 
-const ROL_LABEL = { admin: 'Admin', capturista: 'Capturista', surtidor: 'Surtidor' }
+function rolLabel(t, rol) {
+  return t(`usuarios.rol${rol.charAt(0).toUpperCase()}${rol.slice(1)}`)
+}
 
 function FilaModulos({ usuario }) {
   const { t } = useTranslation()
@@ -39,7 +41,7 @@ function FilaModulos({ usuario }) {
             type="button"
             className="tag tag-mas"
             title={restantes.map((m) => t(m.labelKey)).join(', ')}
-            aria-label={`${restantes.length} módulos más: ${restantes.map((m) => t(m.labelKey)).join(', ')}`}
+            aria-label={t('usuarios.modulosMasAria', { count: restantes.length, lista: restantes.map((m) => t(m.labelKey)).join(', ') })}
             onClick={(e) => { e.stopPropagation(); setAbierto((v) => !v) }}
             aria-expanded={abierto}
           >
@@ -110,10 +112,10 @@ export default function UsuariosTabla({
             <table className="tabla-pedidos">
               <thead>
                 <tr>
-                  <th>Nombre</th>
-                  <th>Rol</th>
-                  <th>Email</th>
-                  <th>Login</th>
+                  <th>{t('usuarios.colNombre')}</th>
+                  <th>{t('usuarios.colRol')}</th>
+                  <th>{t('usuarios.colEmail')}</th>
+                  <th>{t('usuarios.colLogin')}</th>
                   <th>{t('usuarios.modulosAccesos')}</th>
                   <th></th>
                 </tr>
@@ -121,18 +123,18 @@ export default function UsuariosTabla({
               <tbody>
                 {usuariosPagina.map((u) => (
                   <tr key={u.id}>
-                    <td data-label="Nombre">
+                    <td data-label={t('usuarios.colNombre')}>
                       <strong>{u.nombre || '—'}</strong>
                     </td>
-                    <td data-label="Rol">
-                      <span className={`nav-rol-badge rol-${u.rol}`}>{ROL_LABEL[u.rol] || u.rol}</span>
+                    <td data-label={t('usuarios.colRol')}>
+                      <span className={`nav-rol-badge rol-${u.rol}`}>{rolLabel(t, u.rol)}</span>
                     </td>
-                    <td data-label="Email">
+                    <td data-label={t('usuarios.colEmail')}>
                       {u.email
                         ? <span className="celda-email-texto" title={u.email}>{u.email}</span>
                         : <span className="tag-empty">—</span>}
                     </td>
-                    <td data-label="Login">
+                    <td data-label={t('usuarios.colLogin')}>
                       <div className="tags-celda">
                         {u.tienePin && <span className="tag tag-grb">PIN</span>}
                         {u.tieneNfc && <span className="tag tag-gra">NFC</span>}
@@ -193,7 +195,7 @@ export default function UsuariosTabla({
                 </button>
               </div>
               <span className="paginacion-info">
-                Mostrando {desde} a {hasta} de {totalFiltrado} usuarios
+                {t('usuarios.mostrandoUsuarios', { desde, hasta, total: totalFiltrado })}
               </span>
             </div>
           )}

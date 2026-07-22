@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
 import { getUsuario, requireModule } from '@/lib/auth'
-import { ESTADOS_TRANSICION, ESTADO_ORDEN, ESTADO_LABEL } from '@/lib/catalogos'
+import { ESTADOS_TRANSICION, ESTADO_ORDEN, estadoLabel } from '@/lib/catalogos'
 import { normalizeOrderStatus, calcularTotales } from '@/lib/estado-pedido'
 import { registrarEvento, TIPO_EVENTO_POR_DESTINO, DETALLE_POR_DESTINO } from '@/lib/eventos'
+import { getServerT } from '@/lib/i18n-server'
 
 // Avanza el estado logístico de un pedido (Cargando / Listo para salida /
 // Despachado / Cancelado). Solo admin y surtidor (ya filtrado por
@@ -13,14 +14,15 @@ import { registrarEvento, TIPO_EVENTO_POR_DESTINO, DETALLE_POR_DESTINO } from '@
 // derivándose solos del surtido; esta ruta solo mueve las etapas que
 // requieren una acción física real (carga, salida, despacho, cancelación).
 export async function PATCH(req, { params }) {
+  const t = await getServerT()
   const { id } = await params
   if (!ObjectId.isValid(id)) {
-    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    return NextResponse.json({ error: t('estadoApi.idInvalido') }, { status: 400 })
   }
 
   const usuario = await getUsuario()
   if (!usuario || (usuario.rol !== 'admin' && usuario.rol !== 'surtidor')) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    return NextResponse.json({ error: t('estadoApi.noAutorizado') }, { status: 403 })
   }
   // Un surtidor mueve la etapa logística desde el módulo de Surtir; admin
   // queda sin restricción adicional de módulo (siempre puede operar aquí).
@@ -33,43 +35,43 @@ export async function PATCH(req, { params }) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+    return NextResponse.json({ error: t('estadoApi.jsonInvalido') }, { status: 400 })
   }
 
   const { estado: destino, razon } = body || {}
   if (!ESTADOS_TRANSICION.includes(destino)) {
-    return NextResponse.json({ error: 'Estado destino inválido' }, { status: 400 })
+    return NextResponse.json({ error: t('estadoApi.estadoDestinoInvalido') }, { status: 400 })
   }
 
   // "Iniciar carga" y "Cancelar pedido" son exclusivas de admin. Se valida
   // aquí (nunca solo en el frontend) para que ni capturista ni surtidor
   // puedan lograrlo por URL, consola, Postman o cualquier llamada directa.
   if ((destino === 'CARGANDO' || destino === 'CANCELADO') && usuario.rol !== 'admin') {
-    return NextResponse.json({ error: 'No tienes permisos para realizar esta acción.' }, { status: 403 })
+    return NextResponse.json({ error: t('estadoApi.sinPermiso') }, { status: 403 })
   }
 
   const db = await getDb()
   const pedido = await db.collection('pedidos').findOne({ _id: new ObjectId(id) })
   if (!pedido) {
-    return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
+    return NextResponse.json({ error: t('estadoApi.pedidoNoEncontrado') }, { status: 404 })
   }
 
   const { pendiente } = calcularTotales(pedido)
   const actual = normalizeOrderStatus({ ...pedido, pendiente })
 
   if (actual === 'CANCELADO') {
-    return NextResponse.json({ error: 'El pedido ya está cancelado' }, { status: 400 })
+    return NextResponse.json({ error: t('estadoApi.yaCancelado') }, { status: 400 })
   }
 
   if (destino === 'CANCELADO') {
     if (actual === 'DESPACHADO') {
-      return NextResponse.json({ error: 'No se puede cancelar un pedido ya despachado' }, { status: 400 })
+      return NextResponse.json({ error: t('estadoApi.noCancelarDespachado') }, { status: 400 })
     }
   } else {
     // Solo se puede avanzar, nunca retroceder ni "re-marcar" la misma etapa.
     if (ESTADO_ORDEN[destino] <= ESTADO_ORDEN[actual]) {
       return NextResponse.json(
-        { error: `No se puede pasar de "${ESTADO_LABEL[actual]}" a "${ESTADO_LABEL[destino]}"` },
+        { error: t('estadoApi.transicionInvalida', { actual: estadoLabel(t, actual), destino: estadoLabel(t, destino) }) },
         { status: 400 }
       )
     }
@@ -77,7 +79,7 @@ export async function PATCH(req, { params }) {
       const razonValida = typeof razon === 'string' && razon.trim().length > 0
       if (usuario.rol !== 'admin' || !razonValida) {
         return NextResponse.json(
-          { error: 'No se puede despachar con unidades pendientes, salvo excepción de admin con razón' },
+          { error: t('estadoApi.noDespacharPendiente') },
           { status: 400 }
         )
       }
@@ -108,7 +110,7 @@ export async function PATCH(req, { params }) {
     estadoNuevo: destino,
     usuarioId: usuario.userId || null,
     usuarioNombre: usuario.nombre || null,
-    detalle: DETALLE_POR_DESTINO[destino] || ESTADO_LABEL[destino],
+    detalle: DETALLE_POR_DESTINO[destino] || estadoLabel(t, destino),
     detalleSecundario: entradaHistorial.observacion,
   })
 
