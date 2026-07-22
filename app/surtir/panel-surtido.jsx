@@ -440,7 +440,14 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
                 <tr key={idx} className={claseFila}>
                   <td data-label="SKU/LPN"><span className="sku-celda">{tv.modelo || '—'}</span></td>
                   <td data-label="Marca">{tv.marca}</td>
-                  <td data-label="Modelo">{tv.modelo || '—'}</td>
+                  <td data-label="Modelo">
+                    {tv.modelo || '—'}
+                    {tv.modelosAlternativos?.length > 0 && (
+                      <div className="tv-alt-hint">
+                        También válido: {tv.modelosAlternativos.join(', ')}
+                      </div>
+                    )}
+                  </td>
                   <td data-label="Pulgadas">{tv.pulgadas}&quot;</td>
                   <td data-label="Condición">
                     {tv.condiciones?.length ? (

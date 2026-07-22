@@ -215,6 +215,11 @@ export default async function ImprimirPage({ params }) {
                     </span>
                     <span className="col-modelo">
                       {tv.modelo ? tv.modelo : <span className="modelo-vacio">—</span>}
+                      {tv.modelosAlternativos?.length > 0 && (
+                        <span className="modelo-alt-hint" title={`También válido: ${tv.modelosAlternativos.join(', ')}`}>
+                          {' '}(+{tv.modelosAlternativos.length} SKU{tv.modelosAlternativos.length === 1 ? '' : 's'} alt.)
+                        </span>
+                      )}
                     </span>
                   </li>
                 ))}

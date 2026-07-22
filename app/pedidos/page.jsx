@@ -66,6 +66,7 @@ async function obtenerPedidos() {
         pulgadas: tv.pulgadas || 0,
         condiciones: Array.isArray(tv.condiciones) ? tv.condiciones : (tv.condicion ? [tv.condicion] : []),
         modelo: tv.modelo || '',
+        modelosAlternativos: Array.isArray(tv.modelosAlternativos) ? tv.modelosAlternativos : [],
         unidad: tv.unidad || 'pieza',
         cantidad: tv.cantidad || 0,
         sinLimite: !!tv.sinLimite,

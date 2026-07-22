@@ -365,6 +365,11 @@ export default function PedidoDetalleModal({
                                 <span className="sku-celda">
                                   {tv.marca} {tv.pulgadas}″ {tv.modelo}
                                 </span>
+                                {tv.modelosAlternativos?.length > 0 && (
+                                  <div className="tv-alt-hint">
+                                    También válido: {tv.modelosAlternativos.join(', ')}
+                                  </div>
+                                )}
                               </td>
                               <td data-label="Condición">
                                 <div className="tags-celda">

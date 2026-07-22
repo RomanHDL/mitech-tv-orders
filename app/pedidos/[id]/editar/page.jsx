@@ -28,6 +28,7 @@ export default async function EditarPage({ params }) {
       pulgadas: tv.pulgadas,
       condiciones: Array.isArray(tv.condiciones) ? tv.condiciones : (tv.condicion ? [tv.condicion] : []),
       modelo: tv.modelo || '',
+      modelosAlternativos: Array.isArray(tv.modelosAlternativos) ? tv.modelosAlternativos : [],
       cantidad: tv.cantidad,
       unidad: tv.unidad || 'pieza',
       sinLimite: !!tv.sinLimite,
