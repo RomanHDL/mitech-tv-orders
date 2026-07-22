@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
@@ -91,18 +92,50 @@ export default function PedidoForm({
   const previousLength = useRef(tvs.length)
   const masMenuRef = useRef(null)
   const [filaCondicionAbierta, setFilaCondicionAbierta] = useState(null)
-  const filaCondicionRef = useRef(null)
+  const condicionBtnRefs = useRef([])
+  const condicionPortalRef = useRef(null)
+  const [condicionPopoverRect, setCondicionPopoverRect] = useState(null)
+
+  // El popover de condición por fila se renderiza en un portal (document.body,
+  // position: fixed) en vez de dentro de la celda: la tabla scrollea
+  // horizontalmente (.tabla-wrap tiene overflow-x: auto) y un popover
+  // absoluto ahí adentro queda recortado/atrapado en ese scroll. Un portal
+  // lo saca de ese contenedor por completo.
+  useEffect(() => {
+    if (filaCondicionAbierta == null) {
+      setCondicionPopoverRect(null)
+      return
+    }
+    const actualizarPosicion = () => {
+      const btn = condicionBtnRefs.current[filaCondicionAbierta]
+      if (!btn) return
+      const r = btn.getBoundingClientRect()
+      setCondicionPopoverRect({ top: r.bottom + 6, left: r.left, minWidth: r.width })
+    }
+    actualizarPosicion()
+    window.addEventListener('resize', actualizarPosicion)
+    window.addEventListener('scroll', actualizarPosicion, true)
+    return () => {
+      window.removeEventListener('resize', actualizarPosicion)
+      window.removeEventListener('scroll', actualizarPosicion, true)
+    }
+  }, [filaCondicionAbierta])
 
   // Cierra el desplegable "Más condiciones" del toolbar y el popover de
   // condición por fila al hacer clic fuera o con Escape — mismo patrón que
-  // ya usa el menú de usuario del nav.
+  // ya usa el menú de usuario del nav. El popover por fila vive en un
+  // portal, así que se revisan tanto el botón que lo abrió como su propio
+  // contenido (ninguno de los dos está dentro del otro en el DOM).
   useEffect(() => {
     function onClickFuera(e) {
       if (masMenuRef.current && !masMenuRef.current.contains(e.target)) {
         setMasCondicionesAbierto(false)
       }
-      if (filaCondicionRef.current && !filaCondicionRef.current.contains(e.target)) {
-        setFilaCondicionAbierta(null)
+      if (filaCondicionAbierta != null) {
+        const btn = condicionBtnRefs.current[filaCondicionAbierta]
+        const dentroBoton = btn && btn.contains(e.target)
+        const dentroPopover = condicionPortalRef.current && condicionPortalRef.current.contains(e.target)
+        if (!dentroBoton && !dentroPopover) setFilaCondicionAbierta(null)
       }
     }
     function onKeyDown(e) {
@@ -117,7 +150,7 @@ export default function PedidoForm({
       document.removeEventListener('mousedown', onClickFuera)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [])
+  }, [filaCondicionAbierta])
 
   // Enter avanza al siguiente campo enfocable de toda la tabla (SKU → Marca
   // → Pulgada → Cantidad → SKU de la fila siguiente...), en vez de intentar
@@ -726,52 +759,31 @@ export default function PedidoForm({
                             </div>
                           </td>
                           <td className="tv-col-condicion" data-label="Condición">
-                            <div
-                              className="tv-fila-condicion"
-                              ref={filaCondicionAbierta === i ? filaCondicionRef : null}
+                            <button
+                              type="button"
+                              ref={(el) => { condicionBtnRefs.current[i] = el }}
+                              className="tv-fila-condicion-btn"
+                              onClick={() => setFilaCondicionAbierta((prev) => (prev === i ? null : i))}
+                              aria-expanded={filaCondicionAbierta === i}
+                              aria-haspopup="listbox"
+                              title="Editar condición(es) de esta televisión"
                             >
-                              <button
-                                type="button"
-                                className="tv-fila-condicion-btn"
-                                onClick={() => setFilaCondicionAbierta((prev) => (prev === i ? null : i))}
-                                aria-expanded={filaCondicionAbierta === i}
-                                aria-haspopup="listbox"
-                                title="Editar condición(es) de esta televisión"
-                              >
-                                <span className="tv-fila-condicion-chips">
-                                  {(tv.condiciones || []).map((c) => (
-                                    <span
-                                      key={c}
-                                      className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-fila-condicion-chip`}
-                                    >
-                                      <span className="tv-condicion-chip-dot" aria-hidden="true" />
-                                      {c}
-                                    </span>
-                                  ))}
-                                </span>
-                                <IconChevronDown />
-                              </button>
-                              {filaCondicionAbierta === i && (
-                                <div className="tv-condicion-mas-dropdown tv-fila-condicion-dropdown" role="listbox" aria-multiselectable="true">
-                                  {CONDICIONES.map((c) => {
-                                    const seleccionada = (tv.condiciones || []).includes(c)
-                                    return (
-                                      <button
-                                        key={c}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={seleccionada}
-                                        className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-condicion-mas-item ${seleccionada ? 'activa' : ''}`}
-                                        onClick={() => toggleCondicionEnFila(i, c)}
-                                      >
-                                        <span className="tv-condicion-chip-dot" aria-hidden="true" />
-                                        {c}
-                                      </button>
-                                    )
-                                  })}
-                                </div>
-                              )}
-                            </div>
+                              <span className="tv-fila-condicion-resumen">
+                                {(tv.condiciones || []).slice(0, 2).map((c) => (
+                                  <span
+                                    key={c}
+                                    className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-fila-condicion-chip`}
+                                  >
+                                    <span className="tv-condicion-chip-dot" aria-hidden="true" />
+                                    {c}
+                                  </span>
+                                ))}
+                                {(tv.condiciones?.length || 0) > 2 && (
+                                  <span className="tv-fila-condicion-mas-badge">+{tv.condiciones.length - 2}</span>
+                                )}
+                              </span>
+                              <IconChevronDown />
+                            </button>
                           </td>
                           <td className="tv-col-acciones" data-label="Acciones">
                             <div className="tv-acciones-fila">
@@ -824,6 +836,39 @@ export default function PedidoForm({
                   </tbody>
                 </table>
               </div>
+
+              {filaCondicionAbierta !== null && condicionPopoverRect && typeof document !== 'undefined' && createPortal(
+                <div
+                  ref={condicionPortalRef}
+                  className="tv-fila-condicion-dropdown-portal"
+                  role="listbox"
+                  aria-multiselectable="true"
+                  style={{
+                    position: 'fixed',
+                    top: condicionPopoverRect.top,
+                    left: condicionPopoverRect.left,
+                    minWidth: condicionPopoverRect.minWidth,
+                  }}
+                >
+                  {CONDICIONES.map((c) => {
+                    const seleccionada = (tvs[filaCondicionAbierta]?.condiciones || []).includes(c)
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        role="option"
+                        aria-selected={seleccionada}
+                        className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-condicion-mas-item ${seleccionada ? 'activa' : ''}`}
+                        onClick={() => toggleCondicionEnFila(filaCondicionAbierta, c)}
+                      >
+                        <span className="tv-condicion-chip-dot" aria-hidden="true" />
+                        {c}
+                      </button>
+                    )
+                  })}
+                </div>,
+                document.body
+              )}
 
               <div className="tv-footer-resumen">
                 <div className="tv-footer-item">
