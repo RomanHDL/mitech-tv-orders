@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
-import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_PARTIDA, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
+import { MARCAS, PULGADAS, CONDICIONES, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
 import { getUsuario } from '@/lib/auth'
 import { registrarEvento } from '@/lib/eventos'
 
@@ -51,7 +51,7 @@ export async function POST(req) {
     if (!PULGADAS.includes(pulgadas)) {
       return NextResponse.json({ error: `TV #${i + 1}: pulgadas inválidas` }, { status: 400 })
     }
-    if (!CONDICIONES_PARTIDA.includes(tv.condicion)) {
+    if (!CONDICIONES.includes(tv.condicion)) {
       return NextResponse.json({ error: `TV #${i + 1}: falta condición` }, { status: 400 })
     }
     const sku = typeof tv.modelo === 'string' ? tv.modelo.trim().toUpperCase() : ''

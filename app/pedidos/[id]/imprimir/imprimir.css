@@ -165,6 +165,14 @@ body { background: #fff; }
 .condicion-chip.cond-gra { background: #10b981; color: #fff; }
 .condicion-chip.cond-grb { background: #fcd34d; color: #000; }
 .condicion-chip.cond-grc { background: #ef4444; color: #fff; }
+.condicion-chip.cond-box { background: #64748b; color: #fff; }
+.condicion-chip.cond-icb { background: #8b5cf6; color: #fff; }
+.condicion-chip.cond-icc { background: #d946ef; color: #fff; }
+.condicion-chip.cond-icd { background: #6366f1; color: #fff; }
+.condicion-chip.cond-icx { background: #ec4899; color: #fff; }
+.condicion-chip.cond-dma { background: #f97316; color: #fff; }
+.condicion-chip.cond-dmt { background: #92400e; color: #fff; }
+.condicion-chip.cond-dnp { background: #14b8a6; color: #fff; }
 
 /* Comentarios del envío en la impresión */
 .comentarios-banda {

@@ -3,21 +3,38 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_PARTIDA, SKU_REGEX } from '@/lib/catalogos'
+import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
 import {
   IconAlert,
+  IconArrowDown,
   IconArrowRight,
+  IconArrowUp,
   IconBox,
+  IconChevronDown,
   IconClipboardList,
+  IconCopy,
   IconExcel,
   IconHelp,
   IconPlus,
-  IconSearch,
   IconTrash,
 } from './icons'
 import ImportarPedidoPanel from './importar-pedido-panel'
 
-const tvVacia = () => ({ marca: '', pulgadas: '', condicion: '', modelo: '', cantidad: 1, unidad: 'pieza', sinLimite: false, modelosAlternativos: [] })
+// Condiciones que no caben en los accesos directos — se ofrecen en el
+// desplegable "Más condiciones" del selector de condición activa.
+const CONDICIONES_MAS = CONDICIONES.filter((c) => !CONDICIONES_FRECUENTES.includes(c))
+
+const tvVacia = (overrides = {}) => ({
+  marca: '',
+  pulgadas: '',
+  condicion: CONDICIONES_FRECUENTES[0],
+  modelo: '',
+  cantidad: 1,
+  unidad: 'pieza',
+  sinLimite: false,
+  modelosAlternativos: [],
+  ...overrides,
+})
 
 export default function PedidoForm({
   initialData,
@@ -34,18 +51,25 @@ export default function PedidoForm({
   const [numeroPedido, setNumeroPedido] = useState(initialData?.numeroPedido || '')
   const [pedidoNombre, setPedidoNombre] = useState(initialData?.pedidoNombre || '')
   const [fechaLimite, setFechaLimite] = useState(initialData?.fechaLimite || '')
-  const [condiciones, setCondiciones] = useState(initialData?.condiciones || [])
   const [cantidadTotal, setCantidadTotal] = useState(
     initialData?.cantidadTotal != null && initialData?.cantidadTotal > 0
       ? String(initialData.cantidadTotal)
       : ''
   )
+  // Valores "activos" del toolbar: se aplican SOLO a las TVs nuevas que se
+  // agreguen a partir de ahora (manual, duplicado o importación) — nunca de
+  // forma retroactiva a filas ya existentes, igual que pidió el operador.
+  const [condicionActiva, setCondicionActiva] = useState(CONDICIONES_FRECUENTES[0])
+  const condicionEsExtra = CONDICIONES_MAS.includes(condicionActiva)
+  const [masCondicionesAbierto, setMasCondicionesAbierto] = useState(false)
+  const [palletPorDefecto, setPalletPorDefecto] = useState(false)
+  const [sinLimitePorDefecto, setSinLimitePorDefecto] = useState(false)
   const [tvs, setTvs] = useState(
     initialData?.televisiones?.length
       ? initialData.televisiones.map((tv) => ({
           marca: tv.marca || '',
           pulgadas: tv.pulgadas !== undefined ? String(tv.pulgadas) : '',
-          condicion: tv.condicion || '',
+          condicion: tv.condicion || CONDICIONES_FRECUENTES[0],
           modelo: tv.modelo || '',
           cantidad: tv.cantidad || 1,
           unidad: tv.unidad || 'pieza',
@@ -56,17 +80,52 @@ export default function PedidoForm({
   )
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
-  const [busquedaTv, setBusquedaTv] = useState('')
-  const [seleccionados, setSeleccionados] = useState(() => new Set())
 
   const inputRefs = useRef([])
+  const tablaRef = useRef(null)
   const previousLength = useRef(tvs.length)
+  const masMenuRef = useRef(null)
+
+  // Cierra el desplegable "Más condiciones" al hacer clic fuera o con
+  // Escape — mismo patrón que ya usa el menú de usuario del nav.
+  useEffect(() => {
+    function onClickFuera(e) {
+      if (masMenuRef.current && !masMenuRef.current.contains(e.target)) {
+        setMasCondicionesAbierto(false)
+      }
+    }
+    function onKeyDown(e) {
+      if (e.key === 'Escape') setMasCondicionesAbierto(false)
+    }
+    document.addEventListener('mousedown', onClickFuera)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onClickFuera)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
+
+  // Enter avanza al siguiente campo enfocable de toda la tabla (SKU → Marca
+  // → Pulgada → Cantidad → SKU de la fila siguiente...), en vez de intentar
+  // enviar el formulario. En el último campo enfocable, agrega una TV nueva
+  // — mismo comportamiento que ya existía, generalizado a cualquier columna.
+  const onTablaKeyDown = (e) => {
+    if (e.key !== 'Enter') return
+    const tag = e.target.tagName
+    if (tag !== 'INPUT' && tag !== 'SELECT') return
+    e.preventDefault()
+    const focosables = Array.from(tablaRef.current?.querySelectorAll('tbody input, tbody select') || [])
+    const idx = focosables.indexOf(e.target)
+    if (idx === -1) return
+    if (idx < focosables.length - 1) {
+      focosables[idx + 1].focus()
+    } else {
+      agregarTv()
+    }
+  }
 
   useEffect(() => {
     if (tvs.length > previousLength.current) {
-      // Si había un filtro activo, se limpia para que la fila recién
-      // agregada quede visible (si no, el efecto de foco no la encontraría).
-      setBusquedaTv('')
       const lastInput = inputRefs.current[tvs.length - 1]
       if (lastInput) {
         lastInput.focus()
@@ -115,26 +174,6 @@ export default function PedidoForm({
   const pedidoCerrado = limite > 0 && totalUnidades >= limite
   const pedidoExcedido = limite > 0 && totalUnidades > limite
 
-  // Filtro visual de la tabla (no toca el estado real de `tvs`; conserva el
-  // índice original `i` para que todos los handlers sigan funcionando igual).
-  const busquedaNormalizada = busquedaTv.trim().toLowerCase()
-  const filasVisibles = tvs
-    .map((tv, i) => ({ tv, i }))
-    .filter(({ tv }) => {
-      if (!busquedaNormalizada) return true
-      return (
-        (tv.modelo || '').toLowerCase().includes(busquedaNormalizada) ||
-        (tv.marca || '').toLowerCase().includes(busquedaNormalizada)
-      )
-    })
-  const idsVisibles = filasVisibles.map(({ i }) => i)
-  const todosVisiblesSeleccionados = idsVisibles.length > 0 && idsVisibles.every((i) => seleccionados.has(i))
-
-  const toggleCondicion = (c) =>
-    setCondiciones((prev) =>
-      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
-    )
-
   const updateTv = (i, campo, valor) =>
     setTvs((prev) => prev.map((tv, idx) => (idx === i ? { ...tv, [campo]: valor } : tv)))
 
@@ -179,80 +218,66 @@ export default function PedidoForm({
 
   const agregarTv = () => {
     if (pedidoCerrado) return
-    setTvs((prev) => [...prev, tvVacia()])
+    setTvs((prev) => [...prev, tvVacia({
+      condicion: condicionActiva,
+      unidad: palletPorDefecto ? 'pallet' : 'pieza',
+      sinLimite: sinLimitePorDefecto,
+    })])
   }
-  const eliminarTv = (i) => {
-    setTvs((prev) => prev.filter((_, idx) => idx !== i))
-    setSeleccionados(new Set())
+  const eliminarTv = (i) => setTvs((prev) => prev.filter((_, idx) => idx !== i))
+
+  // Duplica una fila completa (todos sus valores actuales) justo debajo de
+  // ella — respeta el mismo tope de cantidad total que "Agregar televisión".
+  const duplicarTv = (i) => {
+    if (pedidoCerrado) return
+    setTvs((prev) => {
+      const original = prev[i]
+      if (!original) return prev
+      const copia = { ...original, modelosAlternativos: [...(original.modelosAlternativos || [])] }
+      const next = [...prev]
+      next.splice(i + 1, 0, copia)
+      return next
+    })
+  }
+
+  const moverArriba = (i) => {
+    if (i <= 0) return
+    setTvs((prev) => {
+      const next = [...prev]
+      ;[next[i - 1], next[i]] = [next[i], next[i - 1]]
+      return next
+    })
+  }
+
+  const moverAbajo = (i) => {
+    setTvs((prev) => {
+      if (i >= prev.length - 1) return prev
+      const next = [...prev]
+      ;[next[i], next[i + 1]] = [next[i + 1], next[i]]
+      return next
+    })
   }
 
   // Carga en lote (pegar / Excel / foto). Mapea los items al estado de TVs.
   // Si lo único que hay es la tarjeta vacía inicial, la reemplaza; si no, agrega.
+  // Las TVs importadas también son "nuevas", así que heredan los mismos
+  // valores activos del toolbar (condición / pallet / sin límite).
   const importarTvs = (items) => {
     if (pedidoCerrado || !items?.length) return
-    setSeleccionados(new Set())
     const nuevas = items.map((it) => ({
       marca: it.marca,
       pulgadas: it.pulgadas ? String(it.pulgadas) : '',
-      condicion: '',
+      condicion: condicionActiva,
       modelo: it.modelo,
       cantidad: it.cantidad || 1,
-      unidad: it.unidad || 'pieza',
-      sinLimite: false,
+      unidad: palletPorDefecto ? 'pallet' : (it.unidad || 'pieza'),
+      sinLimite: sinLimitePorDefecto,
       modelosAlternativos: it.modelosAlternativos || [],
     }))
     setTvs((prev) => {
       const soloVacia = prev.length === 1 && !prev[0].marca && !prev[0].modelo
       return soloVacia ? nuevas : [...prev, ...nuevas]
     })
-  }
-
-  // Selección de filas — solo controla acciones masivas del lado del
-  // cliente (borrar / marcar pallet / marcar sin límite). No se envía al
-  // backend ni se guarda: es puramente una conveniencia de captura.
-  const toggleSeleccionado = (i) =>
-    setSeleccionados((prev) => {
-      const next = new Set(prev)
-      if (next.has(i)) next.delete(i)
-      else next.add(i)
-      return next
-    })
-
-  const toggleSeleccionarTodos = () => {
-    setSeleccionados((prev) => {
-      if (todosVisiblesSeleccionados) {
-        const next = new Set(prev)
-        idsVisibles.forEach((i) => next.delete(i))
-        return next
-      }
-      return new Set([...prev, ...idsVisibles])
-    })
-  }
-
-  const eliminarSeleccionadas = () => {
-    if (seleccionados.size === 0) return
-    setTvs((prev) => prev.filter((_, idx) => !seleccionados.has(idx)))
-    setSeleccionados(new Set())
-  }
-
-  // Aplica Pallet a todas las filas seleccionadas (reutiliza la misma regla
-  // que el toggle individual); si ya estaban todas en pallet, las regresa a
-  // pieza — mismo comportamiento de "encender/apagar todo" en un solo click.
-  const bulkTogglePallet = () => {
-    if (seleccionados.size === 0) return
-    const todosPallet = [...seleccionados].every((i) => tvs[i]?.unidad === 'pallet')
-    setTvs((prev) => prev.map((tv, idx) => (
-      seleccionados.has(idx) ? { ...tv, unidad: todosPallet ? 'pieza' : 'pallet' } : tv
-    )))
-  }
-
-  const bulkToggleSinLimite = () => {
-    if (seleccionados.size === 0) return
-    const todosSinLimite = [...seleccionados].every((i) => !!tvs[i]?.sinLimite)
-    const nuevoValor = !todosSinLimite
-    setTvs((prev) => prev.map((tv, idx) => (
-      seleccionados.has(idx) ? { ...tv, sinLimite: nuevoValor, cantidad: nuevoValor ? 1 : (tv.cantidad || 1) } : tv
-    )))
   }
 
   const enviar = async (e) => {
@@ -267,7 +292,7 @@ export default function PedidoForm({
     for (const [i, tv] of tvs.entries()) {
       if (!MARCAS.includes(tv.marca)) return setError(`TV #${i + 1}: marca inválida`)
       if (!PULGADAS.includes(Number(tv.pulgadas))) return setError(`TV #${i + 1}: pulgadas inválidas`)
-      if (!CONDICIONES_PARTIDA.includes(tv.condicion)) return setError(`TV #${i + 1}: falta condición`)
+      if (!CONDICIONES.includes(tv.condicion)) return setError(`TV #${i + 1}: falta condición`)
       if (!SKU_REGEX.test(tv.modelo || '')) {
         return setError(`TV #${i + 1}: captura el modelo / SKU (mín. 3 letras o números)`)
       }
@@ -290,13 +315,19 @@ export default function PedidoForm({
       }
     }
 
+    // El pedido ya no pide sus propias "condiciones" por separado — se
+    // construyen automáticamente a partir de las condiciones únicas que
+    // realmente se usaron en las televisiones capturadas (sin duplicar la
+    // captura). El campo y su forma (arreglo de strings) no cambian.
+    const condicionesUnicas = [...new Set(tvs.map((tv) => tv.condicion).filter(Boolean))]
+
     setEnviando(true)
     try {
       await onSubmit({
         numeroPedido: numeroPedido.trim(),
         pedidoNombre: pedidoNombre.trim(),
         fechaLimite,
-        condiciones,
+        condiciones: condicionesUnicas,
         cantidadTotal: limite > 0 ? limite : null,
         televisiones: tvs.map((tv) => ({
           marca: tv.marca,
@@ -451,71 +482,84 @@ export default function PedidoForm({
               {pedidoCerrado ? t('pedidoForm.pedidoCompleto') : t('pedidoForm.agregarTelevision')}
             </button>
 
+            <div className="tv-condicion-activa" role="group" aria-label="Condición activa">
+              <span className="tv-condicion-activa-label">Condición activa</span>
+              {CONDICIONES_FRECUENTES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} ${condicionActiva === c ? 'activa' : ''}`}
+                  onClick={() => setCondicionActiva(c)}
+                  aria-pressed={condicionActiva === c}
+                  title={`Las próximas televisiones que agregues tomarán la condición ${c}`}
+                >
+                  <span className="tv-condicion-chip-dot" aria-hidden="true" />
+                  {c}
+                </button>
+              ))}
+
+              <div className="tv-condicion-mas" ref={masMenuRef}>
+                <button
+                  type="button"
+                  className={`tv-condicion-chip tv-condicion-mas-btn ${
+                    condicionEsExtra ? `tv-condicion-chip-${condicionActiva.toLowerCase()} activa` : ''
+                  }`}
+                  onClick={() => setMasCondicionesAbierto((v) => !v)}
+                  aria-expanded={masCondicionesAbierto}
+                  aria-haspopup="listbox"
+                  title="Ver más condiciones disponibles"
+                >
+                  {condicionEsExtra && <span className="tv-condicion-chip-dot" aria-hidden="true" />}
+                  {condicionEsExtra ? condicionActiva : 'Más condiciones'}
+                  <IconChevronDown />
+                </button>
+                {masCondicionesAbierto && (
+                  <div className="tv-condicion-mas-dropdown" role="listbox">
+                    {CONDICIONES_MAS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        role="option"
+                        aria-selected={condicionActiva === c}
+                        className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-condicion-mas-item ${
+                          condicionActiva === c ? 'activa' : ''
+                        }`}
+                        onClick={() => {
+                          setCondicionActiva(c)
+                          setMasCondicionesAbierto(false)
+                        }}
+                        title={`Las próximas televisiones que agregues tomarán la condición ${c}`}
+                      >
+                        <span className="tv-condicion-chip-dot" aria-hidden="true" />
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button
               type="button"
-              className={`tv-bulk-toggle ${seleccionados.size > 0 && [...seleccionados].every((i) => tvs[i]?.unidad === 'pallet') ? 'activa' : ''}`}
-              onClick={bulkTogglePallet}
-              disabled={seleccionados.size === 0}
-              title="Marcar como pallet las filas seleccionadas"
+              className={`tv-toolbar-toggle ${palletPorDefecto ? 'activa' : ''}`}
+              onClick={() => setPalletPorDefecto((v) => !v)}
+              aria-pressed={palletPorDefecto}
+              title="Las próximas televisiones que agregues serán tipo Pallet"
             >
               <IconBox />
               {t('pedidoForm.pallet')}
             </button>
 
-            <label
-              className={`tv-bulk-switch ${seleccionados.size > 0 && [...seleccionados].every((i) => !!tvs[i]?.sinLimite) ? 'activa' : ''} ${seleccionados.size === 0 ? 'deshabilitado' : ''}`}
-              title="Marcar sin límite las filas seleccionadas"
-            >
-              <input
-                type="checkbox"
-                checked={seleccionados.size > 0 && [...seleccionados].every((i) => !!tvs[i]?.sinLimite)}
-                onChange={bulkToggleSinLimite}
-                disabled={seleccionados.size === 0}
-              />
-              <span className="tv-switch-track"><span className="tv-switch-thumb" /></span>
-              {t('pedidoForm.sinLimite')}
-            </label>
-
-            {tvs.length > 1 && (
-              <div className="search-box tv-toolbar-buscar">
-                <IconSearch className="icon-search" />
-                <input
-                  type="text"
-                  placeholder="Buscar televisión…"
-                  value={busquedaTv}
-                  onChange={(e) => setBusquedaTv(e.target.value)}
-                />
-              </div>
-            )}
-
             <button
               type="button"
-              className="btn-eliminar-seleccionadas"
-              onClick={eliminarSeleccionadas}
-              disabled={seleccionados.size === 0}
+              className={`tv-toolbar-toggle ${sinLimitePorDefecto ? 'activa' : ''}`}
+              onClick={() => setSinLimitePorDefecto((v) => !v)}
+              aria-pressed={sinLimitePorDefecto}
+              title="Las próximas televisiones que agregues serán Sin límite"
             >
-              <IconTrash />
-              Eliminar seleccionadas
+              <span aria-hidden="true">∞</span>
+              {t('pedidoForm.sinLimite')}
             </button>
-          </div>
-
-          <div className="tv-condicion-seccion">
-            <div className="label">Condición</div>
-            <div className="condiciones">
-              {CONDICIONES.map((c) => (
-                <label
-                  key={c}
-                  className={`condicion-chip ${condiciones.includes(c) ? 'activa' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={condiciones.includes(c)}
-                    onChange={() => toggleCondicion(c)}
-                  />
-                  {c}
-                </label>
-              ))}
-            </div>
           </div>
 
           <datalist id="marcas-list">
@@ -525,197 +569,201 @@ export default function PedidoForm({
           {tvs.length === 0 ? (
             <div className="empty tv-empty-state">
               <IconClipboardList width={48} height={48} />
-              <h3>Aún no has agregado televisiones</h3>
-              <p>Comienza agregando la primera televisión o importa un archivo Excel.</p>
+              <h3>No has agregado televisiones.</h3>
               <button type="button" className="btn btn-primary" onClick={agregarTv}>
-                <IconPlus /> {t('pedidoForm.agregarTelevision')}
-              </button>
-            </div>
-          ) : filasVisibles.length === 0 ? (
-            <div className="empty tv-empty-state">
-              <IconSearch width={40} height={40} />
-              <h3>Sin coincidencias</h3>
-              <p>Ninguna televisión coincide con &quot;{busquedaTv}&quot;.</p>
-              <button type="button" className="btn btn-secondary" onClick={() => setBusquedaTv('')}>
-                Limpiar búsqueda
+                <IconPlus /> Agregar primera televisión
               </button>
             </div>
           ) : (
-            <div className="tabla-wrap tv-tabla-wrap">
-              <table className="tabla-pedidos tv-tabla-moderna">
-                <thead>
-                  <tr>
-                    <th className="tv-col-check">
-                      <input
-                        type="checkbox"
-                        checked={todosVisiblesSeleccionados}
-                        onChange={toggleSeleccionarTodos}
-                        aria-label="Seleccionar todas las televisiones visibles"
-                      />
-                    </th>
-                    <th className="tv-col-num">#</th>
-                    <th>SKU / Modelo</th>
-                    <th>Marca</th>
-                    <th>Pulgada</th>
-                    <th>Condición</th>
-                    <th>Cantidad</th>
-                    <th>Tipo</th>
-                    <th className="tv-col-acciones"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filasVisibles.map(({ tv, i }) => {
-                    const esPallet = tv.unidad === 'pallet'
-                    const esSinLimite = !!tv.sinLimite
-                    const otrosTotal = tvs.reduce(
-                      (s, t, idx) => (idx === i ? s : s + cantidadParaSuma(t)),
-                      0
-                    )
-                    const maxCantidad = limite > 0 ? Math.max(0, limite - otrosTotal) : undefined
-                    const skuOk = SKU_REGEX.test(tv.modelo || '')
-                    return (
-                      <tr key={i} className={esPallet ? 'es-pallet' : ''}>
-                        <td className="tv-col-check" data-label="">
-                          <input
-                            type="checkbox"
-                            checked={seleccionados.has(i)}
-                            onChange={() => toggleSeleccionado(i)}
-                            aria-label={`Seleccionar TV ${i + 1}`}
-                          />
-                        </td>
-                        <td className="tv-col-num" data-label="#">{i + 1}</td>
-                        <td data-label="SKU / Modelo">
-                          <input
-                            ref={(el) => { if (el) inputRefs.current[i] = el }}
-                            type="text"
-                            value={tv.modelo}
-                            onChange={(e) => updateSku(i, e.target.value)}
-                            placeholder="SKU / Modelo"
-                            pattern="[A-Za-z0-9]{3,20}"
-                            title="Código del modelo tal como viene en el pedido"
-                            minLength={3}
-                            maxLength={20}
-                            aria-invalid={tv.modelo && !skuOk ? 'true' : undefined}
-                            required
-                          />
-                          {tv.modelosAlternativos?.length > 0 && (
-                            <div className="tv-alt-hint">
-                              También válido: {tv.modelosAlternativos.join(', ')}
-                            </div>
-                          )}
-                        </td>
-                        <td data-label="Marca">
-                          <input
-                            list="marcas-list"
-                            value={tv.marca}
-                            onChange={(e) => updateTv(i, 'marca', e.target.value)}
-                            placeholder="Marca"
-                            required
-                          />
-                        </td>
-                        <td data-label="Pulgada">
-                          <select
-                            value={tv.pulgadas}
-                            onChange={(e) => updateTv(i, 'pulgadas', e.target.value)}
-                            required
-                          >
-                            <option value="">—</option>
-                            {PULGADAS.map((p) => (
-                              <option key={p} value={p}>{p}&quot;</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td data-label="Condición">
-                          <div className="tv-condicion-field">
-                            <select
-                              value={tv.condicion}
-                              onChange={(e) => updateTv(i, 'condicion', e.target.value)}
-                              aria-label="Condición"
-                              required
-                            >
-                              <option value="">{t('pedidoForm.condicion')}</option>
-                              {CONDICIONES_PARTIDA.map((c) => (
-                                <option key={c} value={c}>{c}</option>
-                              ))}
-                            </select>
-                            {tv.condicion && (
-                              <span className={`tag tag-${tv.condicion.toLowerCase()} tv-condicion-preview`}>
-                                {tv.condicion}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td data-label="Cantidad">
-                          {esSinLimite ? (
-                            <div
-                              className="cantidad-sin-limite"
-                              aria-label={limite > 0 ? `Cantidad total del pedido: ${limite}` : 'Cantidad sin límite'}
-                            >
-                              {limite > 0 ? (
-                                <span className="cantidad-sin-limite-numero">{limite}</span>
-                              ) : (
-                                <span className="cantidad-sin-limite-simbolo">∞</span>
-                              )}
-                            </div>
-                          ) : (
+            <>
+              <div className="tabla-wrap tv-tabla-wrap">
+                <table className="tabla-pedidos tv-tabla-moderna" ref={tablaRef} onKeyDown={onTablaKeyDown}>
+                  <thead>
+                    <tr>
+                      <th className="tv-col-num">#</th>
+                      <th>SKU / Modelo</th>
+                      <th>Marca</th>
+                      <th>Pulgada</th>
+                      <th>Cantidad</th>
+                      <th>Tipo</th>
+                      <th className="tv-col-acciones"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tvs.map((tv, i) => {
+                      const esPallet = tv.unidad === 'pallet'
+                      const esSinLimite = !!tv.sinLimite
+                      const otrosTotal = tvs.reduce(
+                        (s, t, idx) => (idx === i ? s : s + cantidadParaSuma(t)),
+                        0
+                      )
+                      const maxCantidad = limite > 0 ? Math.max(0, limite - otrosTotal) : undefined
+                      const skuOk = SKU_REGEX.test(tv.modelo || '')
+                      return (
+                        <tr key={i} className={esPallet ? 'es-pallet' : ''}>
+                          <td className="tv-col-num" data-label="#">{i + 1}</td>
+                          <td data-label="SKU / Modelo">
                             <input
-                              type="number"
-                              min="1"
-                              max={maxCantidad}
-                              value={tv.cantidad}
-                              onChange={(e) => updateCantidad(i, e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && i === tvs.length - 1) {
-                                  e.preventDefault()
-                                  agregarTv()
-                                }
-                              }}
-                              placeholder={esPallet ? 'Pallets' : 'Cant.'}
+                              ref={(el) => { if (el) inputRefs.current[i] = el }}
+                              type="text"
+                              value={tv.modelo}
+                              onChange={(e) => updateSku(i, e.target.value)}
+                              placeholder="SKU / Modelo"
+                              pattern="[A-Za-z0-9]{3,20}"
+                              title="Código del modelo tal como viene en el pedido"
+                              minLength={3}
+                              maxLength={20}
+                              aria-invalid={tv.modelo && !skuOk ? 'true' : undefined}
                               required
                             />
-                          )}
-                        </td>
-                        <td data-label="Tipo">
-                          <div className="tv-tipo-celda">
-                            <label className={`tv-pallet-toggle ${esPallet ? 'activa' : ''}`}>
-                              <input
-                                type="checkbox"
-                                checked={esPallet}
-                                onChange={() => togglePallet(i)}
-                              />
-                              <IconBox />
-                              {t('pedidoForm.pallet')}
-                            </label>
-                            <label className={`tv-sin-limite-toggle ${esSinLimite ? 'activa' : ''}`}>
-                              <input
-                                type="checkbox"
-                                checked={esSinLimite}
-                                onChange={() => toggleSinLimiteTv(i)}
-                              />
-                              <span aria-hidden="true">∞</span>
-                              {t('pedidoForm.sinLimite')}
-                            </label>
-                          </div>
-                        </td>
-                        <td className="tv-col-acciones" data-label="Acciones">
-                          {tvs.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => eliminarTv(i)}
-                              className="btn-icono btn-icono-eliminar"
-                              aria-label={`Quitar TV ${i + 1}`}
-                              title={t('pedidoForm.quitar')}
+                            {tv.modelosAlternativos?.length > 0 && (
+                              <div className="tv-alt-hint">
+                                También válido: {tv.modelosAlternativos.join(', ')}
+                              </div>
+                            )}
+                          </td>
+                          <td data-label="Marca">
+                            <input
+                              list="marcas-list"
+                              value={tv.marca}
+                              onChange={(e) => updateTv(i, 'marca', e.target.value)}
+                              placeholder="Marca"
+                              required
+                            />
+                          </td>
+                          <td data-label="Pulgada">
+                            <select
+                              value={tv.pulgadas}
+                              onChange={(e) => updateTv(i, 'pulgadas', e.target.value)}
+                              required
                             >
-                              <IconTrash />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              <option value="">—</option>
+                              {PULGADAS.map((p) => (
+                                <option key={p} value={p}>{p}&quot;</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td data-label="Cantidad">
+                            {esSinLimite ? (
+                              <div
+                                className="cantidad-sin-limite"
+                                aria-label={limite > 0 ? `Cantidad total del pedido: ${limite}` : 'Cantidad sin límite'}
+                              >
+                                {limite > 0 ? (
+                                  <span className="cantidad-sin-limite-numero">{limite}</span>
+                                ) : (
+                                  <span className="cantidad-sin-limite-simbolo">∞</span>
+                                )}
+                              </div>
+                            ) : (
+                              <input
+                                type="number"
+                                min="1"
+                                max={maxCantidad}
+                                value={tv.cantidad}
+                                onChange={(e) => updateCantidad(i, e.target.value)}
+                                placeholder={esPallet ? 'Pallets' : 'Cant.'}
+                                required
+                              />
+                            )}
+                          </td>
+                          <td data-label="Tipo">
+                            <div className="tv-segment" role="group" aria-label="Tipo de televisión">
+                              <button
+                                type="button"
+                                className={`tv-segment-btn ${esPallet ? 'activo' : ''}`}
+                                onClick={() => togglePallet(i)}
+                                aria-pressed={esPallet}
+                                title="Marcar como pallet"
+                              >
+                                <IconBox /> {t('pedidoForm.pallet')}
+                              </button>
+                              <button
+                                type="button"
+                                className={`tv-segment-btn ${esSinLimite ? 'activo' : ''}`}
+                                onClick={() => toggleSinLimiteTv(i)}
+                                aria-pressed={esSinLimite}
+                                title="Marcar como sin límite"
+                              >
+                                <span aria-hidden="true">∞</span> {t('pedidoForm.sinLimite')}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="tv-col-acciones" data-label="Acciones">
+                            <div className="tv-acciones-fila">
+                              <button
+                                type="button"
+                                onClick={() => duplicarTv(i)}
+                                className="btn-icono"
+                                aria-label={`Duplicar TV ${i + 1}`}
+                                title="Duplicar fila"
+                                disabled={pedidoCerrado}
+                              >
+                                <IconCopy />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moverArriba(i)}
+                                className="btn-icono"
+                                aria-label={`Mover TV ${i + 1} arriba`}
+                                title="Mover arriba"
+                                disabled={i === 0}
+                              >
+                                <IconArrowUp />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moverAbajo(i)}
+                                className="btn-icono"
+                                aria-label={`Mover TV ${i + 1} abajo`}
+                                title="Mover abajo"
+                                disabled={i === tvs.length - 1}
+                              >
+                                <IconArrowDown />
+                              </button>
+                              {tvs.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarTv(i)}
+                                  className="btn-icono btn-icono-eliminar"
+                                  aria-label={`Quitar TV ${i + 1}`}
+                                  title={t('pedidoForm.quitar')}
+                                >
+                                  <IconTrash />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="tv-footer-resumen">
+                <div className="tv-footer-item">
+                  <span className="tv-footer-label">{t('pedidoForm.modelos')}</span>
+                  <strong className="tv-footer-numero">{tvs.length}</strong>
+                </div>
+                <div className="tv-footer-item">
+                  <span className="tv-footer-label">{t('pedidoForm.marcas')}</span>
+                  <strong className="tv-footer-numero">{marcasUnicas}</strong>
+                </div>
+                <div className="tv-footer-item">
+                  <span className="tv-footer-label">{t('pedidoForm.tvsTotal')}</span>
+                  <strong className="tv-footer-numero">{piezas}</strong>
+                </div>
+                <div className="tv-footer-item">
+                  <span className="tv-footer-label">Cantidad total</span>
+                  <strong className="tv-footer-numero">{totalUnidades}</strong>
+                </div>
+                <div className="tv-footer-item">
+                  <span className="tv-footer-label">{t('pedidoForm.pallets')}</span>
+                  <strong className="tv-footer-numero">{pallets}</strong>
+                </div>
+              </div>
+            </>
           )}
         </section>
 

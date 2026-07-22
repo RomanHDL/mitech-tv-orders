@@ -921,10 +921,11 @@ select.select-dueno {
   gap: 16px;
   margin-bottom: 1.5rem;
 }
-.tv-toolbar-buscar { flex: 1 1 220px; max-width: 320px; }
-.tv-toolbar-buscar input { height: 2.6rem; }
 
-.tv-bulk-toggle {
+/* Pallet / Sin límite en el toolbar: NO son acciones masivas — son el
+   "valor activo" que heredarán las próximas TVs que se agreguen (manual,
+   duplicado o importación), igual filosofía que Condición activa. */
+.tv-toolbar-toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -941,73 +942,79 @@ select.select-dueno {
   transition: all var(--tx);
   white-space: nowrap;
 }
-.tv-bulk-toggle:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
-.tv-bulk-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
-.tv-bulk-toggle.activa { background: var(--yellow); color: var(--black); border-color: var(--yellow); }
+.tv-toolbar-toggle:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.tv-toolbar-toggle.activa { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-.tv-bulk-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  height: 2.6rem;
-  padding: 0 0.9rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: #fff;
-  cursor: pointer;
-  transition: all var(--tx);
-  white-space: nowrap;
-}
-.tv-bulk-switch:hover { border-color: var(--primary); }
-.tv-bulk-switch.deshabilitado { opacity: 0.5; cursor: not-allowed; }
-.tv-bulk-switch input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.tv-switch-track {
-  display: inline-flex;
-  align-items: center;
-  width: 34px;
-  height: 20px;
-  border-radius: 999px;
-  background: var(--border);
-  padding: 2px;
-  transition: background-color var(--tx);
-  flex-shrink: 0;
-}
-.tv-switch-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: var(--shadow-xs);
-  transition: transform var(--tx);
-}
-.tv-bulk-switch.activa .tv-switch-track { background: var(--primary); }
-.tv-bulk-switch.activa .tv-switch-thumb { transform: translateX(14px); }
-
-.btn-eliminar-seleccionadas {
+/* Condición activa: selector de contexto (chips), no un <select> — el color
+   de cada punto reutiliza EXACTAMENTE el mismo verde/amarillo/rojo que ya
+   usan las etiquetas .tag-gra/.tag-grb/.tag-grc en el resto del sistema
+   (Pedidos/Historial), para no crear una paleta nueva ni inconsistente. */
+.tv-condicion-activa {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   height: 2.6rem;
-  padding: 0 0.9rem;
+  padding: 0 0.5rem 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
   margin-left: auto;
-  font-size: 0.8rem;
-  font-weight: 700;
+}
+.tv-condicion-activa-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; margin-right: 0.2rem; }
+.tv-condicion-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 1.9rem;
+  padding: 0 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
   font-family: inherit;
-  color: var(--red-dark);
-  border: 1px solid var(--red-light);
-  border-radius: 14px;
-  background: var(--red-light);
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all var(--tx);
-  white-space: nowrap;
 }
-.btn-eliminar-seleccionadas:hover:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
-.btn-eliminar-seleccionadas:disabled { opacity: 0.45; cursor: not-allowed; }
+.tv-condicion-chip:hover { background: var(--bg); color: var(--black); }
+.tv-condicion-chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tv-condicion-chip-gra .tv-condicion-chip-dot { background: var(--green); }
+.tv-condicion-chip-grb .tv-condicion-chip-dot { background: var(--yellow); }
+.tv-condicion-chip-grc .tv-condicion-chip-dot { background: var(--red); }
+.tv-condicion-chip-box .tv-condicion-chip-dot { background: #64748b; }
+.tv-condicion-chip-icb .tv-condicion-chip-dot { background: #8b5cf6; }
+.tv-condicion-chip-icc .tv-condicion-chip-dot { background: #d946ef; }
+.tv-condicion-chip-icd .tv-condicion-chip-dot { background: #6366f1; }
+.tv-condicion-chip-icx .tv-condicion-chip-dot { background: #ec4899; }
+.tv-condicion-chip-dma .tv-condicion-chip-dot { background: #f97316; }
+.tv-condicion-chip-dmt .tv-condicion-chip-dot { background: #92400e; }
+.tv-condicion-chip-dnp .tv-condicion-chip-dot { background: #14b8a6; }
+.tv-condicion-chip.activa { background: var(--primary-light); border-color: var(--primary); color: var(--primary-hover); }
 
-.tv-condicion-seccion { margin-bottom: 1.5rem; }
+/* "Más condiciones": desplegable con el resto del catálogo unificado
+   (ver CONDICIONES_FRECUENTES / CONDICIONES_MAS en pedido-form.jsx). El
+   botón adopta el color de la condición activa cuando esta viene del
+   desplegable, igual que un chip normal. */
+.tv-condicion-mas { position: relative; }
+.tv-condicion-mas-btn svg { width: 14px; height: 14px; }
+.tv-condicion-mas-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 9rem;
+  padding: 0.4rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+}
+.tv-condicion-mas-item { width: 100%; justify-content: flex-start; }
+.tv-condicion-mas-item:hover { background: var(--bg); color: var(--black); }
 
 .tv-tabla-moderna { table-layout: auto; }
 .tv-tabla-moderna thead th {
@@ -1030,69 +1037,85 @@ select.select-dueno {
   min-width: 6rem;
   padding-inline: 0.6rem;
 }
+/* Más espacio para SKU/Marca/Cantidad; # y Acciones lo más angostas posible. */
+.tv-tabla-moderna th:nth-child(2), .tv-tabla-moderna td:nth-child(2) { width: 22%; }
+.tv-tabla-moderna th:nth-child(3), .tv-tabla-moderna td:nth-child(3) { width: 20%; }
+.tv-tabla-moderna th:nth-child(4) { width: 9%; }
+.tv-tabla-moderna th:nth-child(5), .tv-tabla-moderna td:nth-child(5) { width: 14%; }
 .tv-col-num {
-  width: 2.5rem;
+  width: 2.25rem;
   color: var(--text-subtle);
   font-weight: 700;
   text-align: center;
 }
-.tv-col-acciones { width: 3rem; text-align: right; }
-.tv-col-check { width: 2.25rem; text-align: center; }
-.tv-col-check input { margin: 0; cursor: pointer; }
-
-.tv-condicion-field {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
-}
-.tv-condicion-field select { flex: 1; min-width: 0; }
-.tv-condicion-preview { flex-shrink: 0; }
+.tv-col-acciones { width: 1%; white-space: nowrap; text-align: right; }
 .tv-alt-hint {
   margin-top: 0.3rem;
   font-size: 0.72rem;
   color: var(--text-muted, #666);
 }
 
-.tv-tipo-celda { display: flex; flex-direction: column; gap: 0.35rem; }
-.tv-pallet-toggle,
-.tv-sin-limite-toggle {
+/* Tipo: segmented control (dos botones pegados) en vez de dos checkboxes
+   sueltos — misma lógica de togglePallet/toggleSinLimiteTv por debajo. */
+.tv-segment {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  width: fit-content;
+}
+.tv-segment-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.6rem;
+  gap: 0.3rem;
+  padding: 0.4rem 0.65rem;
   font-size: 0.7rem;
   font-weight: 600;
+  font-family: inherit;
   color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  cursor: pointer;
-  user-select: none;
+  border: none;
   background: #fff;
+  cursor: pointer;
   transition: all var(--tx);
   white-space: nowrap;
 }
-.tv-pallet-toggle input,
-.tv-sin-limite-toggle input { margin: 0; cursor: pointer; }
-.tv-pallet-toggle:hover,
-.tv-sin-limite-toggle:hover { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
-.tv-pallet-toggle.activa {
-  background: var(--yellow);
-  color: var(--black);
-  border-color: var(--yellow);
-  font-weight: 700;
-}
-.tv-sin-limite-toggle.activa {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-  font-weight: 700;
-}
+.tv-segment-btn + .tv-segment-btn { border-left: 1px solid var(--border); }
+.tv-segment-btn:hover { background: var(--bg); color: var(--black); }
+.tv-segment-btn.activo { background: var(--primary); color: #fff; }
+
+.tv-acciones-fila { display: flex; align-items: center; gap: 0.3rem; justify-content: flex-end; }
 
 /* ─── Nuevo Pedido — empty state de la tabla ──────────── */
 
 .tv-empty-state { padding: 3.5rem 2rem; }
 .tv-empty-state .btn { margin-top: 0.5rem; }
+
+/* ─── Nuevo Pedido — footer de resumen rápido (Card Televisiones) ──── */
+
+.tv-footer-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.tv-footer-item {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 6rem;
+  text-align: center;
+  border-left: 1px solid var(--border);
+}
+.tv-footer-item:first-child { border-left: none; }
+.tv-footer-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+.tv-footer-numero { font-size: 1.2rem; font-weight: 800; color: var(--black); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .tv-footer-resumen { flex-wrap: wrap; }
+  .tv-footer-item { flex: 1 1 40%; border-left: none; border-top: 1px solid var(--border); padding-top: 0.5rem; }
+}
 
 /* ─── Nuevo Pedido — Importar pedido (Card 2) ─────────── */
 
@@ -2188,6 +2211,14 @@ select.select-dueno {
 .tag-gra { background: var(--green); color: #fff; }
 .tag-grb { background: var(--yellow); color: var(--black); }
 .tag-grc { background: var(--red); color: #fff; }
+.tag-box { background: #64748b; color: #fff; }
+.tag-icb { background: #8b5cf6; color: #fff; }
+.tag-icc { background: #d946ef; color: #fff; }
+.tag-icd { background: #6366f1; color: #fff; }
+.tag-icx { background: #ec4899; color: #fff; }
+.tag-dma { background: #f97316; color: #fff; }
+.tag-dmt { background: #92400e; color: #fff; }
+.tag-dnp { background: #14b8a6; color: #fff; }
 .tag-empty { color: var(--text-subtle); font-size: 0.85rem; font-weight: 500; }
 
 .numero-grande {
