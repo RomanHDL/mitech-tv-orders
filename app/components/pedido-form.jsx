@@ -9,7 +9,6 @@ import {
   IconArrowRight,
   IconBox,
   IconClipboardList,
-  IconClose,
   IconExcel,
   IconHelp,
   IconPlus,
@@ -58,6 +57,7 @@ export default function PedidoForm({
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
   const [busquedaTv, setBusquedaTv] = useState('')
+  const [seleccionados, setSeleccionados] = useState(() => new Set())
 
   const inputRefs = useRef([])
   const previousLength = useRef(tvs.length)
@@ -115,6 +115,21 @@ export default function PedidoForm({
   const pedidoCerrado = limite > 0 && totalUnidades >= limite
   const pedidoExcedido = limite > 0 && totalUnidades > limite
 
+  // Filtro visual de la tabla (no toca el estado real de `tvs`; conserva el
+  // índice original `i` para que todos los handlers sigan funcionando igual).
+  const busquedaNormalizada = busquedaTv.trim().toLowerCase()
+  const filasVisibles = tvs
+    .map((tv, i) => ({ tv, i }))
+    .filter(({ tv }) => {
+      if (!busquedaNormalizada) return true
+      return (
+        (tv.modelo || '').toLowerCase().includes(busquedaNormalizada) ||
+        (tv.marca || '').toLowerCase().includes(busquedaNormalizada)
+      )
+    })
+  const idsVisibles = filasVisibles.map(({ i }) => i)
+  const todosVisiblesSeleccionados = idsVisibles.length > 0 && idsVisibles.every((i) => seleccionados.has(i))
+
   const toggleCondicion = (c) =>
     setCondiciones((prev) =>
       prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
@@ -166,12 +181,16 @@ export default function PedidoForm({
     if (pedidoCerrado) return
     setTvs((prev) => [...prev, tvVacia()])
   }
-  const eliminarTv = (i) => setTvs((prev) => prev.filter((_, idx) => idx !== i))
+  const eliminarTv = (i) => {
+    setTvs((prev) => prev.filter((_, idx) => idx !== i))
+    setSeleccionados(new Set())
+  }
 
   // Carga en lote (pegar / Excel / foto). Mapea los items al estado de TVs.
   // Si lo único que hay es la tarjeta vacía inicial, la reemplaza; si no, agrega.
   const importarTvs = (items) => {
     if (pedidoCerrado || !items?.length) return
+    setSeleccionados(new Set())
     const nuevas = items.map((it) => ({
       marca: it.marca,
       pulgadas: it.pulgadas ? String(it.pulgadas) : '',
@@ -186,6 +205,54 @@ export default function PedidoForm({
       const soloVacia = prev.length === 1 && !prev[0].marca && !prev[0].modelo
       return soloVacia ? nuevas : [...prev, ...nuevas]
     })
+  }
+
+  // Selección de filas — solo controla acciones masivas del lado del
+  // cliente (borrar / marcar pallet / marcar sin límite). No se envía al
+  // backend ni se guarda: es puramente una conveniencia de captura.
+  const toggleSeleccionado = (i) =>
+    setSeleccionados((prev) => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      return next
+    })
+
+  const toggleSeleccionarTodos = () => {
+    setSeleccionados((prev) => {
+      if (todosVisiblesSeleccionados) {
+        const next = new Set(prev)
+        idsVisibles.forEach((i) => next.delete(i))
+        return next
+      }
+      return new Set([...prev, ...idsVisibles])
+    })
+  }
+
+  const eliminarSeleccionadas = () => {
+    if (seleccionados.size === 0) return
+    setTvs((prev) => prev.filter((_, idx) => !seleccionados.has(idx)))
+    setSeleccionados(new Set())
+  }
+
+  // Aplica Pallet a todas las filas seleccionadas (reutiliza la misma regla
+  // que el toggle individual); si ya estaban todas en pallet, las regresa a
+  // pieza — mismo comportamiento de "encender/apagar todo" en un solo click.
+  const bulkTogglePallet = () => {
+    if (seleccionados.size === 0) return
+    const todosPallet = [...seleccionados].every((i) => tvs[i]?.unidad === 'pallet')
+    setTvs((prev) => prev.map((tv, idx) => (
+      seleccionados.has(idx) ? { ...tv, unidad: todosPallet ? 'pieza' : 'pallet' } : tv
+    )))
+  }
+
+  const bulkToggleSinLimite = () => {
+    if (seleccionados.size === 0) return
+    const todosSinLimite = [...seleccionados].every((i) => !!tvs[i]?.sinLimite)
+    const nuevoValor = !todosSinLimite
+    setTvs((prev) => prev.map((tv, idx) => (
+      seleccionados.has(idx) ? { ...tv, sinLimite: nuevoValor, cantidad: nuevoValor ? 1 : (tv.cantidad || 1) } : tv
+    )))
   }
 
   const enviar = async (e) => {
@@ -251,19 +318,6 @@ export default function PedidoForm({
   const hayPallets = pallets > 0
   const progresoLimite = limite > 0 ? Math.min(100, Math.round((totalUnidades / limite) * 100)) : 0
 
-  // Filtro visual de la tabla (no toca el estado real de `tvs`; conserva el
-  // índice original `i` para que todos los handlers sigan funcionando igual).
-  const busquedaNormalizada = busquedaTv.trim().toLowerCase()
-  const filasVisibles = tvs
-    .map((tv, i) => ({ tv, i }))
-    .filter(({ tv }) => {
-      if (!busquedaNormalizada) return true
-      return (
-        (tv.modelo || '').toLowerCase().includes(busquedaNormalizada) ||
-        (tv.marca || '').toLowerCase().includes(busquedaNormalizada)
-      )
-    })
-
   return (
     <main className="pedido-nuevo-page">
       <div className="pedido-nuevo-header">
@@ -271,9 +325,9 @@ export default function PedidoForm({
           <h1 className="pedido-nuevo-titulo">{tituloFinal}</h1>
           <p className="pedido-nuevo-subtitulo">{subtituloFinal}</p>
         </div>
-        <button type="button" className="btn-ayuda" title="Ayuda">
+        <button type="button" className="btn-ayuda" title="¿Necesitas ayuda?">
           <IconHelp />
-          <span>Ayuda</span>
+          <span>¿Necesitas ayuda?</span>
         </button>
       </div>
 
@@ -283,7 +337,7 @@ export default function PedidoForm({
             <span className="card-seccion-icono"><IconClipboardList /></span>
             <div>
               <h2 className="card-seccion-titulo">Información general</h2>
-              <p className="card-seccion-desc">Datos base de este pedido</p>
+              <p className="card-seccion-desc">Datos base del pedido</p>
             </div>
           </header>
 
@@ -359,25 +413,6 @@ export default function PedidoForm({
                 </div>
               )}
             </div>
-
-            <div className="section info-general-full">
-              <div className="label">{t('pedidoForm.condiciones')}</div>
-              <div className="condiciones">
-                {CONDICIONES.map((c) => (
-                  <label
-                    key={c}
-                    className={`condicion-chip ${condiciones.includes(c) ? 'activa' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={condiciones.includes(c)}
-                      onChange={() => toggleCondicion(c)}
-                    />
-                    {c}
-                  </label>
-                ))}
-              </div>
-            </div>
           </div>
         </section>
 
@@ -393,6 +428,17 @@ export default function PedidoForm({
         </section>
 
         <section className="card card-pedido-seccion card-televisiones">
+          <header className="card-seccion-header card-televisiones-header">
+            <span className="card-seccion-icono"><IconClipboardList /></span>
+            <div>
+              <h2 className="card-seccion-titulo">Televisiones</h2>
+              <p className="card-seccion-desc">Agrega las TVs que incluye este pedido.</p>
+            </div>
+            <span className="card-televisiones-contador">
+              {tvs.length} {tvs.length === 1 ? 'televisión' : 'televisiones'}
+            </span>
+          </header>
+
           <div className="tv-toolbar">
             <button
               type="button"
@@ -405,21 +451,71 @@ export default function PedidoForm({
               {pedidoCerrado ? t('pedidoForm.pedidoCompleto') : t('pedidoForm.agregarTelevision')}
             </button>
 
+            <button
+              type="button"
+              className={`tv-bulk-toggle ${seleccionados.size > 0 && [...seleccionados].every((i) => tvs[i]?.unidad === 'pallet') ? 'activa' : ''}`}
+              onClick={bulkTogglePallet}
+              disabled={seleccionados.size === 0}
+              title="Marcar como pallet las filas seleccionadas"
+            >
+              <IconBox />
+              {t('pedidoForm.pallet')}
+            </button>
+
+            <label
+              className={`tv-bulk-switch ${seleccionados.size > 0 && [...seleccionados].every((i) => !!tvs[i]?.sinLimite) ? 'activa' : ''} ${seleccionados.size === 0 ? 'deshabilitado' : ''}`}
+              title="Marcar sin límite las filas seleccionadas"
+            >
+              <input
+                type="checkbox"
+                checked={seleccionados.size > 0 && [...seleccionados].every((i) => !!tvs[i]?.sinLimite)}
+                onChange={bulkToggleSinLimite}
+                disabled={seleccionados.size === 0}
+              />
+              <span className="tv-switch-track"><span className="tv-switch-thumb" /></span>
+              {t('pedidoForm.sinLimite')}
+            </label>
+
             {tvs.length > 1 && (
               <div className="search-box tv-toolbar-buscar">
                 <IconSearch className="icon-search" />
                 <input
                   type="text"
-                  placeholder="Buscar SKU o marca…"
+                  placeholder="Buscar televisión…"
                   value={busquedaTv}
                   onChange={(e) => setBusquedaTv(e.target.value)}
                 />
               </div>
             )}
 
-            <span className="tv-toolbar-count">
-              {tvs.length} {tvs.length === 1 ? 'televisión' : 'televisiones'}
-            </span>
+            <button
+              type="button"
+              className="btn-eliminar-seleccionadas"
+              onClick={eliminarSeleccionadas}
+              disabled={seleccionados.size === 0}
+            >
+              <IconTrash />
+              Eliminar seleccionadas
+            </button>
+          </div>
+
+          <div className="tv-condicion-seccion">
+            <div className="label">Condición</div>
+            <div className="condiciones">
+              {CONDICIONES.map((c) => (
+                <label
+                  key={c}
+                  className={`condicion-chip ${condiciones.includes(c) ? 'activa' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={condiciones.includes(c)}
+                    onChange={() => toggleCondicion(c)}
+                  />
+                  {c}
+                </label>
+              ))}
+            </div>
           </div>
 
           <datalist id="marcas-list">
@@ -449,6 +545,14 @@ export default function PedidoForm({
               <table className="tabla-pedidos tv-tabla-moderna">
                 <thead>
                   <tr>
+                    <th className="tv-col-check">
+                      <input
+                        type="checkbox"
+                        checked={todosVisiblesSeleccionados}
+                        onChange={toggleSeleccionarTodos}
+                        aria-label="Seleccionar todas las televisiones visibles"
+                      />
+                    </th>
                     <th className="tv-col-num">#</th>
                     <th>SKU / Modelo</th>
                     <th>Marca</th>
@@ -471,6 +575,14 @@ export default function PedidoForm({
                     const skuOk = SKU_REGEX.test(tv.modelo || '')
                     return (
                       <tr key={i} className={esPallet ? 'es-pallet' : ''}>
+                        <td className="tv-col-check" data-label="">
+                          <input
+                            type="checkbox"
+                            checked={seleccionados.has(i)}
+                            onChange={() => toggleSeleccionado(i)}
+                            aria-label={`Seleccionar TV ${i + 1}`}
+                          />
+                        </td>
                         <td className="tv-col-num" data-label="#">{i + 1}</td>
                         <td data-label="SKU / Modelo">
                           <input
@@ -611,23 +723,23 @@ export default function PedidoForm({
           <h2 className="card-seccion-titulo">Resumen del pedido</h2>
 
           <div className="resumen-lista">
-            <div className="resumen-fila">
+            <div className="resumen-fila resumen-fila-modelos">
               <span className="resumen-fila-icono"><IconClipboardList /></span>
               <span className="resumen-fila-label">{t('pedidoForm.modelos')}</span>
               <strong className="resumen-fila-numero">{tvs.length}</strong>
             </div>
-            <div className="resumen-fila">
+            <div className="resumen-fila resumen-fila-marcas">
               <span className="resumen-fila-icono"><IconExcel /></span>
               <span className="resumen-fila-label">{t('pedidoForm.marcas')}</span>
               <strong className="resumen-fila-numero">{marcasUnicas}</strong>
             </div>
-            <div className="resumen-fila">
+            <div className="resumen-fila resumen-fila-tvs">
               <span className="resumen-fila-icono"><IconBox /></span>
               <span className="resumen-fila-label">{t('pedidoForm.tvsTotal')}</span>
               <strong className="resumen-fila-numero">{piezas}</strong>
             </div>
             {hayPallets && (
-              <div className="resumen-fila">
+              <div className="resumen-fila resumen-fila-pallets">
                 <span className="resumen-fila-icono"><IconBox /></span>
                 <span className="resumen-fila-label">{t('pedidoForm.pallets')}</span>
                 <strong className="resumen-fila-numero">{pallets}</strong>
