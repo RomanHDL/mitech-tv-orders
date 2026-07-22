@@ -1016,6 +1016,33 @@ select.select-dueno {
 .tv-condicion-mas-item { width: 100%; justify-content: flex-start; }
 .tv-condicion-mas-item:hover { background: var(--bg); color: var(--black); }
 
+.tv-condicion-mas-texto-corto { display: none; }
+
+@media (max-width: 640px) {
+  /* Toolbar de Televisiones: en desktop es una sola fila; "Condición
+     activa" forzaba un renglón rígido de ~500px (label + 4 chips + "Más
+     condiciones") que no cabía en viewports angostos y se salía del
+     toolbar y de la página completa (scroll horizontal de TODA la app).
+     En móvil cada grupo ocupa el ancho disponible y los chips envuelven
+     en varias líneas dentro de su propio contenedor. */
+  .tv-toolbar { gap: 0.6rem; }
+  .tv-toolbar > .btn { width: 100%; justify-content: center; }
+  .tv-condicion-activa {
+    flex-wrap: wrap;
+    height: auto;
+    width: 100%;
+    margin-left: 0;
+    padding: 0.6rem;
+  }
+  .tv-condicion-activa-label { width: 100%; margin: 0 0 0.3rem; }
+  .tv-toolbar-toggle { flex: 1 1 0; justify-content: center; }
+  /* "Más condiciones" envolvía su propio texto en 2 líneas dentro del
+     chip (altura fija) y se encimaba con el botón de abajo — en móvil
+     usa la versión corta, que sí cabe en una sola línea. */
+  .tv-condicion-mas-texto-completo { display: none; }
+  .tv-condicion-mas-texto-corto { display: inline; }
+}
+
 /* Condición por fila: una misma partida/SKU puede llevar varias condiciones
    a la vez (ej. GRA + GRB). El botón se mantiene en UNA sola línea y a
    ancho fijo sin importar cuántas condiciones tenga la fila (se resume a
@@ -2680,8 +2707,30 @@ tr.fila-cancelada .pedido-nombre { text-decoration: line-through; text-decoratio
 }
 
 @media (max-width: 720px) {
-  .stepper-etapas { flex-wrap: wrap; row-gap: 0.75rem; }
-  .stepper-etapa-label { max-width: none; }
+  /* Con flex-wrap solo, los 6 pasos no llegaban a envolver: al tener
+     min-width:0 y flex:1, el navegador prefiere encogerlos hasta casi 0px
+     en una sola fila antes que saltar de línea — iconos encimados y
+     etiquetas concatenadas ilegibles. En vez de eso, en móvil el stepper
+     se vuelve vertical (icono + etiqueta en fila, conector como línea
+     vertical entre pasos), el patrón estándar para steppers angostos. */
+  .stepper-etapas { flex-direction: column; align-items: stretch; gap: 0; }
+  .stepper-etapa-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+    flex: none;
+    min-width: 0;
+    width: 100%;
+  }
+  .stepper-etapa-wrap:last-child { flex: none; }
+  .stepper-etapa { flex-direction: row; width: 100%; }
+  .stepper-etapa-label { max-width: none; text-align: left; }
+  .stepper-conector {
+    flex: none;
+    width: 2px;
+    height: 1.1rem;
+    min-width: 0;
+    margin: 0 0 0 1.1rem;
+  }
 }
 
 /* ─── Pedidos en vivo (WMS) ────────────────────────────── */
@@ -3365,7 +3414,13 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
 .sku-celda { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; font-weight: 600; }
 
 .controles-cantidad { display: flex; align-items: center; gap: 0.4rem; }
-.controles-cantidad-input {
+/* El reset global de inputs (input[type="number"] { width:100% }) es más
+   específico que .controles-cantidad-input sola (attr+elemento vs. una
+   sola clase) y ganaba: el campo se estiraba a todo el ancho de la celda
+   (visto hasta 416px en móvil), forzando que los botones +/-/✓/↻
+   envolvieran a líneas nuevas y triplicando la altura de la fila. Se
+   agrega el selector del contenedor para superar esa especificidad. */
+.controles-cantidad input.controles-cantidad-input {
   width: 3.4rem;
   height: 42px;
   text-align: center;

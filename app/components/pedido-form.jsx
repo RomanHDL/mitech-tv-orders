@@ -578,7 +578,12 @@ export default function PedidoForm({
                   title="Ver más condiciones disponibles"
                 >
                   {condicionEsExtra && <span className="tv-condicion-chip-dot" aria-hidden="true" />}
-                  {condicionEsExtra ? condicionActiva : 'Más condiciones'}
+                  {condicionEsExtra ? condicionActiva : (
+                    <>
+                      <span className="tv-condicion-mas-texto-completo">Más condiciones</span>
+                      <span className="tv-condicion-mas-texto-corto">Más</span>
+                    </>
+                  )}
                   <IconChevronDown />
                 </button>
                 {masCondicionesAbierto && (
