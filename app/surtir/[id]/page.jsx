@@ -40,7 +40,7 @@ export default async function SurtirPage({ params }) {
     televisiones: (pedido.televisiones || []).map((tv) => ({
       marca: tv.marca,
       pulgadas: tv.pulgadas,
-      condicion: tv.condicion || '',
+      condiciones: Array.isArray(tv.condiciones) ? tv.condiciones : (tv.condicion ? [tv.condicion] : []),
       modelo: tv.modelo || '',
       cantidad: tv.cantidad,
       unidad: tv.unidad || 'pieza',

@@ -15,7 +15,13 @@ async function obtenerPedido(id) {
 
 function agruparPorMarca(televisiones) {
   const grupos = {}
-  for (const tv of televisiones) {
+  for (const tvRaw of televisiones) {
+    // Compatibilidad con pedidos creados antes de que una partida pudiera
+    // tener varias condiciones a la vez (guardaban `condicion` string suelto).
+    const tv = {
+      ...tvRaw,
+      condiciones: Array.isArray(tvRaw.condiciones) ? tvRaw.condiciones : (tvRaw.condicion ? [tvRaw.condicion] : []),
+    }
     if (!grupos[tv.marca]) grupos[tv.marca] = []
     grupos[tv.marca].push(tv)
   }
@@ -194,7 +200,13 @@ export default async function ImprimirPage({ params }) {
                 {items.map((tv, i) => (
                   <li key={i} className={tv.unidad === 'pallet' ? 'es-pallet' : ''}>
                     <span className="col-pulgadas">{tv.pulgadas}"</span>
-                    {tv.condicion && <span className="col-condicion">{tv.condicion}</span>}
+                    {tv.condiciones?.length > 0 && (
+                      <span className="col-condicion">
+                        {tv.condiciones.map((c) => (
+                          <span key={c} className={`condicion-chip cond-${c.toLowerCase()}`}>{c}</span>
+                        ))}
+                      </span>
+                    )}
                     <span className="col-cantidad">
                       {tv.sinLimite ? 'S/L' : tv.cantidad}
                     </span>

@@ -1016,6 +1016,37 @@ select.select-dueno {
 .tv-condicion-mas-item { width: 100%; justify-content: flex-start; }
 .tv-condicion-mas-item:hover { background: var(--bg); color: var(--black); }
 
+/* Condición por fila: una misma partida/SKU puede llevar varias condiciones
+   a la vez (ej. GRA + GRB) — el popover reutiliza el mismo desplegable de
+   "Más condiciones" pero listando el catálogo completo como checklist. */
+.tv-col-condicion { width: 15%; }
+.tv-fila-condicion { position: relative; }
+.tv-fila-condicion-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 2.1rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--tx);
+}
+.tv-fila-condicion-btn:hover { border-color: var(--primary); background: var(--primary-soft); }
+.tv-fila-condicion-btn svg { width: 13px; height: 13px; flex-shrink: 0; margin-left: auto; color: var(--text-muted); }
+.tv-fila-condicion-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.tv-fila-condicion-chip {
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  border-color: var(--border);
+  font-size: 0.68rem;
+  cursor: default;
+  pointer-events: none;
+}
+.tv-fila-condicion-dropdown { left: 0; right: auto; max-height: 15rem; overflow-y: auto; }
+
 .tv-tabla-moderna { table-layout: auto; }
 .tv-tabla-moderna thead th {
   background: #F1F5F9;

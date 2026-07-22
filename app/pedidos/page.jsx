@@ -64,7 +64,7 @@ async function obtenerPedidos() {
       televisiones: tvs.map((tv) => ({
         marca: tv.marca || '',
         pulgadas: tv.pulgadas || 0,
-        condicion: tv.condicion || '',
+        condiciones: Array.isArray(tv.condiciones) ? tv.condiciones : (tv.condicion ? [tv.condicion] : []),
         modelo: tv.modelo || '',
         unidad: tv.unidad || 'pieza',
         cantidad: tv.cantidad || 0,

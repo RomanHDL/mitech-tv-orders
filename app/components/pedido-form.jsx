@@ -27,7 +27,7 @@ const CONDICIONES_MAS = CONDICIONES.filter((c) => !CONDICIONES_FRECUENTES.includ
 const tvVacia = (overrides = {}) => ({
   marca: '',
   pulgadas: '',
-  condicion: CONDICIONES_FRECUENTES[0],
+  condiciones: [CONDICIONES_FRECUENTES[0]],
   modelo: '',
   cantidad: 1,
   unidad: 'pieza',
@@ -69,7 +69,12 @@ export default function PedidoForm({
       ? initialData.televisiones.map((tv) => ({
           marca: tv.marca || '',
           pulgadas: tv.pulgadas !== undefined ? String(tv.pulgadas) : '',
-          condicion: tv.condicion || CONDICIONES_FRECUENTES[0],
+          // Compatibilidad con pedidos creados antes de que una partida
+          // pudiera tener varias condiciones a la vez (guardaban `condicion`
+          // como string suelto en vez de `condiciones` como arreglo).
+          condiciones: Array.isArray(tv.condiciones) && tv.condiciones.length > 0
+            ? tv.condiciones
+            : (tv.condicion ? [tv.condicion] : [CONDICIONES_FRECUENTES[0]]),
           modelo: tv.modelo || '',
           cantidad: tv.cantidad || 1,
           unidad: tv.unidad || 'pieza',
@@ -85,17 +90,26 @@ export default function PedidoForm({
   const tablaRef = useRef(null)
   const previousLength = useRef(tvs.length)
   const masMenuRef = useRef(null)
+  const [filaCondicionAbierta, setFilaCondicionAbierta] = useState(null)
+  const filaCondicionRef = useRef(null)
 
-  // Cierra el desplegable "Más condiciones" al hacer clic fuera o con
-  // Escape — mismo patrón que ya usa el menú de usuario del nav.
+  // Cierra el desplegable "Más condiciones" del toolbar y el popover de
+  // condición por fila al hacer clic fuera o con Escape — mismo patrón que
+  // ya usa el menú de usuario del nav.
   useEffect(() => {
     function onClickFuera(e) {
       if (masMenuRef.current && !masMenuRef.current.contains(e.target)) {
         setMasCondicionesAbierto(false)
       }
+      if (filaCondicionRef.current && !filaCondicionRef.current.contains(e.target)) {
+        setFilaCondicionAbierta(null)
+      }
     }
     function onKeyDown(e) {
-      if (e.key === 'Escape') setMasCondicionesAbierto(false)
+      if (e.key === 'Escape') {
+        setMasCondicionesAbierto(false)
+        setFilaCondicionAbierta(null)
+      }
     }
     document.addEventListener('mousedown', onClickFuera)
     document.addEventListener('keydown', onKeyDown)
@@ -216,10 +230,25 @@ export default function PedidoForm({
       )
     )
 
+  // Una misma partida/SKU puede aceptar varias condiciones a la vez (ej.
+  // GRA y GRB). Nunca se permite dejar el arreglo vacío — si solo queda una
+  // condición marcada, no se puede desmarcar.
+  const toggleCondicionEnFila = (i, codigo) =>
+    setTvs((prev) =>
+      prev.map((tv, idx) => {
+        if (idx !== i) return tv
+        const actuales = tv.condiciones || []
+        const yaEsta = actuales.includes(codigo)
+        if (yaEsta && actuales.length === 1) return tv
+        const siguientes = yaEsta ? actuales.filter((c) => c !== codigo) : [...actuales, codigo]
+        return { ...tv, condiciones: siguientes }
+      })
+    )
+
   const agregarTv = () => {
     if (pedidoCerrado) return
     setTvs((prev) => [...prev, tvVacia({
-      condicion: condicionActiva,
+      condiciones: [condicionActiva],
       unidad: palletPorDefecto ? 'pallet' : 'pieza',
       sinLimite: sinLimitePorDefecto,
     })])
@@ -233,7 +262,11 @@ export default function PedidoForm({
     setTvs((prev) => {
       const original = prev[i]
       if (!original) return prev
-      const copia = { ...original, modelosAlternativos: [...(original.modelosAlternativos || [])] }
+      const copia = {
+        ...original,
+        condiciones: [...(original.condiciones || [])],
+        modelosAlternativos: [...(original.modelosAlternativos || [])],
+      }
       const next = [...prev]
       next.splice(i + 1, 0, copia)
       return next
@@ -267,7 +300,7 @@ export default function PedidoForm({
     const nuevas = items.map((it) => ({
       marca: it.marca,
       pulgadas: it.pulgadas ? String(it.pulgadas) : '',
-      condicion: condicionActiva,
+      condiciones: [condicionActiva],
       modelo: it.modelo,
       cantidad: it.cantidad || 1,
       unidad: palletPorDefecto ? 'pallet' : (it.unidad || 'pieza'),
@@ -292,7 +325,9 @@ export default function PedidoForm({
     for (const [i, tv] of tvs.entries()) {
       if (!MARCAS.includes(tv.marca)) return setError(`TV #${i + 1}: marca inválida`)
       if (!PULGADAS.includes(Number(tv.pulgadas))) return setError(`TV #${i + 1}: pulgadas inválidas`)
-      if (!CONDICIONES.includes(tv.condicion)) return setError(`TV #${i + 1}: falta condición`)
+      if (!tv.condiciones?.length || tv.condiciones.some((c) => !CONDICIONES.includes(c))) {
+        return setError(`TV #${i + 1}: falta condición`)
+      }
       if (!SKU_REGEX.test(tv.modelo || '')) {
         return setError(`TV #${i + 1}: captura el modelo / SKU (mín. 3 letras o números)`)
       }
@@ -318,8 +353,8 @@ export default function PedidoForm({
     // El pedido ya no pide sus propias "condiciones" por separado — se
     // construyen automáticamente a partir de las condiciones únicas que
     // realmente se usaron en las televisiones capturadas (sin duplicar la
-    // captura). El campo y su forma (arreglo de strings) no cambian.
-    const condicionesUnicas = [...new Set(tvs.map((tv) => tv.condicion).filter(Boolean))]
+    // captura). Cada TV puede aportar varias condiciones a la vez.
+    const condicionesUnicas = [...new Set(tvs.flatMap((tv) => tv.condiciones || []))]
 
     setEnviando(true)
     try {
@@ -332,7 +367,7 @@ export default function PedidoForm({
         televisiones: tvs.map((tv) => ({
           marca: tv.marca,
           pulgadas: Number(tv.pulgadas),
-          condicion: tv.condicion,
+          condiciones: tv.condiciones,
           modelo: tv.modelo.trim(),
           cantidad: tv.sinLimite ? (limite > 0 ? limite : 0) : Number(tv.cantidad),
           unidad: tv.unidad === 'pallet' ? 'pallet' : 'pieza',
@@ -586,6 +621,7 @@ export default function PedidoForm({
                       <th>Pulgada</th>
                       <th>Cantidad</th>
                       <th>Tipo</th>
+                      <th className="tv-col-condicion">Condición</th>
                       <th className="tv-col-acciones"></th>
                     </tr>
                   </thead>
@@ -687,6 +723,54 @@ export default function PedidoForm({
                               >
                                 <span aria-hidden="true">∞</span> {t('pedidoForm.sinLimite')}
                               </button>
+                            </div>
+                          </td>
+                          <td className="tv-col-condicion" data-label="Condición">
+                            <div
+                              className="tv-fila-condicion"
+                              ref={filaCondicionAbierta === i ? filaCondicionRef : null}
+                            >
+                              <button
+                                type="button"
+                                className="tv-fila-condicion-btn"
+                                onClick={() => setFilaCondicionAbierta((prev) => (prev === i ? null : i))}
+                                aria-expanded={filaCondicionAbierta === i}
+                                aria-haspopup="listbox"
+                                title="Editar condición(es) de esta televisión"
+                              >
+                                <span className="tv-fila-condicion-chips">
+                                  {(tv.condiciones || []).map((c) => (
+                                    <span
+                                      key={c}
+                                      className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-fila-condicion-chip`}
+                                    >
+                                      <span className="tv-condicion-chip-dot" aria-hidden="true" />
+                                      {c}
+                                    </span>
+                                  ))}
+                                </span>
+                                <IconChevronDown />
+                              </button>
+                              {filaCondicionAbierta === i && (
+                                <div className="tv-condicion-mas-dropdown tv-fila-condicion-dropdown" role="listbox" aria-multiselectable="true">
+                                  {CONDICIONES.map((c) => {
+                                    const seleccionada = (tv.condiciones || []).includes(c)
+                                    return (
+                                      <button
+                                        key={c}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={seleccionada}
+                                        className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-condicion-mas-item ${seleccionada ? 'activa' : ''}`}
+                                        onClick={() => toggleCondicionEnFila(i, c)}
+                                      >
+                                        <span className="tv-condicion-chip-dot" aria-hidden="true" />
+                                        {c}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="tv-col-acciones" data-label="Acciones">

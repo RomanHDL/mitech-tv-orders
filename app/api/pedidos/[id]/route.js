@@ -6,6 +6,16 @@ import { getUsuario, requireModule } from '@/lib/auth'
 import { registrarEvento } from '@/lib/eventos'
 import { calcularTotales } from '@/lib/estado-pedido'
 
+// Un SKU puede llevar varias condiciones a la vez (ej. la misma partida
+// acepta GRA y GRB) — se compara como conjunto, sin importar el orden.
+// Los pedidos creados antes de este cambio guardan `condicion` (string);
+// los nuevos guardan `condiciones` (string[]). Nunca se migra el dato en
+// la DB, solo se normaliza al leer para no perder el emparejamiento con
+// pedidos históricos.
+const condicionesDe = (tv) =>
+  Array.isArray(tv.condiciones) ? tv.condiciones : (tv.condicion ? [tv.condicion] : [])
+const condicionKey = (tv) => [...condicionesDe(tv)].sort().join(',')
+
 export async function GET(_req, { params }) {
   const { id } = await params
   if (!ObjectId.isValid(id)) {
@@ -207,7 +217,7 @@ export async function PUT(req, { params }) {
     if (!PULGADAS.includes(pulgadas)) {
       return NextResponse.json({ error: `TV #${i + 1}: pulgadas inválidas` }, { status: 400 })
     }
-    if (!CONDICIONES.includes(tv.condicion)) {
+    if (!Array.isArray(tv.condiciones) || tv.condiciones.length === 0 || tv.condiciones.some((c) => !CONDICIONES.includes(c))) {
       return NextResponse.json({ error: `TV #${i + 1}: falta condición` }, { status: 400 })
     }
     const tvSinLimite = !!tv.sinLimite
@@ -225,16 +235,19 @@ export async function PUT(req, { params }) {
       )
     }
 
-    // Preservar cantidadSurtida si hay match exacto de SKU + condición
-    // (marca+pulgadas+modelo+unidad+condicion). Dos partidas del mismo SKU
-    // con condición distinta se tratan como líneas independientes.
+    const condicionesLimpias = [...new Set(tv.condiciones)]
+
+    // Preservar cantidadSurtida si hay match exacto de SKU + condiciones
+    // (marca+pulgadas+modelo+unidad+condiciones, comparadas como conjunto).
+    // Dos partidas del mismo SKU con un conjunto de condiciones distinto se
+    // tratan como líneas independientes.
     const matching = tvsExistentes.find(
       (v) =>
         v.marca === tv.marca &&
         v.pulgadas === pulgadas &&
         (v.modelo || '') === modelo &&
         (v.unidad || 'pieza') === unidad &&
-        (v.condicion || '') === tv.condicion
+        condicionKey(v) === [...condicionesLimpias].sort().join(',')
     )
     const cantidadSurtida = matching
       ? (tvSinLimite ? (matching.cantidadSurtida || 0) : Math.min(cantidadFinal, matching.cantidadSurtida || 0))
@@ -252,7 +265,7 @@ export async function PUT(req, { params }) {
     tvsLimpias.push({
       marca: tv.marca,
       pulgadas,
-      condicion: tv.condicion,
+      condiciones: condicionesLimpias,
       modelo,
       modelosAlternativos,
       cantidad: cantidadFinal,
@@ -301,7 +314,7 @@ export async function PUT(req, { params }) {
   const cambioCantidades = sumaAntes !== sumaDespues
   const mismasLineas =
     tvsExistentes.length === tvsLimpias.length &&
-    tvsExistentes.every((v, i) => v.marca === tvsLimpias[i].marca && v.modelo === tvsLimpias[i].modelo && v.condicion === tvsLimpias[i].condicion)
+    tvsExistentes.every((v, i) => v.marca === tvsLimpias[i].marca && v.modelo === tvsLimpias[i].modelo && condicionKey(v) === condicionKey(tvsLimpias[i]))
 
   const usuarioEdita = await getUsuario()
   if (cambios.length > 0 || cambioCantidades) {

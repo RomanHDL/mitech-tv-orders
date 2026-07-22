@@ -432,7 +432,8 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
               const completo = !esSinLimite && surtida >= tv.cantidad
               const enProgreso = surtida > 0 && !completo
               const claseFila = completo ? 'fila-surtido-completo' : enProgreso ? 'fila-surtido-parcial' : 'fila-surtido-pendiente'
-              const descTv = `${tv.marca} ${tv.pulgadas}"${tv.condicion ? ' ' + tv.condicion : ''}${tv.modelo ? ' ' + tv.modelo : ''}`
+              const condTv = tv.condiciones?.join(' ') || ''
+              const descTv = `${tv.marca} ${tv.pulgadas}"${condTv ? ' ' + condTv : ''}${tv.modelo ? ' ' + tv.modelo : ''}`
               const unidadTxt = unidadLabel(tv.cantidad || 1, tv.unidad)
 
               return (
@@ -441,7 +442,15 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
                   <td data-label="Marca">{tv.marca}</td>
                   <td data-label="Modelo">{tv.modelo || '—'}</td>
                   <td data-label="Pulgadas">{tv.pulgadas}&quot;</td>
-                  <td data-label="Condición">{tv.condicion ? <span className={`tag tag-${tv.condicion.toLowerCase()}`}>{tv.condicion}</span> : '—'}</td>
+                  <td data-label="Condición">
+                    {tv.condiciones?.length ? (
+                      <div className="tags-celda">
+                        {tv.condiciones.map((c) => (
+                          <span key={c} className={`tag tag-${c.toLowerCase()}`}>{c}</span>
+                        ))}
+                      </div>
+                    ) : '—'}
+                  </td>
                   <td data-label="Solicitado">{esSinLimite ? 'Sin límite' : tv.cantidad}</td>
                   <td data-label="Surtido">{surtida}</td>
                   <td data-label="Pendiente">{pendienteTv === null ? '—' : pendienteTv}</td>

@@ -367,7 +367,11 @@ export default function PedidoDetalleModal({
                                 </span>
                               </td>
                               <td data-label="Condición">
-                                <span className={tagClase(tv.condicion)}>{tv.condicion}</span>
+                                <div className="tags-celda">
+                                  {(tv.condiciones || []).map((c) => (
+                                    <span key={c} className={tagClase(c)}>{c}</span>
+                                  ))}
+                                </div>
                               </td>
                               <td data-label="Solicitada">
                                 {tv.sinLimite ? 'Sin límite' : tv.cantidad}
