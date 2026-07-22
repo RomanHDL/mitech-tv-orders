@@ -1666,6 +1666,22 @@ select.select-dueno {
   -webkit-overflow-scrolling: touch;
   margin: 0 -0.25rem;
   padding: 0 0.25rem;
+  /* Pista visual de que hay más columnas por ver con scroll horizontal —
+     sin tocar columnas/anchos/breakpoints existentes (decisión ya tomada
+     de mantener las tablas siempre horizontales, nunca en tarjetas
+     apiladas). Técnica de "scroll shadow" en 4 capas: 2 degradados del
+     color de fondo que viajan CON el contenido (tapan la sombra en los
+     extremos) y 2 sombras fijas al contenedor que solo se asoman cuando
+     no se ha llegado a ese borde. */
+  background-image:
+    linear-gradient(to right, var(--card) 30%, rgba(255, 255, 255, 0)),
+    linear-gradient(to left, var(--card) 30%, rgba(255, 255, 255, 0)),
+    linear-gradient(to right, rgba(20, 20, 20, 0.12), rgba(20, 20, 20, 0)),
+    linear-gradient(to left, rgba(20, 20, 20, 0.12), rgba(20, 20, 20, 0));
+  background-position: left, right, left, right;
+  background-repeat: no-repeat;
+  background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
+  background-attachment: local, local, scroll, scroll;
 }
 
 /* FORZAR layout horizontal en TODOS los anchos — nunca cascada.
