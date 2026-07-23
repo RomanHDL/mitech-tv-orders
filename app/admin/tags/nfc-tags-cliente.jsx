@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconAlert, IconCheck } from '../../components/icons'
 
 export default function NfcTagsCliente() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [pin, setPin] = useState('')
   const [estado, setEstado] = useState('idle') // 'idle' | 'escribiendo' | 'exito' | 'error'
@@ -22,15 +24,15 @@ export default function NfcTagsCliente() {
     const pinLimpio = pin.trim()
 
     if (!emailLimpio || !pinLimpio) {
-      setError('Falta email o PIN')
+      setError(t('tagsNfc.errorFaltaEmailOPin'))
       return
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpio)) {
-      setError('Email inválido')
+      setError(t('tagsNfc.errorEmailInvalido'))
       return
     }
     if (!/^\d{6,}$/.test(pinLimpio)) {
-      setError('El PIN debe ser mínimo 6 dígitos numéricos')
+      setError(t('tagsNfc.errorPinCorto'))
       return
     }
 
@@ -44,17 +46,15 @@ export default function NfcTagsCliente() {
       setTimeout(() => setEstado('idle'), 3500)
     } catch (err) {
       setEstado('error')
-      setError(err.message || 'No se pudo escribir el tag')
+      setError(err.message || t('tagsNfc.errorEscribir'))
     }
   }
 
   return (
     <main className="page">
       <div className="page-header">
-        <h1>Crear tag NFC</h1>
-        <p className="subtitle">
-          Escribe email y PIN en un tag NFC en blanco para que el usuario entre con un toque.
-        </p>
+        <h1>{t('tagsNfc.titulo')}</h1>
+        <p className="subtitle">{t('tagsNfc.subtitulo')}</p>
       </div>
 
       <div className="card">
@@ -62,20 +62,20 @@ export default function NfcTagsCliente() {
           <div className="alerta alerta-error">
             <IconAlert />
             <span>
-              NFC solo funciona en <strong>Android con Chrome</strong> y NFC habilitado en
-              ajustes. Abre esta página desde un Android para escribir tags.
+              {t('tagsNfc.avisoNoSoportadoPre')} <strong>{t('tagsNfc.avisoNoSoportadoStrong')}</strong>{' '}
+              {t('tagsNfc.avisoNoSoportadoPost')}
             </span>
           </div>
         ) : (
           <form onSubmit={escribir}>
             <div className="section">
-              <label className="label" htmlFor="tag-email">Email del usuario</label>
+              <label className="label" htmlFor="tag-email">{t('tagsNfc.emailUsuarioLabel')}</label>
               <input
                 id="tag-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@correo.com"
+                placeholder={t('usuarios.emailPlaceholder')}
                 autoComplete="off"
                 disabled={estado === 'escribiendo'}
                 required
@@ -83,13 +83,13 @@ export default function NfcTagsCliente() {
             </div>
 
             <div className="section">
-              <label className="label" htmlFor="tag-pin">PIN</label>
+              <label className="label" htmlFor="tag-pin">{t('tagsNfc.pinLabel')}</label>
               <input
                 id="tag-pin"
                 type="text"
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                placeholder="Mínimo 6 dígitos"
+                placeholder={t('tagsNfc.pinPlaceholder')}
                 inputMode="numeric"
                 pattern="\d{6,}"
                 autoComplete="off"
@@ -108,7 +108,7 @@ export default function NfcTagsCliente() {
             {estado === 'exito' && (
               <div className="alerta alerta-exito">
                 <IconCheck />
-                <span>Tag escrito. El usuario ya puede entrar acercándolo al login.</span>
+                <span>{t('tagsNfc.tagEscrito')}</span>
               </div>
             )}
 
@@ -117,14 +117,12 @@ export default function NfcTagsCliente() {
               className="btn btn-primary btn-large"
               disabled={estado === 'escribiendo' || !email.trim() || !pin.trim()}
             >
-              {estado === 'escribiendo' ? 'Acerca un tag NFC en blanco…' : 'Escribir tag'}
+              {estado === 'escribiendo' ? t('tagsNfc.acercaTag') : t('tagsNfc.escribirTag')}
             </button>
 
             <p className="tag-hint">
-              <strong>Cómo usarlo:</strong> Llena email y PIN, click "Escribir tag", luego
-              acerca un tag NFC vacío al teléfono. El tag queda con el formato{' '}
-              <code>email|pin</code>. Cuando ese usuario acerque su tag al login, entra
-              automáticamente.
+              <strong>{t('tagsNfc.comoUsarloTitulo')}</strong> {t('tagsNfc.comoUsarloTexto')}{' '}
+              <code>email|pin</code>. {t('tagsNfc.comoUsarloFinal')}
             </p>
           </form>
         )}

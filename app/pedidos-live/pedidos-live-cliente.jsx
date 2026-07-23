@@ -1,7 +1,9 @@
 'use client'
 
 import { Fragment, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconBox, IconRefresh, IconSearch } from '../components/icons'
+import { localeDe } from '@/lib/intl-format'
 
 // Los nombres de estatus vienen de SOP.vw_StatusInternal (17 valores fijos
 // del WMS). Los agrupamos en unas pocas clases visuales.
@@ -19,26 +21,27 @@ function claseEstatus(estatus) {
   return 'recibido'
 }
 
-function formatMoneda(total, moneda) {
+function formatMoneda(total, moneda, lang) {
   if (total === null || total === undefined) return '—'
   try {
-    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda || 'MXN' }).format(total)
+    return new Intl.NumberFormat(localeDe(lang), { style: 'currency', currency: moneda || 'MXN' }).format(total)
   } catch {
     return `${total} ${moneda || ''}`.trim()
   }
 }
 
-function formatFechaMovimiento(iso) {
+function formatFechaMovimiento(iso, lang) {
   if (!iso) return ''
   const fecha = new Date(iso)
   if (Number.isNaN(fecha.getTime())) return iso
-  return new Intl.DateTimeFormat('es-MX', {
+  return new Intl.DateTimeFormat(localeDe(lang), {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   }).format(fecha)
 }
 
 export default function PedidosLiveCliente({ pedidos }) {
+  const { t, i18n } = useTranslation()
   const [busqueda, setBusqueda] = useState('')
   const [abiertoId, setAbiertoId] = useState(null)
   const [detalle, setDetalle] = useState({}) // orderId -> { cargando, error, items }
@@ -67,7 +70,7 @@ export default function PedidosLiveCliente({ pedidos }) {
     try {
       const res = await fetch(`/api/pedidos-live/${orderId}`)
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'No se pudo cargar el detalle')
+      if (!res.ok) throw new Error(data.error || t('pedidosLive.errorCargarDetalle'))
       setDetalle((prev) => ({ ...prev, [orderId]: { cargando: false, items: data.items || [] } }))
     } catch (err) {
       setDetalle((prev) => ({ ...prev, [orderId]: { cargando: false, error: err.message } }))
@@ -81,7 +84,7 @@ export default function PedidosLiveCliente({ pedidos }) {
           <IconSearch className="icon-search" />
           <input
             type="text"
-            placeholder="Buscar por N° pedido, cuenta, cliente o marketplace…"
+            placeholder={t('pedidosLive.buscarPlaceholder')}
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -90,21 +93,21 @@ export default function PedidosLiveCliente({ pedidos }) {
 
       {pedidosFiltrados.length === 0 ? (
         <div className="empty">
-          <p>No se encontraron pedidos con "{busqueda}".</p>
+          <p>{t('pedidosLive.sinResultados', { busqueda })}</p>
         </div>
       ) : (
         <div className="tabla-wrap">
           <table className="tabla-pedidos">
             <thead>
               <tr>
-                <th>Pedido</th>
-                <th>Marketplace</th>
-                <th>Cuenta</th>
-                <th>Cliente</th>
-                <th>Estatus</th>
-                <th>Total</th>
-                <th>Fecha</th>
-                <th>Ubicación</th>
+                <th>{t('pedidosLive.colPedido')}</th>
+                <th>{t('pedidosLive.colMarketplace')}</th>
+                <th>{t('pedidosLive.colCuenta')}</th>
+                <th>{t('pedidosLive.colCliente')}</th>
+                <th>{t('pedidosLive.colEstatus')}</th>
+                <th>{t('pedidosLive.colTotal')}</th>
+                <th>{t('pedidosLive.colFecha')}</th>
+                <th>{t('pedidosLive.colUbicacion')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -115,23 +118,23 @@ export default function PedidosLiveCliente({ pedidos }) {
                 return (
                   <Fragment key={p.orderId}>
                     <tr>
-                      <td data-label="Pedido">
+                      <td data-label={t('pedidosLive.colPedido')}>
                         <div className="pedido-nombre">
                           #{p.orderId}
                           {p.webOrderId && <span className="tag-empty">{p.webOrderId}</span>}
                         </div>
                       </td>
-                      <td data-label="Marketplace">{p.source || '—'}</td>
-                      <td data-label="Cuenta">{p.accountName || '—'}</td>
-                      <td data-label="Cliente">{p.cliente || '—'}</td>
-                      <td data-label="Estatus">
+                      <td data-label={t('pedidosLive.colMarketplace')}>{p.source || '—'}</td>
+                      <td data-label={t('pedidosLive.colCuenta')}>{p.accountName || '—'}</td>
+                      <td data-label={t('pedidosLive.colCliente')}>{p.cliente || '—'}</td>
+                      <td data-label={t('pedidosLive.colEstatus')}>
                         <span className={`badge-estatus ${claseEstatus(p.estatus)}`}>{p.estatus}</span>
                       </td>
-                      <td data-label="Total">
-                        <span className="numero-grande">{formatMoneda(p.total, p.moneda)}</span>
+                      <td data-label={t('pedidosLive.colTotal')}>
+                        <span className="numero-grande">{formatMoneda(p.total, p.moneda, i18n.language)}</span>
                       </td>
-                      <td data-label="Fecha">{p.fechaFmt}</td>
-                      <td data-label="Ubicación">{p.ubicacion || '—'}</td>
+                      <td data-label={t('pedidosLive.colFecha')}>{p.fechaFmt}</td>
+                      <td data-label={t('pedidosLive.colUbicacion')}>{p.ubicacion || '—'}</td>
                       <td>
                         <div className="acciones">
                           <button
@@ -140,7 +143,7 @@ export default function PedidosLiveCliente({ pedidos }) {
                             onClick={() => toggleDetalle(p.orderId)}
                           >
                             <IconBox />
-                            {abierto ? 'Ocultar' : 'Ver'}
+                            {abierto ? t('pedidosLive.ocultar') : t('pedidosLive.ver')}
                           </button>
                         </div>
                       </td>
@@ -150,21 +153,21 @@ export default function PedidosLiveCliente({ pedidos }) {
                         <td colSpan={9}>
                           {!d || d.cargando ? (
                             <p className="detalle-cargando">
-                              <IconRefresh /> Cargando detalle del pedido…
+                              <IconRefresh /> {t('pedidosLive.cargandoDetalle')}
                             </p>
                           ) : d.error ? (
                             <p className="detalle-error">{d.error}</p>
                           ) : d.items.length === 0 ? (
-                            <p className="detalle-vacio">Sin artículos registrados para este pedido.</p>
+                            <p className="detalle-vacio">{t('pedidosLive.sinArticulos')}</p>
                           ) : (
                             <table className="tabla-detalle-items">
                               <thead>
                                 <tr>
-                                  <th>SKU</th>
-                                  <th>Descripción</th>
-                                  <th>Cant.</th>
-                                  <th>Pallet</th>
-                                  <th>Último movimiento</th>
+                                  <th>{t('pedidosLive.colSku')}</th>
+                                  <th>{t('pedidosLive.colDescripcion')}</th>
+                                  <th>{t('pedidosLive.colCant')}</th>
+                                  <th>{t('pedidosLive.colPallet')}</th>
+                                  <th>{t('pedidosLive.colUltimoMovimiento')}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -176,7 +179,7 @@ export default function PedidosLiveCliente({ pedidos }) {
                                     <td>{it.binCode || '—'}</td>
                                     <td>
                                       {it.ultimoMovimiento
-                                        ? `${it.ultimoMovimiento.tipoMovimiento} · ${it.ultimoMovimiento.movidoPor} (${formatFechaMovimiento(it.ultimoMovimiento.fecha)})`
+                                        ? `${it.ultimoMovimiento.tipoMovimiento} · ${it.ultimoMovimiento.movidoPor} (${formatFechaMovimiento(it.ultimoMovimiento.fecha, i18n.language)})`
                                         : '—'}
                                     </td>
                                   </tr>
