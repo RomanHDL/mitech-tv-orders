@@ -557,7 +557,7 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                         <option value="">{t('pedidos.sinDueno')}</option>
                         {usuarios.map((u) => (
                           <option key={u.id} value={u.id}>
-                            {u.nombre} ({u.rol})
+                            {u.nombre} ({t(`usuarios.rol${u.rol.charAt(0).toUpperCase()}${u.rol.slice(1)}`)})
                           </option>
                         ))}
                       </select>
