@@ -420,10 +420,10 @@ export default function PedidoForm({
           <h1 className="pedido-nuevo-titulo">{tituloFinal}</h1>
           <p className="pedido-nuevo-subtitulo">{subtituloFinal}</p>
         </div>
-        <button type="button" className="btn-ayuda" title={t('pedidoForm.necesitasAyuda')}>
+        <Link href="/manual" className="btn-ayuda" title={t('pedidoForm.necesitasAyuda')}>
           <IconHelp />
           <span>{t('pedidoForm.necesitasAyuda')}</span>
-        </button>
+        </Link>
       </div>
 
       <form onSubmit={enviar} className="pedido-nuevo-grid">
