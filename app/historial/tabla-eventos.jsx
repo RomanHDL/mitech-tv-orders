@@ -17,6 +17,7 @@ import {
   IconUser,
 } from '../components/icons'
 import { claseEvento, etiquetaEstado, formatearFechaHora } from './eventos-helpers'
+import { detalleLabel, detalleSecundarioLabel } from '@/lib/eventos-labels'
 
 const ICONO_POR_CLASE = {
   'evt-creacion': IconPlus,
@@ -31,10 +32,11 @@ const ICONO_POR_CLASE = {
 }
 
 function CirculoEvento({ evento }) {
+  const { t } = useTranslation()
   const clase = claseEvento(evento)
   const Icono = evento.tipo === 'CAMBIO_DUENO' ? IconUser : (ICONO_POR_CLASE[clase] || IconClipboardList)
   return (
-    <span className={`circulo-evento ${clase}`} title={evento.detalle}>
+    <span className={`circulo-evento ${clase}`} title={detalleLabel(t, evento)}>
       <Icono />
     </span>
   )
@@ -141,7 +143,7 @@ export default function TablaEventos({
                   </button>
                 </td>
                 <td data-label={t('historial.colPedido')}>{e.pedidoNombre || '—'}</td>
-                <td data-label={t('historial.colEvento')}>{e.detalle || '—'}</td>
+                <td data-label={t('historial.colEvento')}>{detalleLabel(t, e) || '—'}</td>
                 <td data-label={t('historial.colEstadoAnterior')}>
                   {e.estadoAnterior
                     ? <span className={`badge-estado-op estado-${e.estadoAnterior.toLowerCase().replace('_', '-')}`}>{etiquetaEstado(t, e.estadoAnterior)}</span>
@@ -157,8 +159,8 @@ export default function TablaEventos({
                 </td>
                 <td data-label={t('historial.colDetalle')}>
                   <div className="evento-detalle-celda">
-                    <span>{e.detalle}</span>
-                    {e.detalleSecundario && <span className="evento-detalle-sec">{e.detalleSecundario}</span>}
+                    <span>{detalleLabel(t, e)}</span>
+                    {e.detalleSecundario && <span className="evento-detalle-sec">{detalleSecundarioLabel(t, e)}</span>}
                   </div>
                 </td>
                 <td data-label={t('historial.colAcciones')}>

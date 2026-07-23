@@ -3,6 +3,7 @@ import { getUsuario } from '@/lib/auth'
 import { construirFiltroEventos, idsDePedidosDeCapturista } from '@/lib/eventos'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
 import { estadoLabel } from '@/lib/catalogos'
+import { detalleLabel, detalleSecundarioLabel } from '@/lib/eventos-labels'
 import { getServerT, getServerLang } from '@/lib/i18n-server'
 import { localeDe, formatearNumero } from '@/lib/intl-format'
 import PrintButtonPdf from './print-button-pdf'
@@ -101,11 +102,11 @@ export default async function ExportarHistorialPdf({ searchParams }) {
               <td>{fmtFechaHora(e.creadoEn, lang)}</td>
               <td>{e.numeroPedido || '—'}</td>
               <td>{e.pedidoNombre || '—'}</td>
-              <td>{e.detalle}</td>
+              <td>{detalleLabel(t, e)}</td>
               <td>{e.estadoAnterior ? estadoLabel(t, e.estadoAnterior) : '—'}</td>
               <td>{e.estadoNuevo ? estadoLabel(t, e.estadoNuevo) : '—'}</td>
               <td>{e.usuarioNombre || '—'}</td>
-              <td>{e.detalle}{e.detalleSecundario ? ` — ${e.detalleSecundario}` : ''}</td>
+              <td>{detalleLabel(t, e)}{e.detalleSecundario ? ` — ${detalleSecundarioLabel(t, e)}` : ''}</td>
             </tr>
           ))}
         </tbody>

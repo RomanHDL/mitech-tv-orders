@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { etiquetaEstado, etiquetaTipo, formatearFechaHora } from './eventos-helpers'
+import { detalleLabel, detalleSecundarioLabel } from '@/lib/eventos-labels'
 
 // Excel de Historial — usa /api/eventos?todos=1 (respeta los filtros
 // activos, sin paginación, con el mismo tope duro del servidor) y enriquece
@@ -50,17 +51,17 @@ export async function exportarEventosExcel(filtros, t, lang) {
       formatearFechaHora(e.creadoEn, lang),
       e.numeroPedido || '',
       e.pedidoNombre || '',
-      `${etiquetaTipo(t, e.tipo)}: ${e.detalle}`,
+      `${etiquetaTipo(t, e.tipo)}: ${detalleLabel(t, e)}`,
       e.estadoAnterior ? etiquetaEstado(t, e.estadoAnterior) : '—',
       e.estadoNuevo ? etiquetaEstado(t, e.estadoNuevo) : '—',
       e.usuarioNombre || '',
-      e.detalle || '',
+      detalleLabel(t, e) || '',
       (e.condiciones || []).join(' / '),
       p ? p.totalRequerido : '',
       p ? p.totalSurtido : '',
       p ? p.pendiente : '',
       p ? p.unidad : '',
-      e.detalleSecundario || '',
+      detalleSecundarioLabel(t, e) || '',
     ]
   })
 

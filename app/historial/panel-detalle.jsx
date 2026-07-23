@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconAlert, IconClipboardList, IconClose, IconPrinter, IconRetry } from '../components/icons'
 import { claseEvento, etiquetaEstado, formatearFechaHora } from './eventos-helpers'
+import { detalleLabel, detalleSecundarioLabel } from '@/lib/eventos-labels'
 
 const TIMELINE_COLAPSADA = 6
 
@@ -146,8 +147,8 @@ export default function PanelDetalle({ pedidoId, onCerrar }) {
                         {etiquetaEstado(t, e.estadoNuevo)}
                       </span>
                     )}
-                    <strong className="timeline-titulo">{e.detalle}</strong>
-                    {e.detalleSecundario && <p className="timeline-desc">{e.detalleSecundario}</p>}
+                    <strong className="timeline-titulo">{detalleLabel(t, e)}</strong>
+                    {e.detalleSecundario && <p className="timeline-desc">{detalleSecundarioLabel(t, e)}</p>}
                     {e.usuarioNombre && <span className="timeline-usuario">{e.usuarioNombre}</span>}
                   </div>
                 </li>
