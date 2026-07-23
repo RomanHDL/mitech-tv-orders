@@ -221,12 +221,35 @@
     "sumaExcede": "The sum of quantities ({{suma}}) exceeds the order's total quantity ({{limite}}).",
     "sumaNoCoincide": "The sum of quantities ({{suma}}) doesn't match the order's total quantity ({{limite}})."
   },
+  "eventosDetalle": {
+    "cargaIniciada": "Loading started",
+    "listoParaSalida": "Order ready for pickup",
+    "despachado": "Order shipped",
+    "cancelado": "Order cancelled",
+    "pedidoCreado": "Order created",
+    "modelosCapturados_one": "{{count}} model captured",
+    "modelosCapturados_other": "{{count}} models captured",
+    "surtidoIniciado": "Fulfillment started",
+    "surtidoCompleto": "100% fulfilled",
+    "articulosSurtidos": "{{surt}} of {{req}} items fulfilled",
+    "fechaLimiteModificada": "Deadline changed",
+    "condicionesActualizadas": "Conditions updated",
+    "numeroPedidoActualizado": "Order number updated",
+    "nombreActualizado": "Name updated",
+    "cantidadesModificadas": "Quantities modified",
+    "pedidoEditado": "Order edited",
+    "deAaBPiezas": "From {{antes}} to {{despues}} pieces",
+    "cantidadesDeAaB": "Quantities: from {{antes}} to {{despues}}",
+    "duenoActualizado": "Owner updated",
+    "sinDueno": "— no owner —"
+  },
   "apiComun": {
     "idInvalido": "Invalid ID",
     "jsonInvalido": "Invalid JSON",
     "noAutorizado": "Unauthorized",
     "noAutenticado": "Not authenticated",
-    "noEncontrado": "Not found"
+    "noEncontrado": "Not found",
+    "sesionInvalida": "Invalid session"
   },
   "apiPedidos": {
     "condicionesInvalidas": "Invalid conditions",
@@ -566,6 +589,7 @@
     }
   },
   "changelogAdmin": {
+    "subtitulo": "Publish or delete version entries visible at /changelog.",
     "nuevaEntrada": "New entry",
     "versionLabel": "Version (semver)",
     "versionPlaceholder": "E.g. 1.2.0",

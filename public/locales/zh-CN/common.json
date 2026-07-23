@@ -221,12 +221,35 @@
     "sumaExcede": "数量总和（{{suma}}）超过了订单总数量（{{limite}}）。",
     "sumaNoCoincide": "数量总和（{{suma}}）与订单总数量（{{limite}}）不一致。"
   },
+  "eventosDetalle": {
+    "cargaIniciada": "开始装车",
+    "listoParaSalida": "订单已准备好出库",
+    "despachado": "订单已发出",
+    "cancelado": "订单已取消",
+    "pedidoCreado": "订单已创建",
+    "modelosCapturados_one": "已录入 {{count}} 个型号",
+    "modelosCapturados_other": "已录入 {{count}} 个型号",
+    "surtidoIniciado": "配货已开始",
+    "surtidoCompleto": "已100%配货",
+    "articulosSurtidos": "已配货 {{surt}} / {{req}} 件商品",
+    "fechaLimiteModificada": "截止日期已修改",
+    "condicionesActualizadas": "条件已更新",
+    "numeroPedidoActualizado": "订单号已更新",
+    "nombreActualizado": "名称已更新",
+    "cantidadesModificadas": "数量已修改",
+    "pedidoEditado": "订单已编辑",
+    "deAaBPiezas": "从 {{antes}} 件改为 {{despues}} 件",
+    "cantidadesDeAaB": "数量：从 {{antes}} 改为 {{despues}}",
+    "duenoActualizado": "负责人已更新",
+    "sinDueno": "— 无负责人 —"
+  },
   "apiComun": {
     "idInvalido": "ID 无效",
     "jsonInvalido": "JSON 无效",
     "noAutorizado": "无权限",
     "noAutenticado": "未登录",
-    "noEncontrado": "未找到"
+    "noEncontrado": "未找到",
+    "sesionInvalida": "会话无效"
   },
   "apiPedidos": {
     "condicionesInvalidas": "条件无效",
@@ -566,6 +589,7 @@
     }
   },
   "changelogAdmin": {
+    "subtitulo": "发布或删除 /changelog 中显示的版本条目。",
     "nuevaEntrada": "新条目",
     "versionLabel": "版本（语义化版本）",
     "versionPlaceholder": "例如 1.2.0",
@@ -745,7 +769,7 @@
     "rolLabel": "角色",
     "emailLabel": "邮箱",
     "emailHelp": "可选，用于邮箱 + PIN 码登录",
-    "emailPlaceholder": "usuario@correo.com",
+    "emailPlaceholder": "you@email.com",
     "pinLabel": "PIN 码",
     "pinHelpEditando": "留空则不修改 PIN 码",
     "pinHelpNuevo": "至少6位数字",

@@ -132,8 +132,8 @@ export async function POST(req) {
       estadoNuevo: 'PENDIENTE',
       usuarioId: usuario?.userId || null,
       usuarioNombre: usuario?.nombre || null,
-      detalle: 'Pedido creado',
-      detalleSecundario: `${totalTvs} ${totalTvs === 1 ? 'modelo' : 'modelos'} capturados`,
+      detalle: t('eventosDetalle.pedidoCreado'),
+      detalleSecundario: t('eventosDetalle.modelosCapturados', { count: totalTvs }),
       fecha: fechaCreacion,
     }
   )

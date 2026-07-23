@@ -221,12 +221,35 @@
     "sumaExcede": "La suma de cantidades ({{suma}}) excede la cantidad total del pedido ({{limite}}).",
     "sumaNoCoincide": "La suma de cantidades ({{suma}}) no coincide con la cantidad total del pedido ({{limite}})."
   },
+  "eventosDetalle": {
+    "cargaIniciada": "Carga iniciada",
+    "listoParaSalida": "Pedido listo para salida",
+    "despachado": "Pedido despachado",
+    "cancelado": "Pedido cancelado",
+    "pedidoCreado": "Pedido creado",
+    "modelosCapturados_one": "{{count}} modelo capturado",
+    "modelosCapturados_other": "{{count}} modelos capturados",
+    "surtidoIniciado": "Surtido iniciado",
+    "surtidoCompleto": "100% surtido",
+    "articulosSurtidos": "{{surt}} de {{req}} artículos surtidos",
+    "fechaLimiteModificada": "Fecha límite modificada",
+    "condicionesActualizadas": "Condiciones actualizadas",
+    "numeroPedidoActualizado": "Número de pedido actualizado",
+    "nombreActualizado": "Nombre actualizado",
+    "cantidadesModificadas": "Cantidades modificadas",
+    "pedidoEditado": "Pedido editado",
+    "deAaBPiezas": "De {{antes}} a {{despues}} piezas",
+    "cantidadesDeAaB": "Cantidades: de {{antes}} a {{despues}}",
+    "duenoActualizado": "Dueño actualizado",
+    "sinDueno": "— sin dueño —"
+  },
   "apiComun": {
     "idInvalido": "ID inválido",
     "jsonInvalido": "JSON inválido",
     "noAutorizado": "No autorizado",
     "noAutenticado": "No autenticado",
-    "noEncontrado": "No encontrado"
+    "noEncontrado": "No encontrado",
+    "sesionInvalida": "Sesión inválida"
   },
   "apiPedidos": {
     "condicionesInvalidas": "Condiciones inválidas",
@@ -566,6 +589,7 @@
     }
   },
   "changelogAdmin": {
+    "subtitulo": "Publica o elimina entradas de versión visibles en /changelog.",
     "nuevaEntrada": "Nueva entrada",
     "versionLabel": "Versión (semver)",
     "versionPlaceholder": "Ej. 1.2.0",

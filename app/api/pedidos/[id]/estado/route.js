@@ -4,7 +4,7 @@ import { getDb } from '@/lib/mongodb'
 import { getUsuario, requireModule } from '@/lib/auth'
 import { ESTADOS_TRANSICION, ESTADO_ORDEN, estadoLabel } from '@/lib/catalogos'
 import { normalizeOrderStatus, calcularTotales } from '@/lib/estado-pedido'
-import { registrarEvento, TIPO_EVENTO_POR_DESTINO, DETALLE_POR_DESTINO } from '@/lib/eventos'
+import { registrarEvento, TIPO_EVENTO_POR_DESTINO, detallePorDestino } from '@/lib/eventos'
 import { getServerT } from '@/lib/i18n-server'
 
 // Avanza el estado logístico de un pedido (Cargando / Listo para salida /
@@ -110,7 +110,7 @@ export async function PATCH(req, { params }) {
     estadoNuevo: destino,
     usuarioId: usuario.userId || null,
     usuarioNombre: usuario.nombre || null,
-    detalle: DETALLE_POR_DESTINO[destino] || estadoLabel(t, destino),
+    detalle: detallePorDestino(t, destino) || estadoLabel(t, destino),
     detalleSecundario: entradaHistorial.observacion,
   })
 

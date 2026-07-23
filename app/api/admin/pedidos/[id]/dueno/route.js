@@ -66,8 +66,8 @@ export async function PATCH(req, { params }) {
     tipo: 'CAMBIO_DUENO',
     usuarioId: usuarioActual?.userId || null,
     usuarioNombre: usuarioActual?.nombre || null,
-    detalle: 'Dueño actualizado',
-    detalleSecundario: `${pedido.creadoPorNombre || '— sin dueño —'} → ${nuevoDuenoNombre || '— sin dueño —'}`,
+    detalle: t('eventosDetalle.duenoActualizado'),
+    detalleSecundario: `${pedido.creadoPorNombre || t('eventosDetalle.sinDueno')} → ${nuevoDuenoNombre || t('eventosDetalle.sinDueno')}`,
   })
 
   return NextResponse.json({ ok: true })

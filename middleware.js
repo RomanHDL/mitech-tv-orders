@@ -1,6 +1,21 @@
 import { NextResponse } from 'next/server'
 import { moduloDePagina, primerModuloPermitido } from './lib/modulos'
 
+// Middleware corre en Edge runtime: no puede usar getServerT() (depende de
+// next/headers), así que traduce estos 2 mensajes leyendo la cookie de
+// idioma directamente — solo cubre este archivo, no reemplaza getServerT().
+const MENSAJES_MIDDLEWARE = {
+  'es-MX': { noAutenticado: 'No autenticado', noAutorizado: 'No autorizado' },
+  en: { noAutenticado: 'Not authenticated', noAutorizado: 'Unauthorized' },
+  'zh-CN': { noAutenticado: '未登录', noAutorizado: '无权限' },
+}
+
+function tMiddleware(request, clave) {
+  const lang = request.cookies.get('mitech_idioma')?.value
+  const dict = MENSAJES_MIDDLEWARE[lang] || MENSAJES_MIDDLEWARE['es-MX']
+  return dict[clave]
+}
+
 export function middleware(request) {
   const { pathname } = request.nextUrl
   const method = request.method
@@ -28,7 +43,7 @@ export function middleware(request) {
 
   if (!rol) {
     if (isApi) {
-      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+      return NextResponse.json({ error: tMiddleware(request, 'noAutenticado') }, { status: 401 })
     }
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -37,7 +52,7 @@ export function middleware(request) {
 
   if (!verificarAcceso(pathname, method, rol)) {
     if (isApi) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+      return NextResponse.json({ error: tMiddleware(request, 'noAutorizado') }, { status: 403 })
     }
     // Redirigir a la home del rol
     const url = request.nextUrl.clone()

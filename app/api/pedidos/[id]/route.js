@@ -136,7 +136,7 @@ export async function PATCH(req, { params }) {
       estadoNuevo: 'EN_PROCESO',
       usuarioId: usuario?.userId || null,
       usuarioNombre: usuario?.nombre || null,
-      detalle: 'Surtido iniciado',
+      detalle: t('eventosDetalle.surtidoIniciado'),
     })
   }
   if (pctAntes < 100 && pctDespues >= 100) {
@@ -146,8 +146,8 @@ export async function PATCH(req, { params }) {
       estadoNuevo: 'TERMINADO',
       usuarioId: usuario?.userId || null,
       usuarioNombre: usuario?.nombre || null,
-      detalle: '100% surtido',
-      detalleSecundario: `${totalSurtido} de ${totalRequerido} artículos surtidos`,
+      detalle: t('eventosDetalle.surtidoCompleto'),
+      detalleSecundario: t('eventosDetalle.articulosSurtidos', { surt: totalSurtido, req: totalRequerido }),
     })
   }
 
@@ -307,12 +307,12 @@ export async function PUT(req, { params }) {
   // Detecta qué cambió realmente para no registrar un evento vacío cuando el
   // usuario solo reabre y guarda sin tocar nada.
   const cambios = []
-  if (existing.fechaLimite !== fechaLimite) cambios.push('Fecha límite modificada')
+  if (existing.fechaLimite !== fechaLimite) cambios.push(t('eventosDetalle.fechaLimiteModificada'))
   const condicionesAntes = [...(existing.condiciones || [])].sort().join(',')
   const condicionesDespues = [...condiciones].sort().join(',')
-  if (condicionesAntes !== condicionesDespues) cambios.push('Condiciones actualizadas')
-  if ((existing.numeroPedido || '') !== numeroPedido.trim()) cambios.push('Número de pedido actualizado')
-  if ((existing.pedidoNombre || '') !== pedidoNombre.trim()) cambios.push('Nombre actualizado')
+  if (condicionesAntes !== condicionesDespues) cambios.push(t('eventosDetalle.condicionesActualizadas'))
+  if ((existing.numeroPedido || '') !== numeroPedido.trim()) cambios.push(t('eventosDetalle.numeroPedidoActualizado'))
+  if ((existing.pedidoNombre || '') !== pedidoNombre.trim()) cambios.push(t('eventosDetalle.nombreActualizado'))
 
   const sumaAntes = tvsExistentes.reduce((s, tv) => s + (tv.sinLimite ? 0 : tv.cantidad || 0), 0)
   const sumaDespues = tvsLimpias.reduce((s, tv) => s + (tv.sinLimite ? 0 : tv.cantidad), 0)
@@ -331,10 +331,10 @@ export async function PUT(req, { params }) {
         tipo: esSoloCantidades ? 'CAMBIO_CANTIDADES' : 'EDICION',
         usuarioId: usuarioEdita?.userId || null,
         usuarioNombre: usuarioEdita?.nombre || null,
-        detalle: esSoloCantidades ? 'Cantidades modificadas' : (cambios[0] || 'Pedido editado'),
+        detalle: esSoloCantidades ? t('eventosDetalle.cantidadesModificadas') : (cambios[0] || t('eventosDetalle.pedidoEditado')),
         detalleSecundario: esSoloCantidades
-          ? `De ${sumaAntes} a ${sumaDespues} piezas`
-          : (cambios.length > 1 ? cambios.slice(1).join(' · ') : (cambioCantidades ? `Cantidades: de ${sumaAntes} a ${sumaDespues}` : null)),
+          ? t('eventosDetalle.deAaBPiezas', { antes: sumaAntes, despues: sumaDespues })
+          : (cambios.length > 1 ? cambios.slice(1).join(' · ') : (cambioCantidades ? t('eventosDetalle.cantidadesDeAaB', { antes: sumaAntes, despues: sumaDespues }) : null)),
       }
     )
   }

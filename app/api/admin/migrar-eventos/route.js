@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { getRol } from '@/lib/auth'
-import { TIPO_EVENTO_POR_DESTINO, DETALLE_POR_DESTINO } from '@/lib/eventos'
+import { TIPO_EVENTO_POR_DESTINO, detallePorDestino } from '@/lib/eventos'
+import { getServerT } from '@/lib/i18n-server'
 
 // Migración one-shot (idempotente, se puede correr varias veces sin
 // duplicar): respalda en la colección `eventos` lo único que SÍ se puede
@@ -21,8 +22,9 @@ import { TIPO_EVENTO_POR_DESTINO, DETALLE_POR_DESTINO } from '@/lib/eventos'
 //
 // POST /api/admin/migrar-eventos — solo admin.
 export async function POST() {
+  const t = await getServerT()
   if ((await getRol()) !== 'admin') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    return NextResponse.json({ error: t('apiComun.noAutorizado') }, { status: 403 })
   }
 
   const db = await getDb()
@@ -52,8 +54,8 @@ export async function POST() {
         estadoNuevo: 'PENDIENTE',
         usuarioId: p.creadoPor || null,
         usuarioNombre: p.creadoPorNombre || null,
-        detalle: 'Pedido creado',
-        detalleSecundario: totalTvs > 0 ? `${totalTvs} ${totalTvs === 1 ? 'modelo' : 'modelos'} capturados` : null,
+        detalle: t('eventosDetalle.pedidoCreado'),
+        detalleSecundario: totalTvs > 0 ? t('eventosDetalle.modelosCapturados', { count: totalTvs }) : null,
         metadata: {},
         creadoEn: p.fecha,
       })
@@ -76,7 +78,7 @@ export async function POST() {
         estadoNuevo: h.estadoNuevo,
         usuarioId: h.usuarioId || null,
         usuarioNombre: h.usuarioNombre || null,
-        detalle: DETALLE_POR_DESTINO[h.estadoNuevo] || h.estadoNuevo,
+        detalle: detallePorDestino(t, h.estadoNuevo) || h.estadoNuevo,
         detalleSecundario: h.observacion || null,
         metadata: {},
         creadoEn: h.fecha,
