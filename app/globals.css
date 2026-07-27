@@ -2629,7 +2629,7 @@ tr.fila-cancelada .pedido-nombre { text-decoration: line-through; text-decoratio
 .pedido-ciclo {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.1rem;
+  padding: 0.85rem 1.1rem;
   margin-bottom: 1.25rem;
   background: var(--bg);
 }
@@ -2652,15 +2652,15 @@ tr.fila-cancelada .pedido-nombre { text-decoration: line-through; text-decoratio
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.42rem;
   flex-shrink: 0;
 }
 .stepper-etapa-icono {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 999px;
   border: 2px solid var(--border);
   background: #fff;
@@ -2689,9 +2689,9 @@ tr.fila-cancelada .pedido-nombre { text-decoration: line-through; text-decoratio
 .stepper-etapa.actual .stepper-etapa-label { color: var(--primary); font-weight: 800; }
 .stepper-conector {
   flex: 1;
-  height: 2px;
+  height: 3px;
   background: var(--border);
-  margin: 1.1rem -0.25rem 0;
+  margin: 1.15rem -0.25rem 0;
   min-width: 0.5rem;
 }
 .stepper-conector.completado { background: var(--green); }
@@ -3318,12 +3318,12 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
 .barra-autoguardado {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
   background: var(--green-light);
   border: 1px solid #a7f3d0;
-  border-radius: var(--radius);
-  padding: 0.75rem 1.1rem;
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.9rem;
 }
 .barra-autoguardado-icono { color: var(--green-dark); display: inline-flex; }
 .barra-autoguardado-texto { display: flex; flex-direction: column; line-height: 1.25; margin-right: auto; }
@@ -3466,6 +3466,195 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
 .btn-mini-action.btn-listo:hover:not(:disabled) { background: var(--green); color: #fff; border-color: var(--green); }
 .btn-mini-action.btn-reset:hover:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
 .btn-reset-separado { margin-left: 0.5rem; }
+
+/* ─── Fila de producto en Surtir: híbrido tabla + card ───────────────
+   Reemplaza la tabla clásica de 10 columnas por un grid de 4 grupos
+   (Producto | Solicitado·Surtido·Pendiente | Cantidad | Acción) que se
+   comporta como tabla (columnas alineadas, encabezado sticky) pero se
+   lee como card (jerarquía tipográfica real, sin amontonamiento). Los
+   controles (+/-/input/✓/↻) conservan exactamente el mismo alto de 42px
+   que ya tenían — la reducción de altura de fila sale de apretar el
+   padding y el interlineado del bloque de producto, nunca de encoger
+   el área clickeable. */
+.filas-surtido {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+}
+.fila-surtido-cabecera,
+.fila-surtido-fila {
+  display: grid;
+  grid-template-columns: minmax(230px, 1fr) 190px 148px 92px;
+  gap: 16px;
+  align-items: center;
+}
+.fila-surtido-cabecera {
+  padding: 8px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  border-top-left-radius: var(--radius-sm);
+  border-top-right-radius: var(--radius-sm);
+  position: sticky;
+  top: 76px;
+  z-index: 5;
+}
+.fila-surtido-cabecera span {
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+@media (max-width: 768px) {
+  .fila-surtido-cabecera { top: 56px; }
+}
+
+.fila-surtido-fila {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--tx);
+  position: relative;
+}
+.filas-surtido .fila-surtido-fila:last-child {
+  border-bottom: none;
+  border-bottom-left-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+}
+.fila-surtido-fila:hover { background: var(--yellow-soft); }
+.fila-surtido-fila.fila-surtido-completo { background: var(--green-light); }
+.fila-surtido-fila.fila-surtido-parcial { background: var(--yellow-soft); }
+/* Fila "seleccionada" = la que tiene el foco (input o botón) en ese
+   momento — sin estado nuevo en React, se resuelve solo con :focus-within.
+   Azul casi blanco a propósito: no debe competir con el verde de
+   completado ni el amarillo de parcial, solo marcar dónde está el foco. */
+.fila-surtido-fila:focus-within {
+  background: var(--primary-soft);
+  box-shadow: inset 4px 0 0 var(--primary);
+}
+
+.fila-surtido-producto { min-width: 0; }
+.fila-surtido-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+.fila-surtido-marca { font-size: 1rem; font-weight: 800; color: var(--black); letter-spacing: -0.01em; }
+.fila-surtido-pulgadas { font-size: 0.95rem; font-weight: 700; color: var(--black); }
+.fila-surtido-pct {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+.fila-surtido-pct.avanzando { color: var(--primary); }
+.fila-surtido-pct.completa { color: var(--green-dark); }
+.fila-surtido-bar { height: 7px; border-radius: 999px; background: var(--border); overflow: hidden; margin-bottom: 3px; }
+.fila-surtido-bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--text-subtle); transition: width var(--tx-slow); }
+.fila-surtido-bar-fill.avanzando { background: var(--primary); }
+.fila-surtido-bar-fill.completa { background: var(--green); }
+.fila-surtido-sub {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  color: var(--text-subtle);
+  font-weight: 600;
+}
+.fila-surtido-sub b { color: var(--text-muted); font-weight: 700; }
+.fila-surtido-sub .tv-alt-hint { flex-basis: 100%; margin-top: 0; }
+
+.fila-surtido-metricas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 190px; }
+.fila-surtido-metrica {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  background: var(--bg);
+  border-radius: 7px;
+  padding: 4px 2px;
+}
+.fila-surtido-metrica-label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-subtle); }
+.fila-surtido-metrica-valor { font-size: 0.9rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--black); }
+.fila-surtido-metrica-valor.ok { color: var(--green-dark); }
+.fila-surtido-metrica-valor.warn { color: var(--warning-dark, #92400e); }
+
+/* Stepper de cantidad — un único componente unido (borde compartido,
+   sin huecos entre − / input / +), altura de controles sin cambios (42px). */
+.stepper-cantidad {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  background: #fff;
+  width: 148px;
+}
+.stepper-cantidad button {
+  flex: 1 1 40px;
+  height: 42px;
+  border: none;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--black);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--tx);
+}
+.stepper-cantidad button:hover:not(:disabled) { background: var(--bg); }
+.stepper-cantidad button:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Mismo motivo que .controles-cantidad-input arriba: input[type="number"]
+   (línea ~820) tiene la misma especificidad que un selector de una sola
+   clase — se agrega el selector de atributo aquí para ganarle siempre,
+   sin depender del orden de aparición en la hoja de estilos. */
+.stepper-cantidad input.stepper-cantidad-input {
+  flex: 1 1 60px;
+  height: 42px;
+  min-width: 0;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+.stepper-cantidad input.stepper-cantidad-input:focus { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+.fila-surtido-acciones { display: flex; gap: 5px; justify-self: end; }
+
+@media (max-width: 900px) {
+  .fila-surtido-cabecera { display: none; }
+  .fila-surtido-fila {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 10px;
+    padding: 12px 16px;
+  }
+  .fila-surtido-controles {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .fila-surtido-metricas { width: auto; flex: 1 1 160px; }
+  .stepper-cantidad { width: auto; flex: 0 0 auto; }
+  .fila-surtido-acciones { justify-self: start; }
+}
+
+/* En escritorio el wrapper de controles no debe partir el grid de 4
+   columnas en dos — se "disuelve" y sus 3 hijos pasan a ser ítems
+   directos del grid de la fila, alineados 1:1 con la cabecera. */
+@media (min-width: 901px) {
+  .fila-surtido-controles { display: contents; }
+}
 
 /* Barra inferior sticky — se pega al fondo del viewport mientras se
    scrollea la tabla; ninguno de sus ancestros usa overflow, así que el

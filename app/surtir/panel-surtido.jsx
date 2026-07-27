@@ -407,138 +407,137 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         placeholder={t('surtir.comentariosPedidoPlaceholder')}
       />
 
-      <div className="tabla-wrap">
-        <table className="tabla-pedidos tabla-pedidos-densa tabla-surtido">
-          <thead>
-            <tr>
-              <th>{t('surtir.colSkuLpn')}</th>
-              <th>{t('common.marca')}</th>
-              <th>{t('surtir.colModelo')}</th>
-              <th>{t('common.pulgadas')}</th>
-              <th>{t('pedidoForm.condicion')}</th>
-              <th>{t('common.solicitado')}</th>
-              <th>{t('common.surtido')}</th>
-              <th>{t('common.pendiente')}</th>
-              <th>{t('surtir.colProgreso')}</th>
-              <th>{t('surtir.colAccion')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {grupos.map(({ items }) => items.map((tv) => {
-              const idx = tv._idx
-              const esSinLimite = !!tv.sinLimite
-              const surtida = esSinLimite ? (tv.cantidadSurtida || 0) : Math.min(tv.cantidad, tv.cantidadSurtida || 0)
-              const pendienteTv = esSinLimite ? null : Math.max(0, tv.cantidad - surtida)
-              const pctTv = esSinLimite ? null : (tv.cantidad > 0 ? Math.round((surtida / tv.cantidad) * 100) : 0)
-              const completo = !esSinLimite && surtida >= tv.cantidad
-              const enProgreso = surtida > 0 && !completo
-              const claseFila = completo ? 'fila-surtido-completo' : enProgreso ? 'fila-surtido-parcial' : 'fila-surtido-pendiente'
-              const condTv = tv.condiciones?.join(' ') || ''
-              const descTv = `${tv.marca} ${tv.pulgadas}"${condTv ? ' ' + condTv : ''}${tv.modelo ? ' ' + tv.modelo : ''}`
-              const unidadTxt = unidadLabel(t, tv.cantidad || 1, tv.unidad)
+      <div className="filas-surtido">
+        <div className="fila-surtido-cabecera">
+          <span>{t('surtir.colProducto')}</span>
+          <span>{t('common.solicitado')} · {t('common.surtido')} · {t('common.pendiente')}</span>
+          <span>{t('surtir.colCantidad')}</span>
+          <span>{t('surtir.colAccion')}</span>
+        </div>
+        {grupos.map(({ items }) => items.map((tv) => {
+          const idx = tv._idx
+          const esSinLimite = !!tv.sinLimite
+          const surtida = esSinLimite ? (tv.cantidadSurtida || 0) : Math.min(tv.cantidad, tv.cantidadSurtida || 0)
+          const pendienteTv = esSinLimite ? null : Math.max(0, tv.cantidad - surtida)
+          const pctTv = esSinLimite ? null : (tv.cantidad > 0 ? Math.round((surtida / tv.cantidad) * 100) : 0)
+          const completo = !esSinLimite && surtida >= tv.cantidad
+          const enProgreso = surtida > 0 && !completo
+          const claseFila = completo ? 'fila-surtido-completo' : enProgreso ? 'fila-surtido-parcial' : 'fila-surtido-pendiente'
+          const claseProgreso = completo ? 'completa' : enProgreso ? 'avanzando' : ''
+          const condTv = tv.condiciones?.join(' ') || ''
+          const descTv = `${tv.marca} ${tv.pulgadas}"${condTv ? ' ' + condTv : ''}${tv.modelo ? ' ' + tv.modelo : ''}`
+          const unidadTxt = unidadLabel(t, tv.cantidad || 1, tv.unidad)
 
-              return (
-                <tr key={idx} className={claseFila}>
-                  <td data-label={t('surtir.colSkuLpn')}><span className="sku-celda">{tv.modelo || '—'}</span></td>
-                  <td data-label={t('common.marca')}>{tv.marca}</td>
-                  <td data-label={t('surtir.colModelo')}>
-                    {tv.modelo || '—'}
-                    {tv.modelosAlternativos?.length > 0 && (
-                      <div className="tv-alt-hint">
-                        {t('common.tambienValido', { lista: tv.modelosAlternativos.join(', ') })}
-                      </div>
-                    )}
-                  </td>
-                  <td data-label={t('common.pulgadas')}>{tv.pulgadas}&quot;</td>
-                  <td data-label={t('pedidoForm.condicion')}>
-                    {tv.condiciones?.length ? (
-                      <div className="tags-celda">
-                        {tv.condiciones.map((c) => (
-                          <span key={c} className={`tag tag-${c.toLowerCase()}`}>{c}</span>
-                        ))}
-                      </div>
-                    ) : '—'}
-                  </td>
-                  <td data-label={t('common.solicitado')}>{esSinLimite ? t('pedidoForm.sinLimite') : tv.cantidad}</td>
-                  <td data-label={t('common.surtido')}>{surtida}</td>
-                  <td data-label={t('common.pendiente')}>{pendienteTv === null ? '—' : pendienteTv}</td>
-                  <td data-label={t('surtir.colProgreso')}>
-                    {pctTv === null ? '—' : (
-                      <div className="barra-progreso-celda">
-                        <div className="barra-progreso-track">
-                          <div className={`barra-progreso-fill ${pctTv >= 100 ? 'completa' : pctTv > 0 ? 'avanzando' : 'vacia'}`} style={{ width: `${pctTv}%` }} />
-                        </div>
-                        <span className="barra-progreso-texto">{pctTv}%</span>
-                      </div>
-                    )}
-                  </td>
-                  <td data-label={t('surtir.colAccion')}>
-                    <div className="controles-cantidad">
-                      <button
-                        type="button"
-                        className="btn-mini-action"
-                        onClick={() => actualizar(idx, surtida - 1, { inmediato: true })}
-                        disabled={surtida === 0}
-                        aria-label={t('surtir.restarUno')}
-                        title={t('surtir.restarUno')}
-                      >
-                        <IconMinus />
-                      </button>
-                      <input
-                        type="number"
-                        min="0"
-                        max={esSinLimite ? undefined : tv.cantidad}
-                        value={surtida}
-                        onChange={(e) => actualizar(idx, e.target.value, { descripcion: descTv })}
-                        aria-label={t('surtir.cantidadSurtidaLabel')}
-                        className="controles-cantidad-input"
-                      />
-                      <button
-                        type="button"
-                        className="btn-mini-action"
-                        onClick={() => actualizar(idx, surtida + 1, { inmediato: true })}
-                        disabled={completo}
-                        aria-label={t('surtir.sumarUno')}
-                        title={t('surtir.sumarUno')}
-                      >
-                        <IconPlus />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-mini-action btn-listo"
-                        onClick={() => {
-                          if (esSinLimite) return
-                          if (confirm(t('surtir.confirmarMarcarSurtidas', { cantidad: tv.cantidad - surtida, unidad: unidadTxt, desc: descTv }))) {
-                            actualizar(idx, tv.cantidad, { inmediato: true })
-                          }
-                        }}
-                        disabled={completo || esSinLimite}
-                        aria-label={t('surtir.completar')}
-                        title={t('surtir.completarTitle')}
-                      >
-                        <IconCheck />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-mini-action btn-reset btn-reset-separado"
-                        onClick={() => {
-                          if (confirm(t('surtir.confirmarRestablecer'))) {
-                            actualizar(idx, 0, { inmediato: true })
-                          }
-                        }}
-                        disabled={surtida === 0}
-                        aria-label={t('surtir.reiniciar')}
-                        title={t('surtir.restablecerA0')}
-                      >
-                        <IconRefresh />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            }))}
-          </tbody>
-        </table>
+          return (
+            <div key={idx} className={`fila-surtido-fila ${claseFila}`}>
+              <div className="fila-surtido-producto">
+                <div className="fila-surtido-top">
+                  <span className="fila-surtido-marca">{tv.marca}</span>
+                  <span className="fila-surtido-pulgadas">{tv.pulgadas}&quot;</span>
+                  {tv.condiciones?.map((c) => (
+                    <span key={c} className={`tag tag-${c.toLowerCase()}`}>{c}</span>
+                  ))}
+                  <span className={`fila-surtido-pct ${claseProgreso}`}>
+                    {pctTv === null ? '—' : `${pctTv}%`}
+                  </span>
+                </div>
+                {pctTv !== null && (
+                  <div className="fila-surtido-bar">
+                    <div className={`fila-surtido-bar-fill ${claseProgreso}`} style={{ width: `${pctTv}%` }} />
+                  </div>
+                )}
+                <div className="fila-surtido-sub">
+                  <span>{t('surtir.modeloEtiqueta')} <b>{tv.modelo || '—'}</b></span>
+                  <span>· {t('surtir.skuEtiqueta')} <b>{tv.modelo || '—'}</b></span>
+                  {tv.modelosAlternativos?.length > 0 && (
+                    <span className="tv-alt-hint">
+                      {t('common.tambienValido', { lista: tv.modelosAlternativos.join(', ') })}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="fila-surtido-controles">
+                <div className="fila-surtido-metricas">
+                  <div className="fila-surtido-metrica">
+                    <span className="fila-surtido-metrica-label">{t('common.solicitado')}</span>
+                    <span className="fila-surtido-metrica-valor">{esSinLimite ? t('pedidoForm.sinLimite') : tv.cantidad}</span>
+                  </div>
+                  <div className="fila-surtido-metrica">
+                    <span className="fila-surtido-metrica-label">{t('common.surtido')}</span>
+                    <span className="fila-surtido-metrica-valor ok">{surtida}</span>
+                  </div>
+                  <div className="fila-surtido-metrica">
+                    <span className="fila-surtido-metrica-label">{t('common.pendiente')}</span>
+                    <span className="fila-surtido-metrica-valor warn">{pendienteTv === null ? '—' : pendienteTv}</span>
+                  </div>
+                </div>
+
+                <div className="stepper-cantidad">
+                  <button
+                    type="button"
+                    onClick={() => actualizar(idx, surtida - 1, { inmediato: true })}
+                    disabled={surtida === 0}
+                    aria-label={t('surtir.restarUno')}
+                    title={t('surtir.restarUno')}
+                  >
+                    <IconMinus />
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    max={esSinLimite ? undefined : tv.cantidad}
+                    value={surtida}
+                    onChange={(e) => actualizar(idx, e.target.value, { descripcion: descTv })}
+                    aria-label={t('surtir.cantidadSurtidaLabel')}
+                    className="stepper-cantidad-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => actualizar(idx, surtida + 1, { inmediato: true })}
+                    disabled={completo}
+                    aria-label={t('surtir.sumarUno')}
+                    title={t('surtir.sumarUno')}
+                  >
+                    <IconPlus />
+                  </button>
+                </div>
+
+                <div className="fila-surtido-acciones">
+                  <button
+                    type="button"
+                    className="btn-mini-action btn-listo"
+                    onClick={() => {
+                      if (esSinLimite) return
+                      if (confirm(t('surtir.confirmarMarcarSurtidas', { cantidad: tv.cantidad - surtida, unidad: unidadTxt, desc: descTv }))) {
+                        actualizar(idx, tv.cantidad, { inmediato: true })
+                      }
+                    }}
+                    disabled={completo || esSinLimite}
+                    aria-label={t('surtir.completar')}
+                    title={t('surtir.completarTitle')}
+                  >
+                    <IconCheck />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-mini-action btn-reset"
+                    onClick={() => {
+                      if (confirm(t('surtir.confirmarRestablecer'))) {
+                        actualizar(idx, 0, { inmediato: true })
+                      }
+                    }}
+                    disabled={surtida === 0}
+                    aria-label={t('surtir.reiniciar')}
+                    title={t('surtir.restablecerA0')}
+                  >
+                    <IconRefresh />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        }))}
       </div>
 
       <div className="barra-sticky-surtido">
