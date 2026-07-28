@@ -241,7 +241,8 @@
     "deAaBPiezas": "从 {{antes}} 件改为 {{despues}} 件",
     "cantidadesDeAaB": "数量：从 {{antes}} 改为 {{despues}}",
     "duenoActualizado": "负责人已更新",
-    "sinDueno": "— 无负责人 —"
+    "sinDueno": "— 无负责人 —",
+    "skuUltimoMomentoAgregado": "已添加临时SKU：{{sku}} ×{{cantidad}}"
   },
   "apiComun": {
     "idInvalido": "ID 无效",
@@ -434,7 +435,14 @@
     "pendientesTarjeta": "{{n}} 待处理",
     "mostrandoPedidos": "显示 {{n}} / {{total}} 个订单",
     "seleccionaPedido": "选择一个订单以开始配货。",
-    "errorCargarPedido": "无法加载订单"
+    "errorCargarPedido": "无法加载订单",
+    "agregarSkuUltimoMomento": "添加临时/未列出的SKU",
+    "agregarSkuUltimoMomentoDesc": "是否使用了不在此订单清单上的型号来完成配货？在此登记，而不是仅仅写在备注里。",
+    "tagUltimoMomento": "临时SKU",
+    "tagUltimoMomentoTitle": "该SKU不在订单原始清单中——是在配货过程中添加的",
+    "confirmarAgregarSku": "将SKU {{sku}} 的 {{cantidad}} 件标记为已配货？将记录为临时SKU，不属于原始清单。",
+    "errorAgregarSku": "无法添加该SKU",
+    "agregarSkuBtn": "添加"
   },
   "historial": {
     "titulo": "订单历史记录",

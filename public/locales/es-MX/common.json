@@ -241,7 +241,8 @@
     "deAaBPiezas": "De {{antes}} a {{despues}} piezas",
     "cantidadesDeAaB": "Cantidades: de {{antes}} a {{despues}}",
     "duenoActualizado": "Dueño actualizado",
-    "sinDueno": "— sin dueño —"
+    "sinDueno": "— sin dueño —",
+    "skuUltimoMomentoAgregado": "SKU de último momento agregado: {{sku}} ×{{cantidad}}"
   },
   "apiComun": {
     "idInvalido": "ID inválido",
@@ -434,7 +435,14 @@
     "pendientesTarjeta": "{{n}} pendientes",
     "mostrandoPedidos": "Mostrando {{n}} de {{total}} pedidos",
     "seleccionaPedido": "Selecciona un pedido para comenzar a surtirlo.",
-    "errorCargarPedido": "No se pudo cargar el pedido"
+    "errorCargarPedido": "No se pudo cargar el pedido",
+    "agregarSkuUltimoMomento": "Agregar SKU de último momento",
+    "agregarSkuUltimoMomentoDesc": "¿Se surtieron TVs de un modelo que no está en la lista de este pedido? Regístralo aquí para que quede identificado, en vez de solo anotarlo en comentarios.",
+    "tagUltimoMomento": "Último momento",
+    "tagUltimoMomentoTitle": "Este SKU no venía en la lista original del pedido — se agregó durante el surtido",
+    "confirmarAgregarSku": "¿Agregar {{cantidad}} pieza(s) del SKU {{sku}} como ya surtidas? Se registrará como un SKU de último momento, no incluido en la lista original.",
+    "errorAgregarSku": "No se pudo agregar el SKU",
+    "agregarSkuBtn": "Agregar"
   },
   "historial": {
     "titulo": "Historial de pedidos",

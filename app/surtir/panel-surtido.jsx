@@ -3,18 +3,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { unidadLabel, estadoLabel } from '@/lib/catalogos'
+import { unidadLabel, estadoLabel, MARCAS, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
 import { normalizeOrderStatus } from '@/lib/estado-pedido'
 import { localeDe } from '@/lib/intl-format'
 import ComentariosPedido from '../components/comentarios-pedido'
 import StepperEtapas from '../pedidos/stepper-etapas'
 import {
+  IconAlert,
   IconCheck,
   IconMinus,
   IconPlus,
   IconPrinter,
   IconRefresh,
 } from '../components/icons'
+
+const CONDICIONES_MAS_EXTRA = CONDICIONES.filter((c) => !CONDICIONES_FRECUENTES.includes(c))
+
+function formExtraVacio(pedido) {
+  return {
+    marca: '',
+    pulgadas: '',
+    modelo: '',
+    condiciones: pedido.condiciones?.length > 0 ? [...pedido.condiciones] : [CONDICIONES_FRECUENTES[0]],
+    cantidad: 1,
+  }
+}
 
 // Próxima etapa accionable — mismo helper que el modal de detalle de /pedidos
 // y que la vista standalone de /surtir/[id] (una sola fuente de verdad).
@@ -67,6 +80,11 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
   const [cambiandoEstado, setCambiandoEstado] = useState(false)
   const [errorEstado, setErrorEstado] = useState('')
   const [finalizando, setFinalizando] = useState(false)
+  const [mostrarFormExtra, setMostrarFormExtra] = useState(false)
+  const [formExtra, setFormExtra] = useState(() => formExtraVacio(pedido))
+  const [masCondicionesExtra, setMasCondicionesExtra] = useState(false)
+  const [guardandoExtra, setGuardandoExtra] = useState(false)
+  const [errorExtra, setErrorExtra] = useState('')
 
   const seqPorIdx = useRef({})
   const debounceRef = useRef({})
@@ -79,6 +97,10 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
     setErroresPorIdx(new Set())
     setUltimoGuardado(null)
     setErrorEstado('')
+    setMostrarFormExtra(false)
+    setFormExtra(formExtraVacio(pedido))
+    setMasCondicionesExtra(false)
+    setErrorExtra('')
     seqPorIdx.current = {}
   }, [pedido.id])
 
@@ -281,6 +303,51 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
     comentariosRef.current?.guardarAhora()
   }
 
+  function toggleCondicionExtra(c) {
+    setFormExtra((prev) => {
+      const activa = prev.condiciones.includes(c)
+      const condiciones = activa ? prev.condiciones.filter((x) => x !== c) : [...prev.condiciones, c]
+      return { ...prev, condiciones }
+    })
+  }
+
+  // Agrega un renglón para un SKU que no venía en la lista original del
+  // pedido (usado cuando ya se surtieron TVs de un modelo no cargado). Se
+  // guarda como surtido de inmediato porque las piezas ya se usaron.
+  async function agregarSkuExtra() {
+    setErrorExtra('')
+    const modelo = formExtra.modelo.trim().toUpperCase()
+    if (!formExtra.marca) return setErrorExtra(t('pedidoForm.marcaInvalida', { n: 1 }))
+    if (!PULGADAS.includes(Number(formExtra.pulgadas))) return setErrorExtra(t('pedidoForm.pulgadasInvalidas', { n: 1 }))
+    if (!SKU_REGEX.test(modelo)) return setErrorExtra(t('pedidoForm.capturaModelo', { n: 1 }))
+    if (formExtra.condiciones.length === 0) return setErrorExtra(t('pedidoForm.faltaCondicion', { n: 1 }))
+    const cantidad = Number(formExtra.cantidad)
+    if (!Number.isInteger(cantidad) || cantidad < 1) return setErrorExtra(t('pedidoForm.cantidadInvalida', { n: 1 }))
+
+    if (!confirm(t('surtir.confirmarAgregarSku', { cantidad, sku: modelo }))) return
+
+    setGuardandoExtra(true)
+    try {
+      const res = await fetch(`/api/pedidos/${pedido.id}/agregar-sku`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marca: formExtra.marca, pulgadas: Number(formExtra.pulgadas), modelo, condiciones: formExtra.condiciones, cantidad }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || t('surtir.errorAgregarSku'))
+
+      setTvs((prev) => [...prev, data.tv])
+      setFormExtra(formExtraVacio(pedido))
+      setMasCondicionesExtra(false)
+      setMostrarFormExtra(false)
+      setUltimoGuardado(new Date())
+    } catch (err) {
+      setErrorExtra(err.message)
+    } finally {
+      setGuardandoExtra(false)
+    }
+  }
+
   const hayCambiosSinSincronizar = pendientesSync.size > 0 || erroresPorIdx.size > 0
   const puedeFinalizar = pendienteCantidad === 0 && !hayCambiosSinSincronizar
   let motivoBloqueoFinalizar = ''
@@ -434,6 +501,11 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
                 <div className="fila-surtido-top">
                   <span className="fila-surtido-marca">{tv.marca}</span>
                   <span className="fila-surtido-pulgadas">{tv.pulgadas}&quot;</span>
+                  {tv.esUltimoMomento && (
+                    <span className="tag tag-extra" title={t('surtir.tagUltimoMomentoTitle')}>
+                      <IconAlert width={11} height={11} /> {t('surtir.tagUltimoMomento')}
+                    </span>
+                  )}
                   {tv.condiciones?.map((c) => (
                     <span key={c} className={`tag tag-${c.toLowerCase()}`}>{c}</span>
                   ))}
@@ -538,6 +610,125 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
             </div>
           )
         }))}
+      </div>
+
+      <div className="bloque-sku-extra">
+        {!mostrarFormExtra ? (
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm btn-agregar-sku-extra"
+            onClick={() => setMostrarFormExtra(true)}
+          >
+            <IconAlert /> {t('surtir.agregarSkuUltimoMomento')}
+          </button>
+        ) : (
+          <div className="form-sku-extra">
+            <div className="form-sku-extra-header">
+              <strong><IconAlert /> {t('surtir.agregarSkuUltimoMomento')}</strong>
+              <p>{t('surtir.agregarSkuUltimoMomentoDesc')}</p>
+            </div>
+
+            <datalist id="marcas-list-extra">
+              {MARCAS.map((m) => <option key={m} value={m} />)}
+            </datalist>
+
+            <div className="form-sku-extra-campos">
+              <label className="label">
+                {t('pedidoForm.colSkuModelo')}
+                <input
+                  type="text"
+                  value={formExtra.modelo}
+                  onChange={(e) => setFormExtra((p) => ({ ...p, modelo: e.target.value }))}
+                  placeholder={t('pedidoForm.colSkuModelo')}
+                  minLength={3}
+                  maxLength={20}
+                />
+              </label>
+              <label className="label">
+                {t('common.marca')}
+                <input
+                  list="marcas-list-extra"
+                  value={formExtra.marca}
+                  onChange={(e) => setFormExtra((p) => ({ ...p, marca: e.target.value }))}
+                  placeholder={t('common.marca')}
+                />
+              </label>
+              <label className="label">
+                {t('pedidoForm.colPulgada')}
+                <select
+                  value={formExtra.pulgadas}
+                  onChange={(e) => setFormExtra((p) => ({ ...p, pulgadas: e.target.value }))}
+                >
+                  <option value="">—</option>
+                  {PULGADAS.map((p) => (
+                    <option key={p} value={p}>{p}&quot;</option>
+                  ))}
+                </select>
+              </label>
+              <label className="label">
+                {t('pedidoForm.colCantidad')}
+                <input
+                  type="number"
+                  min="1"
+                  value={formExtra.cantidad}
+                  onChange={(e) => setFormExtra((p) => ({ ...p, cantidad: e.target.value }))}
+                />
+              </label>
+            </div>
+
+            <div className="form-sku-extra-condiciones">
+              <span className="label">{t('pedidoForm.condicion')}</span>
+              <div className="tv-condicion-chips">
+                {CONDICIONES_FRECUENTES.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`tv-condicion-chip ${formExtra.condiciones.includes(c) ? 'activa' : ''}`}
+                    onClick={() => toggleCondicionExtra(c)}
+                  >
+                    {c}
+                  </button>
+                ))}
+                {masCondicionesExtra && CONDICIONES_MAS_EXTRA.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`tv-condicion-chip ${formExtra.condiciones.includes(c) ? 'activa' : ''}`}
+                    onClick={() => toggleCondicionExtra(c)}
+                  >
+                    {c}
+                  </button>
+                ))}
+                {!masCondicionesExtra && (
+                  <button type="button" className="tag-mas" onClick={() => setMasCondicionesExtra(true)}>
+                    {t('pedidoForm.masCondicionesCorto')}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {errorExtra && <div className="alerta alerta-error"><span>{errorExtra}</span></div>}
+
+            <div className="form-sku-extra-acciones">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => { setMostrarFormExtra(false); setErrorExtra(''); setFormExtra(formExtraVacio(pedido)) }}
+                disabled={guardandoExtra}
+              >
+                {t('common.cancelar')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={agregarSkuExtra}
+                disabled={guardandoExtra}
+              >
+                <IconPlus /> {guardandoExtra ? t('common.guardando') : t('surtir.agregarSkuBtn')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="barra-sticky-surtido">

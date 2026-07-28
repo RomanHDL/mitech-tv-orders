@@ -241,7 +241,8 @@
     "deAaBPiezas": "From {{antes}} to {{despues}} pieces",
     "cantidadesDeAaB": "Quantities: from {{antes}} to {{despues}}",
     "duenoActualizado": "Owner updated",
-    "sinDueno": "— no owner —"
+    "sinDueno": "— no owner —",
+    "skuUltimoMomentoAgregado": "Last-minute SKU added: {{sku}} ×{{cantidad}}"
   },
   "apiComun": {
     "idInvalido": "Invalid ID",
@@ -434,7 +435,14 @@
     "pendientesTarjeta": "{{n}} pending",
     "mostrandoPedidos": "Showing {{n}} of {{total}} orders",
     "seleccionaPedido": "Select an order to start fulfilling it.",
-    "errorCargarPedido": "Couldn't load the order"
+    "errorCargarPedido": "Couldn't load the order",
+    "agregarSkuUltimoMomento": "Add last-minute SKU",
+    "agregarSkuUltimoMomentoDesc": "Did you fulfill TVs of a model that isn't on this order's list? Register it here so it's tracked properly, instead of just noting it in comments.",
+    "tagUltimoMomento": "Last-minute",
+    "tagUltimoMomentoTitle": "This SKU wasn't on the order's original list — it was added during fulfillment",
+    "confirmarAgregarSku": "Add {{cantidad}} unit(s) of SKU {{sku}} as already fulfilled? It will be recorded as a last-minute SKU, not part of the original list.",
+    "errorAgregarSku": "Couldn't add the SKU",
+    "agregarSkuBtn": "Add"
   },
   "historial": {
     "titulo": "Order history",
