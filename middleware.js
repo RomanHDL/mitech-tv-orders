@@ -38,6 +38,15 @@ export function middleware(request) {
     return NextResponse.next()
   }
 
+  // Excepción EXACTA (path + método) para el receptor M2M de Cubicaje: no
+  // depende de cookie de sesión humana, se autentica con X-Integration-Key
+  // dentro del propio handler (ver app/api/integrations/cubicaje/pallets/route.js).
+  // No usar startsWith aquí — cualquier otra ruta bajo /api/integrations/*
+  // debe seguir exigiendo cookie de sesión salvo que se agregue explícitamente.
+  if (pathname === '/api/integrations/cubicaje/pallets' && method === 'POST') {
+    return NextResponse.next()
+  }
+
   const rol = request.cookies.get('rol')?.value
   const isApi = pathname.startsWith('/api/')
 
