@@ -262,6 +262,11 @@
     "excedeSurtido": "配货数量不能超过订购数量",
     "userIdInvalido": "userId 无效"
   },
+  "apiPallets": {
+    "palletNoEncontrado": "未找到该托盘",
+    "palletIdInvalido": "托盘 ID 无效",
+    "errorInterno": "处理请求时发生内部错误"
+  },
   "apiChangelog": {
     "usaSemver": "请使用语义化版本格式：x.y.z",
     "faltaTitulo": "缺少标题",
@@ -360,6 +365,7 @@
     "usuarioDesconocido": "用户",
     "seccionArticulos": "1. 项目（{{n}}）",
     "seccionComentarios": "2. 评论",
+    "seccionPallets": "3. 已关联托盘",
     "sinArticulos": "该订单没有任何项目。",
     "colSku": "SKU",
     "colSolicitada": "需求数量",
@@ -533,6 +539,30 @@
     "error": "错误",
     "errorGuardar": "无法保存",
     "errorInvalido": "备注无效"
+  },
+  "palletsVinculados": {
+    "buscarPlaceholder": "按托盘 ID 搜索…",
+    "buscarBoton": "搜索",
+    "buscando": "搜索中…",
+    "noEncontrado": "未找到该 ID 的托盘",
+    "errorBuscar": "搜索托盘时出错",
+    "vincularBoton": "关联",
+    "confirmarVincular": "将托盘 {{palletId}} 关联到此订单？",
+    "vinculando": "关联中…",
+    "errorVincular": "无法关联该托盘",
+    "desvincularBoton": "取消关联",
+    "confirmarDesvincular": "从此订单取消关联托盘 {{palletId}}？",
+    "motivoDesvincular": "取消关联的原因（可选）：",
+    "desvinculando": "取消关联中…",
+    "errorDesvincular": "无法取消关联该托盘",
+    "sinPallets": "此订单没有关联的托盘。",
+    "cantidadTotal": "总数量",
+    "ubicacion": "位置",
+    "operador": "操作员",
+    "vinculadoPor": "由 {{nombre}} 于 {{fecha}} 关联",
+    "discrepanciasTitulo": "差异",
+    "discrepanciaNoSolicitado": "{{sku}}（{{condicion}}）不在订单中",
+    "cargando": "正在加载已关联的托盘…"
   },
   "manual": {
     "titulo": "手册",

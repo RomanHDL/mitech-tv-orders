@@ -5,6 +5,7 @@ import {
   esFechaIso8601Valida,
   procesarPalletCubicaje,
   sanitizarMensajeError,
+  serializarPalletPublico,
   validarPayloadPallet,
 } from '@/lib/integration-cubicaje'
 
@@ -419,5 +420,71 @@ describe('procesarPalletCubicaje — idempotencia', () => {
       const docFinal = repo._inspect.pallets.get('389156-0015')
       expect(docFinal.activo).toBe(false) // sigue desactivado, no se reactivó
     })
+  })
+})
+
+describe('serializarPalletPublico', () => {
+  function palletCrudo(overrides = {}) {
+    return {
+      _id: 'mongo-object-id-interno',
+      palletId: '389156-0015',
+      cantidadTotal: 12,
+      productos: [{ sku: 'SNTV007618-GRB', condicion: 'GRB', cantidad: 5, numeroSerie: 'MTG7ST0413' }],
+      ubicacion: 'REFM2',
+      workcenter: 'Refurbish Monterrey 2',
+      operador: 'nathalie.lopez',
+      workOrderId: 116538,
+      sourceOrderId: 'xxTRG CONSIGNMENT-2026-04-28-1',
+      woType: 'PO',
+      purchaseId: 1374637,
+      activo: true,
+      payloadVersion: 1,
+      ultimoEventId: 'evt-interno-123',
+      lastSync: new Date('2026-07-30T00:00:00.000Z'),
+      recibidoEn: new Date('2026-07-29T00:00:00.000Z'),
+      actualizadoEn: new Date('2026-07-30T00:00:00.000Z'),
+      ...overrides,
+    }
+  }
+
+  it('contiene solamente los campos permitidos', () => {
+    const publico = serializarPalletPublico(palletCrudo())
+    expect(Object.keys(publico).sort()).toEqual(
+      ['activo', 'cantidadTotal', 'lastSync', 'operador', 'palletId', 'productos', 'ubicacion', 'workcenter'].sort()
+    )
+  })
+
+  it('no incluye _id', () => {
+    const publico = serializarPalletPublico(palletCrudo())
+    expect(publico._id).toBeUndefined()
+  })
+
+  it('no incluye ultimoEventId ni payloadVersion', () => {
+    const publico = serializarPalletPublico(palletCrudo())
+    expect(publico.ultimoEventId).toBeUndefined()
+    expect(publico.payloadVersion).toBeUndefined()
+  })
+
+  it('no incluye workOrderId, sourceOrderId, woType, purchaseId, recibidoEn ni actualizadoEn', () => {
+    const publico = serializarPalletPublico(palletCrudo())
+    expect(publico.workOrderId).toBeUndefined()
+    expect(publico.sourceOrderId).toBeUndefined()
+    expect(publico.woType).toBeUndefined()
+    expect(publico.purchaseId).toBeUndefined()
+    expect(publico.recibidoEn).toBeUndefined()
+    expect(publico.actualizadoEn).toBeUndefined()
+  })
+
+  it('campos internos inesperados agregados al documento no se filtran accidentalmente (whitelist, no blacklist)', () => {
+    const publico = serializarPalletPublico(palletCrudo({ secretoFuturo: 'no-deberia-salir', otraCosaInterna: 42 }))
+    expect(publico.secretoFuturo).toBeUndefined()
+    expect(publico.otraCosaInterna).toBeUndefined()
+  })
+
+  it('normaliza cada producto a solo sku/condicion/cantidad/numeroSerie', () => {
+    const publico = serializarPalletPublico(palletCrudo({
+      productos: [{ sku: 'A', condicion: 'GRB', cantidad: 1, campoInterno: 'x' }],
+    }))
+    expect(Object.keys(publico.productos[0]).sort()).toEqual(['cantidad', 'condicion', 'numeroSerie', 'sku'].sort())
   })
 })

@@ -141,6 +141,10 @@ function verificarAcceso(pathname, method, rol) {
     // se hace en el handler para devolver 403 cuando no es su pedido)
     if (method === 'POST' && pathname === '/api/pedidos') return true
     if (method === 'PATCH' && /^\/api\/pedidos\/[^/]+$/.test(pathname)) return true
+    // Vincular/desvincular pallets de Cubicaje: mismo criterio que el resto
+    // de las acciones de captura (ownership validado en el propio handler).
+    if (method === 'POST' && /^\/api\/pedidos\/[^/]+\/pallets\/vincular$/.test(pathname)) return true
+    if (method === 'POST' && /^\/api\/pedidos\/[^/]+\/pallets\/[^/]+\/desvincular$/.test(pathname)) return true
     return false
   }
 
@@ -151,6 +155,10 @@ function verificarAcceso(pathname, method, rol) {
     // (carga/salida/despacho — el piso es quien mueve el pedido físicamente)
     if (method === 'PATCH' && /^\/api\/pedidos\/[^/]+$/.test(pathname)) return true
     if (method === 'PATCH' && /^\/api\/pedidos\/[^/]+\/estado$/.test(pathname)) return true
+    // Vincular/desvincular pallets: mismo criterio que agregar-sku (el piso
+    // también puede registrar pallets físicos durante el surtido).
+    if (method === 'POST' && /^\/api\/pedidos\/[^/]+\/pallets\/vincular$/.test(pathname)) return true
+    if (method === 'POST' && /^\/api\/pedidos\/[^/]+\/pallets\/[^/]+\/desvincular$/.test(pathname)) return true
     return false
   }
 

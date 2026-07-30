@@ -262,6 +262,11 @@
     "excedeSurtido": "No se puede surtir más que la cantidad pedida",
     "userIdInvalido": "userId inválido"
   },
+  "apiPallets": {
+    "palletNoEncontrado": "Pallet no encontrado",
+    "palletIdInvalido": "Pallet ID inválido",
+    "errorInterno": "Error interno al procesar la solicitud"
+  },
   "apiChangelog": {
     "usaSemver": "Usa formato semver: x.y.z",
     "faltaTitulo": "Falta el título",
@@ -360,6 +365,7 @@
     "usuarioDesconocido": "usuario",
     "seccionArticulos": "1. Artículos ({{n}})",
     "seccionComentarios": "2. Comentarios",
+    "seccionPallets": "3. Pallets vinculados",
     "sinArticulos": "Este pedido no tiene artículos.",
     "colSku": "SKU",
     "colSolicitada": "Solicitada",
@@ -533,6 +539,30 @@
     "error": "Error",
     "errorGuardar": "No se pudo guardar",
     "errorInvalido": "Comentario inválido"
+  },
+  "palletsVinculados": {
+    "buscarPlaceholder": "Buscar por Pallet ID…",
+    "buscarBoton": "Buscar",
+    "buscando": "Buscando…",
+    "noEncontrado": "No se encontró ningún pallet con ese ID",
+    "errorBuscar": "Error al buscar el pallet",
+    "vincularBoton": "Vincular",
+    "confirmarVincular": "¿Vincular el pallet {{palletId}} a este pedido?",
+    "vinculando": "Vinculando…",
+    "errorVincular": "No se pudo vincular el pallet",
+    "desvincularBoton": "Desvincular",
+    "confirmarDesvincular": "¿Desvincular el pallet {{palletId}} de este pedido?",
+    "motivoDesvincular": "Motivo de la desvinculación (opcional):",
+    "desvinculando": "Desvinculando…",
+    "errorDesvincular": "No se pudo desvincular el pallet",
+    "sinPallets": "No hay pallets vinculados a este pedido.",
+    "cantidadTotal": "Cantidad total",
+    "ubicacion": "Ubicación",
+    "operador": "Operador",
+    "vinculadoPor": "Vinculado por {{nombre}} el {{fecha}}",
+    "discrepanciasTitulo": "Discrepancias",
+    "discrepanciaNoSolicitado": "{{sku}} ({{condicion}}) no está en el pedido",
+    "cargando": "Cargando pallets vinculados…"
   },
   "manual": {
     "titulo": "Manual",

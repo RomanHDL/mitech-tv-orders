@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import ComentariosPedido from '../components/comentarios-pedido'
+import PalletsVinculados from '../components/pallets-vinculados'
 import StepperEtapas from './stepper-etapas'
 import { estadoLabel } from '@/lib/catalogos'
 import { localeDe } from '@/lib/intl-format'
@@ -427,6 +428,24 @@ export default function PedidoDetalleModal({
                     actualizadoPorNombre={comentarios?.actualizadoPorNombre || null}
                   />
                 )}
+              </div>
+            )}
+          </div>
+
+          <div className="acordeon">
+            <button
+              type="button"
+              className={`acordeon-franja acordeon-franja-pallets ${seccionAbierta === 'pallets' ? 'abierta' : ''}`}
+              onClick={() => toggleSeccion('pallets')}
+            >
+              <span className="acordeon-titulo">{t('pedidoDetalle.seccionPallets')}</span>
+              <span className="acordeon-simbolo">
+                <IconChevronDown className={seccionAbierta === 'pallets' ? 'rotado' : ''} />
+              </span>
+            </button>
+            {seccionAbierta === 'pallets' && (
+              <div className="acordeon-contenido">
+                <PalletsVinculados pedidoId={resumen.id} />
               </div>
             )}
           </div>

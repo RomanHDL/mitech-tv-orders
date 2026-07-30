@@ -73,3 +73,42 @@ describe('middleware — regresión de rutas existentes (deben mantener su compo
     expect(res.headers.get('location')).toContain('/login')
   })
 })
+
+describe('middleware — nuevas rutas de vinculación de pallets (Bloque 2)', () => {
+  const idPedido = '507f1f77bcf86cd799439011'
+
+  it('POST vincular sin cookie → 401 (requiere sesión, a diferencia del M2M de Cubicaje)', () => {
+    const res = middleware(req(`/api/pedidos/${idPedido}/pallets/vincular`, { method: 'POST' }))
+    expect(res.status).toBe(401)
+  })
+
+  it('POST vincular con cookie de capturista → pasa', () => {
+    const res = middleware(req(`/api/pedidos/${idPedido}/pallets/vincular`, { method: 'POST', cookies: { rol: 'capturista' } }))
+    expect(res.status).toBe(200)
+  })
+
+  it('POST vincular con cookie de surtidor → pasa', () => {
+    const res = middleware(req(`/api/pedidos/${idPedido}/pallets/vincular`, { method: 'POST', cookies: { rol: 'surtidor' } }))
+    expect(res.status).toBe(200)
+  })
+
+  it('POST desvincular con cookie de capturista → pasa', () => {
+    const res = middleware(req(`/api/pedidos/${idPedido}/pallets/P-1/desvincular`, { method: 'POST', cookies: { rol: 'capturista' } }))
+    expect(res.status).toBe(200)
+  })
+
+  it('POST desvincular con cookie de surtidor → pasa', () => {
+    const res = middleware(req(`/api/pedidos/${idPedido}/pallets/P-1/desvincular`, { method: 'POST', cookies: { rol: 'surtidor' } }))
+    expect(res.status).toBe(200)
+  })
+
+  it('GET a /api/cubicaje-pallets/[palletId] con cualquier rol logueado → pasa (regla general de GET)', () => {
+    const res = middleware(req('/api/cubicaje-pallets/P-1', { method: 'GET', cookies: { rol: 'surtidor' } }))
+    expect(res.status).toBe(200)
+  })
+
+  it('GET a /api/pedidos/[id]/pallets con cualquier rol logueado → pasa (regla general de GET)', () => {
+    const res = middleware(req(`/api/pedidos/${idPedido}/pallets`, { method: 'GET', cookies: { rol: 'capturista' } }))
+    expect(res.status).toBe(200)
+  })
+})

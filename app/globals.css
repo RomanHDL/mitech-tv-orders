@@ -4254,3 +4254,45 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
   .login-card { padding: 1.75rem 1.2rem 1.5rem; border-radius: var(--radius); }
   .login-titulo { font-size: 1.55rem; }
 }
+
+/* ─── Pallets vinculados (integración Cubicaje) ────────────────────── */
+.acordeon-franja-pallets { border-left-color: var(--primary); }
+
+.pallets-vinculados { display: flex; flex-direction: column; gap: 0.9rem; }
+
+.pallets-buscador { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.pallets-buscador input { flex: 1; min-width: 12rem; }
+
+.pallet-preview,
+.pallet-vinculado-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pallet-preview-header,
+.pallet-vinculado-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pallet-preview-datos {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.pallets-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.7rem; }
+
+.pallet-vinculado-meta { font-size: 0.8rem; color: var(--text-muted); }
+
+.pallet-discrepancias ul { margin: 0.25rem 0 0; padding-left: 1.1rem; }
