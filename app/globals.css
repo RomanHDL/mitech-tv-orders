@@ -4296,3 +4296,27 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
 .pallet-vinculado-meta { font-size: 0.8rem; color: var(--text-muted); }
 
 .pallet-discrepancias ul { margin: 0.25rem 0 0; padding-left: 1.1rem; }
+
+/* ─── Progreso sincronizado (Bloque 3) ──────────────────────────────── */
+.progreso-resumen { display: flex; flex-direction: column; gap: 0.9rem; margin-bottom: 1rem; }
+
+.progreso-tiles { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+.progreso-tile {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 8rem;
+  flex: 1 1 8rem;
+}
+.progreso-tile-label { font-size: 0.75rem; color: var(--text-muted); }
+.progreso-tile-valor { font-size: 1.15rem; font-weight: 700; color: var(--black); }
+.progreso-tile-destacado { border-color: var(--primary); }
+.progreso-tile-alerta { border-color: var(--red-dark); }
+.progreso-tile-alerta .progreso-tile-valor { color: var(--red-dark); }
+
+.progreso-detalle-titulo { text-align: left; font-weight: 700; font-size: 0.85rem; color: var(--black); padding-bottom: 0.4rem; caption-side: top; }

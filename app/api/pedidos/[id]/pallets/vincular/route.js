@@ -8,9 +8,14 @@ import { getRepositorioPedidoPalletLinks } from '@/lib/integration-pedido-pallet
 import { validarVincularInput, vincularPallet } from '@/lib/integration-pedido-pallet-links'
 
 // Vincula manualmente un pallet (ya recibido de Cubicaje) a un pedido.
-// Mismo criterio de autorización que POST /api/pedidos/[id]/agregar-sku:
-// admin sin restricción, capturista con módulo 'orders' + dueño del
-// pedido, surtidor con módulo 'picking'.
+//
+// Autorización EN EL HANDLER (no solo en middleware.js), armonizada con
+// los GET de este módulo: admin sin restricción; capturista debe tener
+// módulo 'orders' Y ser dueño del pedido; surtidor debe tener módulo
+// 'picking'; sin sesión -> 401; rol desconocido -> 403. Antes esta ruta
+// dejaba pasar sin restricción cualquier usuario/rol que no fuera
+// exactamente 'capturista' o 'surtidor' (incluyendo un usuario sin cookie
+// o un rol inexistente) — corregido aquí.
 export async function POST(req, { params }) {
   const t = await getServerT()
   const { id } = await params
@@ -42,15 +47,20 @@ export async function POST(req, { params }) {
     }
 
     const usuario = await getUsuario()
-    if (usuario?.rol === 'capturista') {
+    if (!usuario) {
+      return NextResponse.json({ error: t('apiComun.noAutenticado') }, { status: 401 })
+    }
+    if (usuario.rol === 'capturista') {
       const chk = await requireModule('orders')
       if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
       if (pedido.creadoPor !== usuario.userId) {
         return NextResponse.json({ error: t('apiComun.noAutorizado') }, { status: 403 })
       }
-    } else if (usuario?.rol === 'surtidor') {
+    } else if (usuario.rol === 'surtidor') {
       const chk = await requireModule('picking')
       if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+    } else if (usuario.rol !== 'admin') {
+      return NextResponse.json({ error: t('apiComun.noAutorizado') }, { status: 403 })
     }
 
     const pallet = await db.collection('integrationCubicajePallets').findOne({ palletId: validacion.value.palletId })

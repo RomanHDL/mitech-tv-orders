@@ -24,14 +24,19 @@ function fmtFecha(iso, lang = 'es-MX') {
 
 // Sección aditiva "Pallets vinculados" del detalle de pedido. Solo lectura
 // contra la API propia de Pedidos — nunca llama a Cubicaje directamente.
-// No calcula surtido efectivo ni cambia cantidadSurtida/badges/estado —
-// eso queda para un bloque posterior aprobado por separado. Sin polling
-// todavía: carga al montar y refresca tras vincular/desvincular.
+// El progreso sincronizado (Bloque 3) es puramente informativo: nunca
+// cambia cantidadSurtida, badges ni estadoOperativo. Sin polling todavía:
+// carga al montar, y se recarga tras vincular/desvincular o al cambiar de
+// pedido (flechas del modal).
 export default function PalletsVinculados({ pedidoId }) {
   const { t, i18n } = useTranslation()
   const [vinculados, setVinculados] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [errorCarga, setErrorCarga] = useState('')
+
+  const [progreso, setProgreso] = useState(null)
+  const [cargandoProgreso, setCargandoProgreso] = useState(true)
+  const [errorProgreso, setErrorProgreso] = useState('')
 
   const [busquedaPalletId, setBusquedaPalletId] = useState('')
   const [buscando, setBuscando] = useState(false)
@@ -60,16 +65,40 @@ export default function PalletsVinculados({ pedidoId }) {
     return () => { cancelado = true }
   }, [pedidoId, t])
 
+  const cargarProgreso = useCallback(() => {
+    let cancelado = false
+    setCargandoProgreso(true)
+    setErrorProgreso('')
+    fetch(`/api/pedidos/${pedidoId}/pallets/progreso`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
+      .then((data) => {
+        if (cancelado) return
+        setProgreso(data)
+      })
+      .catch(() => {
+        if (!cancelado) setErrorProgreso(t('palletsVinculados.errorProgreso'))
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoProgreso(false)
+      })
+    return () => { cancelado = true }
+  }, [pedidoId, t])
+
   useEffect(() => {
     const cancelar = cargarVinculados()
     return cancelar
   }, [cargarVinculados])
 
+  useEffect(() => {
+    const cancelar = cargarProgreso()
+    return cancelar
+  }, [cargarProgreso])
+
   // Al cambiar de pedido (flechas anterior/siguiente del modal, sin
   // desmontar este componente) se limpia todo el estado de búsqueda y
   // acción — evita mostrar un resultado de búsqueda o un error que
-  // pertenecían al pedido anterior. La lista de vinculados ya se
-  // refresca sola arriba porque cargarVinculados depende de pedidoId.
+  // pertenecían al pedido anterior. La lista de vinculados y el progreso
+  // ya se refrescan solos arriba porque sus callbacks dependen de pedidoId.
   useEffect(() => {
     setBusquedaPalletId('')
     setBuscando(false)
@@ -116,6 +145,7 @@ export default function PalletsVinculados({ pedidoId }) {
       setBusquedaPalletId('')
       setResultadoBusqueda(null)
       cargarVinculados()
+      cargarProgreso()
     } catch (err) {
       setErrorAccion(err.message)
     } finally {
@@ -140,6 +170,7 @@ export default function PalletsVinculados({ pedidoId }) {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || t('palletsVinculados.errorDesvincular'))
       cargarVinculados()
+      cargarProgreso()
     } catch (err) {
       setErrorAccion(err.message)
     } finally {
@@ -147,8 +178,116 @@ export default function PalletsVinculados({ pedidoId }) {
     }
   }
 
+  const resumen = progreso?.resumen || null
+
   return (
     <div className="pallets-vinculados">
+      {cargandoProgreso ? (
+        <p className="acordeon-vacio">{t('palletsVinculados.cargandoProgreso')}</p>
+      ) : errorProgreso ? (
+        <div className="alerta alerta-error">
+          <IconAlert />
+          <span>{errorProgreso}</span>
+        </div>
+      ) : resumen ? (
+        <div className="progreso-resumen">
+          <div className="progreso-tiles">
+            <div className="progreso-tile">
+              <span className="progreso-tile-label">{t('palletsVinculados.surtidoManual')}</span>
+              <span className="progreso-tile-valor">{resumen.cantidadSurtidaManual}</span>
+            </div>
+            <div className="progreso-tile">
+              <span className="progreso-tile-label">{t('palletsVinculados.surtidoSincronizadoValido')}</span>
+              <span className="progreso-tile-valor">{resumen.cantidadSincronizadaValida}</span>
+            </div>
+            <div className="progreso-tile progreso-tile-destacado">
+              <span className="progreso-tile-label">{t('palletsVinculados.surtidoEfectivo')}</span>
+              <span className="progreso-tile-valor">{resumen.surtidoEfectivo}</span>
+            </div>
+            <div className="progreso-tile">
+              <span className="progreso-tile-label">{t('palletsVinculados.pendientes')}</span>
+              <span className="progreso-tile-valor">{resumen.cantidadPendiente}</span>
+            </div>
+            <div className="progreso-tile">
+              <span className="progreso-tile-label">{t('palletsVinculados.porcentajeEfectivo')}</span>
+              <span className="progreso-tile-valor">{resumen.porcentajeEfectivo}%</span>
+            </div>
+            <div className="progreso-tile">
+              <span className="progreso-tile-label">{t('palletsVinculados.palletsVinculadosCantidad')}</span>
+              <span className="progreso-tile-valor">{resumen.palletsVinculados}</span>
+            </div>
+            {resumen.cantidadConDiscrepancia > 0 && (
+              <div className="progreso-tile progreso-tile-alerta">
+                <span className="progreso-tile-label">{t('palletsVinculados.piezasConDiscrepancia')}</span>
+                <span className="progreso-tile-valor">{resumen.cantidadConDiscrepancia}</span>
+              </div>
+            )}
+          </div>
+
+          {Array.isArray(progreso.lineas) && progreso.lineas.length > 0 && (
+            <div className="tabla-wrap">
+              <table className="tabla-pedidos tabla-pedidos-densa tabla-items-modal">
+                <caption className="progreso-detalle-titulo">{t('palletsVinculados.detalleLineasTitulo')}</caption>
+                <thead>
+                  <tr>
+                    <th>{t('palletsVinculados.colModelo')}</th>
+                    <th>{t('pedidoForm.condicion')}</th>
+                    <th>{t('palletsVinculados.colSolicitadas')}</th>
+                    <th>{t('palletsVinculados.colManuales')}</th>
+                    <th>{t('palletsVinculados.colSincronizadasValidas')}</th>
+                    <th>{t('palletsVinculados.colEfectivas')}</th>
+                    <th>{t('palletsVinculados.colPendientes')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {progreso.lineas.map((l) => (
+                    <tr key={l.indice}>
+                      <td data-label={t('palletsVinculados.colModelo')}>{l.modelo}</td>
+                      <td data-label={t('pedidoForm.condicion')}>
+                        <div className="tags-celda">
+                          {(l.condiciones || []).map((c) => (
+                            <span key={c} className={tagClase(c)}>{c}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td data-label={t('palletsVinculados.colSolicitadas')}>
+                        {l.cantidadSolicitada === null ? t('pedidoForm.sinLimite') : l.cantidadSolicitada}
+                      </td>
+                      <td data-label={t('palletsVinculados.colManuales')}>{l.cantidadSurtidaManual}</td>
+                      <td data-label={t('palletsVinculados.colSincronizadasValidas')}>{l.cantidadSincronizadaValida}</td>
+                      <td data-label={t('palletsVinculados.colEfectivas')}>{l.surtidoEfectivo}</td>
+                      <td data-label={t('palletsVinculados.colPendientes')}>
+                        {l.cantidadPendiente === null ? '—' : l.cantidadPendiente}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {Array.isArray(progreso.discrepancias) && progreso.discrepancias.length > 0 && (
+            <div className="alerta alerta-error pallet-discrepancias">
+              <IconAlert />
+              <div>
+                <strong>{t('palletsVinculados.discrepanciasTitulo')}</strong>
+                <ul>
+                  {progreso.discrepancias.map((d, i) => (
+                    <li key={i}>
+                      {d.motivo === 'sin_condicion'
+                        ? t('palletsVinculados.discrepanciaSinCondicion', { sku: d.sku })
+                        : d.motivo === 'cantidad_excedente'
+                        ? t('palletsVinculados.discrepanciaCantidadExcedente', { sku: d.sku, condicion: d.condicion, cantidad: d.cantidad })
+                        : t('palletsVinculados.discrepanciaNoSolicitado', { sku: d.sku, condicion: d.condicion })}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
       <form className="pallets-buscador" onSubmit={buscarPallet}>
         <input
           type="text"

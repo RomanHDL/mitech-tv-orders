@@ -10,7 +10,11 @@ import { desvincularPallet, validarDesvincularInput } from '@/lib/integration-pe
 // Desvincula lógicamente un pallet de un pedido (nunca se borra el
 // documento, solo se marca activo:false — ver lib/integration-pedido-
 // pallet-links.js). Idempotente: una segunda desvinculación no falla.
-// Mismo criterio de autorización que vincular/agregar-sku.
+//
+// Autorización EN EL HANDLER (no solo en middleware.js), armonizada con
+// vincular y con los GET de este módulo: admin sin restricción;
+// capturista debe tener módulo 'orders' Y ser dueño del pedido; surtidor
+// debe tener módulo 'picking'; sin sesión -> 401; rol desconocido -> 403.
 export async function POST(req, { params }) {
   const t = await getServerT()
   const { id, palletId } = await params
@@ -48,15 +52,20 @@ export async function POST(req, { params }) {
     }
 
     const usuario = await getUsuario()
-    if (usuario?.rol === 'capturista') {
+    if (!usuario) {
+      return NextResponse.json({ error: t('apiComun.noAutenticado') }, { status: 401 })
+    }
+    if (usuario.rol === 'capturista') {
       const chk = await requireModule('orders')
       if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
       if (pedido.creadoPor !== usuario.userId) {
         return NextResponse.json({ error: t('apiComun.noAutorizado') }, { status: 403 })
       }
-    } else if (usuario?.rol === 'surtidor') {
+    } else if (usuario.rol === 'surtidor') {
       const chk = await requireModule('picking')
       if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status })
+    } else if (usuario.rol !== 'admin') {
+      return NextResponse.json({ error: t('apiComun.noAutorizado') }, { status: 403 })
     }
 
     const repo = await getRepositorioPedidoPalletLinks()
