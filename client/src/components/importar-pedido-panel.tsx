@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { useTranslation } from 'react-i18next'
-import { AlertCircle, Check, Clipboard, FileSpreadsheet, FileImage, Plus, X } from 'lucide-react'
+import { AlertCircle, Check, Clipboard, FileSpreadsheet, FileImage, UploadCloud, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   parsearTexto,
@@ -145,11 +145,15 @@ export default function ImportarPedidoPanel({ onImportar }: { onImportar: (items
 
   if (!abierto) {
     return (
-      <Button type="button" variant="secondary" className="w-full" onClick={() => setAbierto(true)}>
-        <Plus className="h-4 w-4" />
+      <button
+        type="button"
+        className="flex h-[54px] w-full items-center justify-center gap-2 rounded-lg border border-dashed border-primary/50 bg-blue-50/40 text-sm font-medium text-primary transition-colors hover:bg-blue-50"
+        onClick={() => setAbierto(true)}
+      >
+        <UploadCloud className="h-4 w-4" />
         {t('importar.importarEnLote')}
-        <span className="text-xs text-muted-foreground">{t('importar.metodos')}</span>
-      </Button>
+        <span className="font-normal text-muted-foreground">{t('importar.metodos')}</span>
+      </button>
     )
   }
 

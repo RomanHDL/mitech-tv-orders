@@ -1,6 +1,16 @@
 // Selector de idioma — HARD RULE del stack (en / es-MX / zh-CN), persistido
 // en localStorage vía i18next-browser-languagedetector (ver client/src/i18n).
+// Antes era un segmented-control con los 3 idiomas siempre visibles; ahora
+// es un botón compacto ("ES ▾") que abre un DropdownMenu con las mismas 3
+// opciones. Misma llamada i18n.changeLanguage de siempre.
 import { useTranslation } from 'react-i18next'
+import { ChevronDown } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const IDIOMAS = [
   { code: 'es-MX', label: 'ES' },
@@ -10,22 +20,30 @@ const IDIOMAS = [
 
 export default function LanguageSwitcher() {
   const { i18n } = useTranslation()
+  const actual = IDIOMAS.find((idioma) => idioma.code === i18n.resolvedLanguage) ?? IDIOMAS[0]
 
   return (
-    <div className="flex items-center gap-0.5 rounded-md bg-secondary p-0.5 text-xs">
-      {IDIOMAS.map((idioma) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <button
-          key={idioma.code}
           type="button"
-          onClick={() => i18n.changeLanguage(idioma.code)}
-          className={`min-h-7 rounded-sm px-2 py-1 font-semibold transition-colors ${
-            i18n.resolvedLanguage === idioma.code ? 'bg-card shadow-sm' : 'text-muted-foreground'
-          }`}
-          aria-pressed={i18n.resolvedLanguage === idioma.code}
+          className="flex h-10 items-center gap-1 rounded-lg border border-input bg-card px-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
         >
-          {idioma.label}
+          {actual.label}
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
-      ))}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {IDIOMAS.map((idioma) => (
+          <DropdownMenuItem
+            key={idioma.code}
+            onClick={() => i18n.changeLanguage(idioma.code)}
+            className={idioma.code === actual.code ? 'font-semibold text-primary' : ''}
+          >
+            {idioma.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

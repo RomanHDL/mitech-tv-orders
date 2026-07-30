@@ -7,8 +7,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'wouter'
 import { useTranslation } from 'react-i18next'
-import { Plus, X, AlertCircle, ArrowRight, Package } from 'lucide-react'
-import { MARCAS, PULGADAS, CONDICIONES, SKU_REGEX } from '@shared/schema'
+import {
+  Plus,
+  X,
+  AlertCircle,
+  ArrowRight,
+  Package,
+  ShoppingCart,
+  FileText,
+  Tag,
+  Monitor,
+  Layers,
+  Tags,
+  Tv as TvIcon,
+} from 'lucide-react'
+import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_PARTIDA, SKU_REGEX } from '@shared/schema'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,6 +30,7 @@ import ImportarPedidoPanel from '@/components/importar-pedido-panel'
 export type TvFormItem = {
   marca: string
   pulgadas: string
+  condicion: string
   modelo: string
   cantidad: number | ''
   unidad: 'pieza' | 'pallet'
@@ -33,6 +47,7 @@ export type PedidoFormData = {
   televisiones: {
     marca: string
     pulgadas: number
+    condicion: string
     modelo: string
     cantidad: number
     unidad: 'pieza' | 'pallet'
@@ -44,6 +59,7 @@ export type PedidoFormData = {
 const tvVacia = (): TvFormItem => ({
   marca: '',
   pulgadas: '',
+  condicion: '',
   modelo: '',
   cantidad: 1,
   unidad: 'pieza',
@@ -60,6 +76,7 @@ export type PedidoFormInitialData = {
   televisiones?: {
     marca: string
     pulgadas: number
+    condicion?: string
     modelo: string
     cantidad: number
     unidad: string
@@ -100,6 +117,7 @@ export default function PedidoForm({
       ? initialData.televisiones.map((tv) => ({
           marca: tv.marca || '',
           pulgadas: tv.pulgadas !== undefined ? String(tv.pulgadas) : '',
+          condicion: tv.condicion || '',
           modelo: tv.modelo || '',
           cantidad: tv.cantidad || 1,
           unidad: (tv.unidad as 'pieza' | 'pallet') || 'pieza',
@@ -196,6 +214,7 @@ export default function PedidoForm({
     const nuevas: TvFormItem[] = items.map((it) => ({
       marca: it.marca,
       pulgadas: it.pulgadas ? String(it.pulgadas) : '',
+      condicion: '',
       modelo: it.modelo,
       cantidad: it.cantidad || 1,
       unidad: (it.unidad as 'pieza' | 'pallet') || 'pieza',
@@ -220,6 +239,7 @@ export default function PedidoForm({
     for (const [i, tv] of tvs.entries()) {
       if (!(MARCAS as readonly string[]).includes(tv.marca)) return setError(t('pedidoForm.errMarcaInvalida', { n: i + 1 }))
       if (!(PULGADAS as readonly number[]).includes(Number(tv.pulgadas))) return setError(t('pedidoForm.errPulgadasInvalidas', { n: i + 1 }))
+      if (!(CONDICIONES_PARTIDA as readonly string[]).includes(tv.condicion)) return setError(t('pedidoForm.errCondicion', { n: i + 1 }))
       if (!SKU_REGEX.test(tv.modelo || '')) {
         return setError(t('pedidoForm.errSku', { n: i + 1 }))
       }
@@ -249,6 +269,7 @@ export default function PedidoForm({
         televisiones: tvs.map((tv) => ({
           marca: tv.marca,
           pulgadas: Number(tv.pulgadas),
+          condicion: tv.condicion,
           modelo: tv.modelo.trim(),
           cantidad: tv.sinLimite ? (limite > 0 ? limite : 0) : Number(tv.cantidad),
           unidad: tv.unidad,
@@ -265,82 +286,129 @@ export default function PedidoForm({
   const hayPallets = pallets > 0
 
   return (
-    <main className="mx-auto max-w-3xl p-4 sm:p-6">
-      <div className="mb-4">
-        <h1 className="font-display text-3xl text-primary">{tituloFinal}</h1>
-        <p className="text-muted-foreground">{subtituloFinal}</p>
+    <main className="mx-auto max-w-[1200px] px-4 pb-12 pt-8 sm:px-6">
+      <div className="mb-8 flex items-center gap-4">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-50 text-primary">
+          <ShoppingCart className="h-7 w-7" />
+        </span>
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">{tituloFinal}</h1>
+          <p className="text-muted-foreground">{subtituloFinal}</p>
+        </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-4 shadow-sm sm:p-6">
-        <form onSubmit={enviar} className="space-y-5">
+      <form onSubmit={enviar} className="space-y-6">
+        <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">{t('pedidoForm.informacionPedido')}</h2>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label htmlFor="numeroPedido">{t('pedidoForm.numeroPedido')}</Label>
-              <Input id="numeroPedido" value={numeroPedido} onChange={(e) => setNumeroPedido(e.target.value)} placeholder={t('pedidoForm.numeroPedidoEjemplo')} required />
+            <div className="space-y-1.5">
+              <Label htmlFor="numeroPedido" className="font-semibold">
+                {t('pedidoForm.numeroPedido')}
+              </Label>
+              <Input
+                id="numeroPedido"
+                className="h-12 rounded-lg"
+                value={numeroPedido}
+                onChange={(e) => setNumeroPedido(e.target.value)}
+                placeholder={t('pedidoForm.numeroPedidoEjemplo')}
+                required
+              />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="pedidoNombre">{t('pedidoForm.nombrePedido')}</Label>
-              <Input id="pedidoNombre" value={pedidoNombre} onChange={(e) => setPedidoNombre(e.target.value)} placeholder={t('pedidoForm.nombrePedidoEjemplo')} required />
+            <div className="space-y-1.5">
+              <Label htmlFor="pedidoNombre" className="font-semibold">
+                {t('pedidoForm.nombrePedido')}
+              </Label>
+              <Input
+                id="pedidoNombre"
+                className="h-12 rounded-lg"
+                value={pedidoNombre}
+                onChange={(e) => setPedidoNombre(e.target.value)}
+                placeholder={t('pedidoForm.nombrePedidoEjemplo')}
+                required
+              />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="fechaLimite">{t('pedidoForm.fechaLimite')}</Label>
-              <Input id="fechaLimite" type="date" value={fechaLimite} onChange={(e) => setFechaLimite(e.target.value)} required />
+            <div className="space-y-1.5">
+              <Label htmlFor="fechaLimite" className="font-semibold">
+                {t('pedidoForm.fechaLimite')}
+              </Label>
+              <Input
+                id="fechaLimite"
+                type="date"
+                className="h-12 rounded-lg"
+                value={fechaLimite}
+                onChange={(e) => setFechaLimite(e.target.value)}
+                required
+              />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="cantidadTotal">
-                {t('pedidoForm.cantidadTotal')} <span className="text-xs text-muted-foreground">{t('pedidoForm.cantidadTotalHint')}</span>
+            <div className="space-y-1.5">
+              <Label htmlFor="cantidadTotal" className="font-semibold">
+                {t('pedidoForm.cantidadTotal')} <span className="text-xs font-normal text-muted-foreground">{t('pedidoForm.cantidadTotalHint')}</span>
               </Label>
               <Input
                 id="cantidadTotal"
                 type="number"
                 min={1}
                 step={1}
+                className="h-12 rounded-lg"
                 value={cantidadTotal}
                 onChange={(e) => setCantidadTotal(e.target.value)}
                 placeholder={t('pedidoForm.cantidadTotalEjemplo')}
               />
             </div>
           </div>
+        </div>
 
-          {limite > 0 && (
-            <div className={`rounded-md border p-3 ${pedidoExcedido ? 'border-destructive bg-destructive/10' : pedidoCerrado ? 'border-success bg-success/10' : 'bg-secondary'}`}>
-              <div className="flex items-center justify-between text-sm font-semibold">
-                <span>
-                  {totalUnidades} <span className="font-normal text-muted-foreground">{t('pedidoForm.de')}</span> {limite}
-                </span>
-                <span>{progresoLimite}%</span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                <div className="h-full bg-primary transition-all" style={{ width: `${progresoLimite}%` }} />
-              </div>
-              {pedidoCerrado && !pedidoExcedido && <p className="mt-1 text-xs">{t('pedidoForm.pedidoCompleto')}</p>}
-              {pedidoExcedido && <p className="mt-1 text-xs text-destructive">{t('pedidoForm.excedidoPor', { n: totalUnidades - limite })}</p>}
+        {limite > 0 && (
+          <div className={`rounded-xl border p-3 ${pedidoExcedido ? 'border-destructive bg-destructive/10' : pedidoCerrado ? 'border-success bg-success/10' : 'bg-secondary'}`}>
+            <div className="flex items-center justify-between text-sm font-semibold">
+              <span>
+                {totalUnidades} <span className="font-normal text-muted-foreground">{t('pedidoForm.de')}</span> {limite}
+              </span>
+              <span>{progresoLimite}%</span>
             </div>
-          )}
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+              <div className="h-full bg-primary transition-all" style={{ width: `${progresoLimite}%` }} />
+            </div>
+            {pedidoCerrado && !pedidoExcedido && <p className="mt-1 text-xs">{t('pedidoForm.pedidoCompleto')}</p>}
+            {pedidoExcedido && <p className="mt-1 text-xs text-destructive">{t('pedidoForm.excedidoPor', { n: totalUnidades - limite })}</p>}
+          </div>
+        )}
 
-          <div className="space-y-2">
-            <Label>{t('pedidoForm.condiciones')}</Label>
-            <div className="flex flex-wrap gap-2">
-              {CONDICIONES.map((c) => (
-                <label
-                  key={c}
-                  className={`min-h-11 cursor-pointer select-none rounded-full border px-3 py-2 text-sm font-semibold transition-colors ${
-                    condiciones.includes(c) ? 'border-primary bg-primary text-primary-foreground' : 'bg-secondary'
-                  }`}
-                >
-                  <input type="checkbox" className="sr-only" checked={condiciones.includes(c)} onChange={() => toggleCondicion(c)} />
-                  {c}
-                </label>
-              ))}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Tag className="h-4 w-4 text-primary" />
+            <Label className="font-semibold">{t('pedidoForm.condiciones')}</Label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {CONDICIONES.map((c) => (
+              <label
+                key={c}
+                className={`min-h-11 cursor-pointer select-none rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                  condiciones.includes(c)
+                    ? 'border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/30'
+                    : 'border-primary/30 bg-card text-foreground hover:bg-blue-50'
+                }`}
+              >
+                <input type="checkbox" className="sr-only" checked={condiciones.includes(c)} onChange={() => toggleCondicion(c)} />
+                {c}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">{t('pedidoForm.televisiones')}</h2>
             </div>
+            <span className="text-sm text-muted-foreground">{t('pedidoForm.agregadas', { count: tvs.length })}</span>
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t('pedidoForm.televisiones')}</h2>
-              <span className="text-sm text-muted-foreground">{t('pedidoForm.agregadas', { count: tvs.length })}</span>
-            </div>
-
             {!pedidoCerrado && <ImportarPedidoPanel onImportar={importarTvs} />}
 
             <datalist id="marcas-list">
@@ -357,10 +425,10 @@ export default function PedidoForm({
               return (
                 <div
                   key={i}
-                  className={`rounded-md border p-3 ${esPallet ? 'border-accent bg-accent/10' : ''} ${esSinLimite ? 'border-primary' : ''}`}
+                  className={`rounded-xl border p-4 ${esPallet ? 'border-accent bg-accent/10' : ''} ${esSinLimite ? 'border-primary' : ''}`}
                 >
-                  <div className="mb-2 flex flex-wrap items-center gap-3 text-sm">
-                    <span className="font-semibold text-muted-foreground">{t('pedidoForm.tvNumero', { n: i + 1 })}</span>
+                  <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+                    <span className="font-semibold text-primary">{t('pedidoForm.tvNumero', { n: i + 1 })}</span>
                     <label className="flex min-h-11 cursor-pointer items-center gap-1">
                       <input type="checkbox" checked={esPallet} onChange={() => togglePallet(i)} />
                       <Package className="h-4 w-4" /> {t('pedidoForm.pallet')}
@@ -370,39 +438,62 @@ export default function PedidoForm({
                       <span aria-hidden="true">∞</span> {t('pedidoForm.sinLimite')}
                     </label>
                     {tvs.length > 1 && (
-                      <button type="button" onClick={() => eliminarTv(i)} className="ml-auto flex min-h-11 items-center gap-1 text-destructive">
+                      <button type="button" onClick={() => eliminarTv(i)} className="ml-auto flex min-h-11 items-center gap-1 font-medium text-destructive">
                         <X className="h-3.5 w-3.5" /> {t('pedidoForm.quitar')}
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
                     <Input
                       ref={(el) => {
                         inputRefs.current[i] = el
                       }}
+                      className="h-11 rounded-lg"
                       value={tv.modelo}
                       onChange={(e) => updateSku(i, e.target.value)}
-                      placeholder={t('pedidoForm.skuModelo')}
+                      placeholder={t('pedidoForm.skuModeloEjemplo')}
                       minLength={3}
                       maxLength={20}
                       required
                     />
-                    <Input list="marcas-list" value={tv.marca} onChange={(e) => updateTv(i, 'marca', e.target.value)} placeholder={t('pedidoForm.marca')} required />
+                    <Input
+                      list="marcas-list"
+                      className="h-11 rounded-lg"
+                      value={tv.marca}
+                      onChange={(e) => updateTv(i, 'marca', e.target.value)}
+                      placeholder={t('pedidoForm.marcaEjemplo')}
+                      required
+                    />
                     <select
-                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="flex h-11 w-full rounded-lg border border-input bg-background px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label={t('pedidoForm.pulgadas')}
                       value={tv.pulgadas}
                       onChange={(e) => updateTv(i, 'pulgadas', e.target.value)}
                       required
                     >
-                      <option value="">{t('pedidoForm.pulgadas')}</option>
+                      <option value="">{t('pedidoForm.pulgadasSelecciona')}</option>
                       {PULGADAS.map((p) => (
                         <option key={p} value={p}>
                           {p}&quot;
                         </option>
                       ))}
                     </select>
+                    <select
+                      className="flex h-11 w-full rounded-lg border border-input bg-background px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label={t('pedidoForm.condicion')}
+                      value={tv.condicion}
+                      onChange={(e) => updateTv(i, 'condicion', e.target.value)}
+                      required
+                    >
+                      <option value="">{t('pedidoForm.condicion')}</option>
+                      {CONDICIONES_PARTIDA.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
                     {esSinLimite ? (
-                      <div className="flex h-11 items-center justify-center rounded-md border bg-secondary text-sm font-semibold">
+                      <div className="flex h-11 items-center justify-center rounded-lg border bg-secondary text-sm font-semibold">
                         {limite > 0 ? t('pedidoForm.totalDelPedido', { n: limite }) : t('pedidoForm.infinitoSinLimite')}
                       </div>
                     ) : (
@@ -410,6 +501,7 @@ export default function PedidoForm({
                         type="number"
                         min={1}
                         max={maxCantidad}
+                        className="h-11 rounded-lg"
                         value={tv.cantidad}
                         onChange={(e) => updateCantidad(i, e.target.value)}
                         onKeyDown={(e) => {
@@ -418,7 +510,7 @@ export default function PedidoForm({
                             agregarTv()
                           }
                         }}
-                        placeholder={esPallet ? t('pedidoForm.pallets') : t('pedidoForm.cant')}
+                        placeholder={t('pedidoForm.cantidadEjemplo')}
                         required
                       />
                     )}
@@ -430,68 +522,105 @@ export default function PedidoForm({
               )
             })}
 
-            <Button type="button" variant="secondary" onClick={agregarTv} disabled={pedidoCerrado} className="w-full">
+            <button
+              type="button"
+              onClick={agregarTv}
+              disabled={pedidoCerrado}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-primary/50 bg-card text-sm font-medium text-primary transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
               <Plus className="h-4 w-4" />
               {pedidoCerrado ? t('pedidoForm.pedidoCompletoBoton') : t('pedidoForm.agregarTelevision')}
-            </Button>
+            </button>
           </div>
+        </div>
 
-          {totalUnidades > 0 && (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-md border p-2 text-center">
-                <div className="text-xl font-bold">{tvs.length}</div>
+        {totalUnidades > 0 && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-primary">
+                <Layers className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="text-xl font-bold text-foreground">{tvs.length}</div>
                 <div className="text-xs text-muted-foreground">{t('pedidoForm.modelos')}</div>
               </div>
-              <div className="rounded-md border p-2 text-center">
-                <div className="text-xl font-bold">{marcasUnicas}</div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-50 text-purple-600">
+                <Tags className="h-5 w-5" />
+              </span>
+              <div>
+                <div className="text-xl font-bold text-foreground">{marcasUnicas}</div>
                 <div className="text-xs text-muted-foreground">{t('pedidoForm.marcas')}</div>
               </div>
-              {hayPallets ? (
-                <>
-                  <div className="rounded-md border p-2 text-center">
-                    <div className="text-xl font-bold">{pallets}</div>
+            </div>
+            {hayPallets ? (
+              <>
+                <div className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <Package className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <div className="text-xl font-bold text-foreground">{pallets}</div>
                     <div className="text-xs text-muted-foreground">{t('pedidoForm.pallets')}</div>
                   </div>
-                  <div className="rounded-md border p-2 text-center">
-                    <div className="text-xl font-bold">{piezas}</div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <TvIcon className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <div className="text-xl font-bold text-foreground">{piezas}</div>
                     <div className="text-xs text-muted-foreground">{t('pedidoForm.piezas')}</div>
                   </div>
-                </>
-              ) : (
-                <div className="rounded-md border p-2 text-center">
-                  <div className="text-xl font-bold">{limite > 0 ? limite : piezas}</div>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <TvIcon className="h-5 w-5" />
+                </span>
+                <div>
+                  <div className="text-xl font-bold text-foreground">{limite > 0 ? limite : piezas}</div>
                   <div className="text-xs text-muted-foreground">{t('pedidoForm.tvsTotal')}</div>
                 </div>
-              )}
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            {cancelHref && (
-              <Link href={cancelHref}>
-                <Button type="button" variant="secondary" size="lg">
-                  {t('common.cancelar')}
-                </Button>
-              </Link>
+              </div>
             )}
-            <Button type="submit" size="lg" disabled={enviando}>
-              {enviando ? t('common.guardando') : (
-                <>
-                  {submitLabelFinal}
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
           </div>
-        </form>
-      </div>
+        )}
+
+        {error && (
+          <div className="flex items-center gap-2 rounded-xl border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+          {cancelHref && (
+            <Link href={cancelHref}>
+              <Button type="button" variant="secondary" size="lg" className="w-full rounded-lg sm:w-auto">
+                {t('common.cancelar')}
+              </Button>
+            </Link>
+          )}
+          <Button
+            type="submit"
+            size="lg"
+            disabled={enviando}
+            className="w-full gap-2 rounded-lg shadow-md shadow-primary/20 hover:bg-primary/90 sm:w-auto"
+          >
+            {enviando ? (
+              t('common.guardando')
+            ) : (
+              <>
+                {submitLabelFinal}
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
     </main>
   )
 }

@@ -40,6 +40,7 @@ export default function EditarPedido() {
         televisiones: pedido.televisiones.map((tv) => ({
           marca: tv.marca,
           pulgadas: tv.pulgadas,
+          condicion: tv.condicion,
           modelo: tv.modelo,
           cantidad: tv.cantidad,
           unidad: tv.unidad,

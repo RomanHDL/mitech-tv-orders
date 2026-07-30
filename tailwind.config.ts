@@ -8,6 +8,12 @@ export default {
   content: ['./client/index.html', './client/src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      screens: {
+        // Corte del navbar a hamburguesa un poco antes del breakpoint `xl`
+        // por default (1280px) — el navbar completo (logo + 8 links + idioma
+        // + usuario) empieza a apretarse cerca de 1180px en pantallas reales.
+        navlg: '1180px',
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

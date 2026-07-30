@@ -247,12 +247,13 @@ body { background: #fff; }
   margin: 0;
 }
 
-/* Cada renglón de TV: 4 columnas alineadas en grid
-   pulgadas · cantidad · unidad · modelo */
+/* Cada renglón de TV: columnas alineadas en grid
+   pulgadas · condición · cantidad · unidad · modelo */
 .marca-bloque li {
   display: grid;
   grid-template-columns:
     minmax(calc(3.5rem * var(--fs-mult)), auto)
+    minmax(calc(3rem * var(--fs-mult)), auto)
     minmax(calc(2rem * var(--fs-mult)), auto)
     minmax(calc(4rem * var(--fs-mult)), auto)
     1fr;
@@ -276,6 +277,10 @@ body { background: #fff; }
   font-weight: 900;
   white-space: nowrap;
   letter-spacing: 0.02em;
+}
+.col-condicion {
+  justify-self: start;
+  white-space: nowrap;
 }
 .col-cantidad {
   font-weight: 900;

@@ -6,23 +6,23 @@
    (app/globals.css) a variables HSL estilo shadcn/ui. */
 @layer base {
   :root {
-    --background: 60 23% 97%;
-    --foreground: 0 0% 10%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 222 47% 11%;
 
     --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 94%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 94%;
-    --muted-foreground: 215 16% 40%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
     --accent: 43 96% 63%;
-    --accent-foreground: 0 0% 10%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -30,8 +30,8 @@
     --success: 160 84% 33%;
     --success-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
     --ring: 221 83% 53%;
 
     --radius: 0.5rem;

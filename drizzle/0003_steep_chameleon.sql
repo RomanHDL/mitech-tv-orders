@@ -1,0 +1,1 @@
+ALTER TABLE "pedido_televisiones" ADD COLUMN "condicion" text NOT NULL;
