@@ -99,7 +99,8 @@
     "colPallet": "托盘",
     "colUltimoMovimiento": "最近动向",
     "errorCargarDetalle": "无法加载详情",
-    "sinEstatus": "无状态"
+    "sinEstatus": "无状态",
+    "noSePudoActualizar": "更新失败——显示最近一次可用的数据。"
   },
   "modulos": {
     "nuevo": "新建",

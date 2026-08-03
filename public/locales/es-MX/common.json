@@ -99,7 +99,8 @@
     "colPallet": "Pallet",
     "colUltimoMovimiento": "Último movimiento",
     "errorCargarDetalle": "No se pudo cargar el detalle",
-    "sinEstatus": "Sin estatus"
+    "sinEstatus": "Sin estatus",
+    "noSePudoActualizar": "No se pudo actualizar — mostrando los últimos datos disponibles."
   },
   "modulos": {
     "nuevo": "Nuevo",
