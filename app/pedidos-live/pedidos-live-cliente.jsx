@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { IconBox, IconRefresh, IconRetry, IconSearch } from '../components/icons'
 import { localeDe } from '@/lib/intl-format'
 
-const LIMITE_PEDIDOS = 150
+const POR_PAGINA_OPCIONES = [50, 100, 150, 200]
 const INTERVALO_POLLING_MS = 20000
 const TIMEOUT_LISTADO_MS = 15000
 const TIMEOUT_DETALLE_MS = 15000
@@ -50,8 +50,11 @@ export default function PedidosLiveCliente({ titulo }) {
   const { t, i18n } = useTranslation()
 
   const [busqueda, setBusqueda] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const [porPagina, setPorPagina] = useState(150)
   // null = todavía nunca se cargó con éxito (distingue de "cargó y vino vacío").
   const [pedidos, setPedidos] = useState(null)
+  const [total, setTotal] = useState(0)
   const [cargandoInicial, setCargandoInicial] = useState(true)
   const [actualizando, setActualizando] = useState(false)
   const [error, setError] = useState(null) // sin datos previos → error bloqueante
@@ -66,7 +69,7 @@ export default function PedidosLiveCliente({ titulo }) {
   const cargaIdRef = useRef(0)
   const detalleAbortRef = useRef({}) // orderId -> AbortController
 
-  const cargarPedidos = useCallback((busquedaActual) => {
+  const cargarPedidos = useCallback((busquedaActual, paginaActual, porPaginaActual) => {
     abortListaRef.current?.abort()
     const controller = new AbortController()
     abortListaRef.current = controller
@@ -75,7 +78,7 @@ export default function PedidosLiveCliente({ titulo }) {
     const timer = setTimeout(() => controller.abort(), TIMEOUT_LISTADO_MS)
     setActualizando(true)
 
-    const params = new URLSearchParams({ limit: String(LIMITE_PEDIDOS) })
+    const params = new URLSearchParams({ page: String(paginaActual), limit: String(porPaginaActual) })
     if (busquedaActual) params.set('search', busquedaActual)
 
     fetch(`/api/live-orders?${params}`, { signal: controller.signal, cache: 'no-store' })
@@ -89,6 +92,7 @@ export default function PedidosLiveCliente({ titulo }) {
       .then((data) => {
         if (cargaIdRef.current !== miCargaId) return // respuesta obsoleta, se ignora
         setPedidos(data.data || [])
+        setTotal(data.pagination?.total ?? 0)
         setError(null)
         setAvisoDesactualizado(null)
       })
@@ -114,13 +118,14 @@ export default function PedidosLiveCliente({ titulo }) {
 
   // Carga inicial.
   useEffect(() => {
-    cargarPedidos('')
+    cargarPedidos('', 1, porPagina)
     return () => abortListaRef.current?.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Búsqueda con debounce — cancela la solicitud anterior automáticamente
-  // (cargarPedidos aborta el fetch en curso antes de lanzar uno nuevo).
+  // (cargarPedidos aborta el fetch en curso antes de lanzar uno nuevo). Toda
+  // búsqueda nueva vuelve a la página 1.
   const primerRenderBusqueda = useRef(true)
   useEffect(() => {
     if (primerRenderBusqueda.current) {
@@ -128,20 +133,35 @@ export default function PedidosLiveCliente({ titulo }) {
       return
     }
     clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => cargarPedidos(busqueda), 350)
+    debounceRef.current = setTimeout(() => {
+      setPagina(1)
+      cargarPedidos(busqueda, 1, porPagina)
+    }, 350)
     return () => clearTimeout(debounceRef.current)
-  }, [busqueda, cargarPedidos])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busqueda])
+
+  // Cambio de página o tamaño de página — carga inmediata (sin debounce).
+  const primerRenderPagina = useRef(true)
+  useEffect(() => {
+    if (primerRenderPagina.current) {
+      primerRenderPagina.current = false
+      return
+    }
+    cargarPedidos(busqueda, pagina, porPagina)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagina, porPagina])
 
   // Actualización automática silenciosa — no reinicia el spinner central,
-  // no borra los pedidos ya mostrados, y respeta la búsqueda activa.
+  // no borra los pedidos ya mostrados, y mantiene la búsqueda/página actual.
   useEffect(() => {
     pollingRef.current = setInterval(() => {
-      cargarPedidos(busqueda)
+      cargarPedidos(busqueda, pagina, porPagina)
     }, INTERVALO_POLLING_MS)
     return () => clearInterval(pollingRef.current)
-  }, [busqueda, cargarPedidos])
+  }, [busqueda, pagina, porPagina, cargarPedidos])
 
-  const reintentar = () => cargarPedidos(busqueda)
+  const reintentar = () => cargarPedidos(busqueda, pagina, porPagina)
 
   const cargarDetalle = async (orderId) => {
     detalleAbortRef.current[orderId]?.abort()
@@ -212,13 +232,14 @@ export default function PedidosLiveCliente({ titulo }) {
   }
 
   const pedidosFiltrados = pedidos || []
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina))
 
   return (
     <>
       <div className="page-header">
         <h1>{titulo}</h1>
         <p className="subtitle">
-          {t('pedidosLive.subtituloPedidos', { count: pedidosFiltrados.length })}
+          {t('pedidosLive.subtituloPedidos', { count: total })}
           {actualizando && <span className="spinner-sm" aria-hidden="true" />}
         </p>
       </div>
@@ -356,6 +377,32 @@ export default function PedidosLiveCliente({ titulo }) {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!error && total > 0 && (
+          <div className="paginacion">
+            <span className="paginacion-info">
+              {t('historial.mostrandoRegistros', {
+                desde: (pagina - 1) * porPagina + 1,
+                hasta: Math.min(pagina * porPagina, total),
+                total,
+              })}
+            </span>
+            <div className="paginacion-botones">
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina(1)} disabled={pagina <= 1}>«</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina <= 1}>{t('pedidos.anterior')}</button>
+              <span className="paginacion-actual">{t('pedidos.pagina', { actual: pagina, total: totalPaginas })}</span>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={pagina >= totalPaginas}>{t('pedidos.siguiente')}</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPagina(totalPaginas)} disabled={pagina >= totalPaginas}>»</button>
+            </div>
+            <select
+              className="select-por-pagina"
+              value={porPagina}
+              onChange={(e) => { setPorPagina(Number(e.target.value)); setPagina(1) }}
+            >
+              {POR_PAGINA_OPCIONES.map((n) => <option key={n} value={n}>{t('historial.porPagina', { n })}</option>)}
+            </select>
           </div>
         )}
       </div>
