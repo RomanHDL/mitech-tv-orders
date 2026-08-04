@@ -2765,28 +2765,17 @@ tr.fila-cancelada .pedido-nombre { text-decoration: line-through; text-decoratio
   background: #fff;
   color: var(--text-muted);
 }
-.badge-estatus.recibido { background: var(--primary-light); color: var(--primary-hover); }
-.badge-estatus.proceso { background: var(--yellow); color: var(--black); }
-.badge-estatus.listo { background: var(--primary); color: #fff; }
-.badge-estatus.enviado { background: var(--green); color: #fff; }
-.badge-estatus.cancelado,
-.badge-estatus.problema { background: var(--red); color: #fff; }
-
-.fila-detalle td {
-  background: var(--yellow-soft);
-  padding: 1rem 1.25rem !important;
-}
-.detalle-cargando,
-.detalle-error,
-.detalle-vacio {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin: 0;
-}
-.detalle-error { color: var(--red-dark); font-weight: 600; }
+/* 7 categorías visuales derivadas de bucketDeEstatus() (estatus.js) — misma
+   regla que LIVE_ORDER_BUCKET_CASE_SQL en Cubicaje. El texto del badge es
+   siempre el StatusName real; solo el color viene de la categoría. */
+.badge-estatus.nuevo { background: var(--primary-light); color: var(--primary-hover); border-color: transparent; }
+.badge-estatus.porSurtir { background: #ffedd5; color: #c2410c; border-color: transparent; }
+.badge-estatus.enProceso { background: #ede9fe; color: #6d28d9; border-color: transparent; }
+.badge-estatus.listo { background: var(--green-light); color: var(--green-dark); border-color: transparent; }
+.badge-estatus.enviado { background: #ccfbf1; color: #0f766e; border-color: transparent; }
+.badge-estatus.incidencia { background: var(--red-light); color: var(--red-dark); border-color: transparent; }
+.badge-estatus.cancelado { background: var(--bg); color: var(--text-muted); }
+.badge-estatus.sinEstatus { background: #e2e8f0; color: #475569; border-color: transparent; }
 
 .tabla-detalle-items {
   width: 100%;
@@ -2804,9 +2793,300 @@ tr.fila-cancelada .pedido-nombre { text-decoration: line-through; text-decoratio
 }
 .tabla-detalle-items td {
   padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid var(--yellow-light);
+  border-bottom: 1px solid var(--border);
 }
 .tabla-detalle-items tr:last-child td { border-bottom: none; }
+
+/* Encabezado del módulo: título+subtítulo a la izquierda, estado de
+   conexión a la derecha. */
+.live-orders-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.live-orders-header h1 { margin: 0 0 0.25rem; }
+
+/* Indicador "EN VIVO / ACTUALIZANDO / SIN CONEXIÓN" */
+.conexion-estado { display: flex; align-items: center; gap: 0.5rem; }
+.conexion-punto {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.conexion-punto-vivo { background: var(--green-dark); box-shadow: 0 0 0 3px var(--green-light); }
+.conexion-punto-actualizando { background: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); animation: skeleton-pulso 1.4s ease-in-out infinite; }
+.conexion-punto-sinConexion { background: var(--red-dark); box-shadow: 0 0 0 3px var(--red-light); }
+.conexion-texto { display: flex; flex-direction: column; align-items: flex-end; }
+.conexion-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.conexion-label-vivo { color: var(--green-dark); }
+.conexion-label-actualizando { color: var(--primary); }
+.conexion-label-sinConexion { color: var(--red-dark); }
+.conexion-subtexto { font-size: 0.75rem; color: var(--text-muted); }
+
+/* KPI cards — reusan .metrica-card/.metrica-icono/.metrica-valor/.metrica-titulo */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 1.25rem 0;
+}
+.kpi-card { align-items: flex-start; position: relative; padding: 1.1rem 1.25rem; }
+.kpi-info { display: flex; flex-direction: column; gap: 0.2rem; }
+.kpi-indicador { position: absolute; top: 1.1rem; right: 1.1rem; color: var(--text-subtle); opacity: 0.5; }
+.kpi-pedidosHoy .metrica-icono { background: var(--primary-light); color: var(--primary); }
+.kpi-porSurtir .metrica-icono { background: #ffedd5; color: #c2410c; }
+.kpi-enProceso .metrica-icono { background: #ede9fe; color: #6d28d9; }
+.kpi-terminados .metrica-icono { background: var(--green-light); color: var(--green-dark); }
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+/* Filtros + chips activos */
+.live-orders-filtros { padding: 1.1rem 1.25rem; margin-bottom: 1rem; }
+.live-orders-toolbar .filtro-campo { flex: 1 1 150px; min-width: 130px; }
+.live-orders-polling-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-subtle);
+}
+.filtros-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--border);
+}
+.filtro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  cursor: pointer;
+}
+.filtro-chip span { font-weight: 800; opacity: 0.7; }
+.filtro-chip:hover { background: var(--primary); color: #fff; }
+.filtro-chip:hover span { opacity: 1; }
+
+/* Tabla principal */
+.live-orders-tabla-card { padding: 1.1rem; }
+.live-orders-tabla-wrap { max-height: 65vh; overflow-y: auto; }
+.live-orders-tabla thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+.live-orders-col-total { color: var(--text-muted); font-weight: 500; font-size: 0.85em; }
+
+/* ─── Modal grande "Ver detalle" ───────────────────────── */
+
+.modal-live-order-detalle {
+  width: min(94vw, 1500px);
+  max-width: none;
+  max-height: 90vh;
+}
+.live-detalle-subheader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0 1.4rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+.live-detalle-aviso { margin-bottom: 1.1rem; }
+
+.live-detalle-seccion { margin-bottom: 1.5rem; }
+.live-detalle-seccion:last-child { margin-bottom: 0; }
+.live-detalle-titulo {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: none;
+}
+.live-detalle-fila-mitad {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.live-detalle-seccion-mitad { margin-bottom: 0; }
+@media (max-width: 900px) { .live-detalle-fila-mitad { grid-template-columns: 1fr; } }
+
+.live-detalle-datos-generales {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.1rem;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+@media (max-width: 900px) { .live-detalle-datos-generales { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .live-detalle-datos-generales { grid-template-columns: 1fr; } }
+
+/* Resumen operativo — 6 tarjetas compactas */
+.resumen-operativo-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+@media (max-width: 1100px) { .resumen-operativo-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .resumen-operativo-grid { grid-template-columns: repeat(2, 1fr); } }
+.resumen-op-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.resumen-op-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.resumen-op-info { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.resumen-op-etiqueta { font-size: 0.68rem; color: var(--text-subtle); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.resumen-op-valor { font-size: 1rem; font-weight: 800; color: var(--black); }
+.resumen-op-skus .resumen-op-icono { background: var(--primary-light); color: var(--primary); }
+.resumen-op-piezas .resumen-op-icono { background: #ccfbf1; color: #0f766e; }
+.resumen-op-pallets .resumen-op-icono { background: #ede9fe; color: #6d28d9; }
+.resumen-op-granel .resumen-op-icono { background: #ffedd5; color: #c2410c; }
+.resumen-op-incidencias .resumen-op-icono { background: var(--red-light); color: var(--red-dark); }
+.resumen-op-ultimo .resumen-op-icono { background: var(--bg); color: var(--text-muted); }
+
+/* Contenido del pedido */
+.live-detalle-col-descripcion { min-width: 22rem; }
+.live-detalle-items-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.live-detalle-items-nav { display: flex; align-items: center; gap: 0.5rem; }
+
+/* Pallets asociados */
+.pallets-asociados-lista { display: flex; flex-direction: column; gap: 0.6rem; }
+.pallet-asociado-card {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.pallet-asociado-titulo { font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pallet-asociado-datos { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.3rem; font-size: 0.8rem; color: var(--text-muted); }
+.pallet-asociado-movimiento { margin-top: 0.3rem; font-size: 0.78rem; color: var(--text-subtle); }
+
+/* TVs a granel */
+.live-detalle-nota-limitacion { margin: 0.5rem 0 0; font-size: 0.78rem; font-style: italic; color: var(--text-subtle); }
+
+/* Estado vacío elegante (pallets/granel/movimientos sin datos reales) */
+.detalle-vacio-elegante {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.detalle-vacio-elegante p { margin: 0; }
+
+/* Fotografías / evidencia */
+.evidencia-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.85rem;
+}
+.evidencia-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  aspect-ratio: 1;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text-subtle);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Skeleton de carga del modal */
+.live-detalle-skeleton { display: flex; flex-direction: column; gap: 0.85rem; }
+.live-detalle-skeleton .skeleton-linea {
+  height: 1rem;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--bg) 25%, var(--border) 50%, var(--bg) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulso 1.2s ease-in-out infinite;
+}
+.skeleton-ancho-70 { width: 70%; }
+.skeleton-ancho-40 { width: 40%; }
+.live-detalle-skeleton .skeleton-bloque {
+  height: 9rem;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+/* Error bloqueante del detalle (sin datos previos) */
+.live-detalle-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+.live-detalle-error-acciones { display: flex; gap: 0.75rem; }
+
+/* Footer del modal */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.4rem;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+.live-detalle-footer-acciones { display: flex; gap: 0.75rem; }
+
+@media (max-width: 720px) {
+  .modal-live-order-detalle { width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; }
+}
 
 /* ─── Historial (dashboard de auditoría) ──────────────────────── */
 

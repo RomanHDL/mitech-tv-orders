@@ -22,9 +22,14 @@ export async function GET(request) {
   const palletId = searchParams.get('palletId') || undefined
   const estado = searchParams.get('estado') || undefined
   const fecha = searchParams.get('fecha') || undefined
+  const marketplace = searchParams.get('marketplace') || undefined
+  const cuenta = searchParams.get('cuenta') || undefined
+  const ubicacion = searchParams.get('ubicacion') || undefined
 
   try {
-    const respuesta = await fetchLiveOrders({ page, limit, search, orderNumber, palletId, estado, fecha })
+    const respuesta = await fetchLiveOrders({
+      page, limit, search, orderNumber, palletId, estado, fecha, marketplace, cuenta, ubicacion,
+    })
     return NextResponse.json(respuesta, { headers: { 'Cache-Control': 'no-store' } })
   } catch (err) {
     const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 502

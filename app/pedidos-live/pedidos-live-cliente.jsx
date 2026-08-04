@@ -1,85 +1,67 @@
 'use client'
 
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IconBox, IconRefresh, IconRetry, IconSearch } from '../components/icons'
-import { localeDe } from '@/lib/intl-format'
+import { IconRetry } from '../components/icons'
+import { formatearNumero } from '@/lib/intl-format'
+import ConnectionStatus from './components/ConnectionStatus'
+import LiveOrdersKpiCards from './components/LiveOrdersKpiCards'
+import LiveOrdersFilters from './components/LiveOrdersFilters'
+import LiveOrdersTable from './components/LiveOrdersTable'
+import LiveOrderDetailModal from './components/LiveOrderDetailModal'
 
 const POR_PAGINA_OPCIONES = [50, 100, 150, 200]
 const INTERVALO_POLLING_MS = 20000
+const INTERVALO_STATS_MS = 60000
 const TIMEOUT_LISTADO_MS = 15000
-const TIMEOUT_DETALLE_MS = 15000
 
-// Los nombres de estatus vienen de SOP.vw_StatusInternal (17 valores fijos
-// del WMS). Los agrupamos en unas pocas clases visuales.
-function claseEstatus(estatus) {
-  const e = (estatus || '').toLowerCase()
-  if (e.includes('cancel')) return 'cancelado'
-  if (e.includes('not stock') || e.includes('oversold') || e.includes('not found') || e.includes('unmapped')) {
-    return 'problema'
-  }
-  if (e.includes('shipped') || e.includes('send -')) return 'enviado'
-  if (e.includes('ready')) return 'listo'
-  if (e.includes('pick') || e.includes('multiple') || e.includes('assign') || e.includes('above')) {
-    return 'proceso'
-  }
-  return 'recibido'
-}
-
-function formatMoneda(total, moneda, lang) {
-  if (total === null || total === undefined) return '—'
-  try {
-    return new Intl.NumberFormat(localeDe(lang), { style: 'currency', currency: moneda || 'MXN' }).format(total)
-  } catch {
-    return `${total} ${moneda || ''}`.trim()
-  }
-}
-
-function formatFecha(iso, lang) {
-  if (!iso) return '—'
-  const fecha = new Date(iso)
-  if (Number.isNaN(fecha.getTime())) return '—'
-  return new Intl.DateTimeFormat(localeDe(lang), {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-    timeZone: 'America/Mexico_City',
-  }).format(fecha)
-}
+const FILTROS_VACIOS = { estado: '', marketplace: '', cuenta: '', fecha: '', ubicacion: '' }
 
 export default function PedidosLiveCliente({ titulo }) {
   const { t, i18n } = useTranslation()
 
   const [busqueda, setBusqueda] = useState('')
+  const [filtros, setFiltros] = useState(FILTROS_VACIOS)
   const [pagina, setPagina] = useState(1)
   const [porPagina, setPorPagina] = useState(150)
+
   // null = todavía nunca se cargó con éxito (distingue de "cargó y vino vacío").
   const [pedidos, setPedidos] = useState(null)
   const [total, setTotal] = useState(0)
   const [cargandoInicial, setCargandoInicial] = useState(true)
-  const [actualizando, setActualizando] = useState(false)
+  const [actualizandoLista, setActualizandoLista] = useState(false)
   const [error, setError] = useState(null) // sin datos previos → error bloqueante
   const [avisoDesactualizado, setAvisoDesactualizado] = useState(null) // hay datos previos, el refresh falló
+  const [ultimaActualizacion, setUltimaActualizacion] = useState(null)
 
-  const [abiertoId, setAbiertoId] = useState(null)
-  const [detalle, setDetalle] = useState({}) // orderId -> { cargando, error, items }
+  const [stats, setStats] = useState(null)
+  const [opcionesFiltro, setOpcionesFiltro] = useState(null)
+  const [detalleResumen, setDetalleResumen] = useState(null) // fila del pedido con el modal abierto, o null
 
   const abortListaRef = useRef(null)
+  const abortStatsRef = useRef(null)
   const debounceRef = useRef(null)
   const pollingRef = useRef(null)
+  const statsPollingRef = useRef(null)
   const cargaIdRef = useRef(0)
-  const detalleAbortRef = useRef({}) // orderId -> AbortController
+  const detalleCacheRef = useRef(new Map())
 
-  const cargarPedidos = useCallback((busquedaActual, paginaActual, porPaginaActual) => {
+  const cargarPedidos = useCallback((busquedaActual, paginaActual, porPaginaActual, filtrosActuales) => {
     abortListaRef.current?.abort()
     const controller = new AbortController()
     abortListaRef.current = controller
     const miCargaId = ++cargaIdRef.current
 
     const timer = setTimeout(() => controller.abort(), TIMEOUT_LISTADO_MS)
-    setActualizando(true)
+    setActualizandoLista(true)
 
     const params = new URLSearchParams({ page: String(paginaActual), limit: String(porPaginaActual) })
     if (busquedaActual) params.set('search', busquedaActual)
+    if (filtrosActuales.estado) params.set('estado', filtrosActuales.estado)
+    if (filtrosActuales.marketplace) params.set('marketplace', filtrosActuales.marketplace)
+    if (filtrosActuales.cuenta) params.set('cuenta', filtrosActuales.cuenta)
+    if (filtrosActuales.fecha) params.set('fecha', filtrosActuales.fecha)
+    if (filtrosActuales.ubicacion) params.set('ubicacion', filtrosActuales.ubicacion)
 
     fetch(`/api/live-orders?${params}`, { signal: controller.signal, cache: 'no-store' })
       .then(async (res) => {
@@ -93,6 +75,7 @@ export default function PedidosLiveCliente({ titulo }) {
         if (cargaIdRef.current !== miCargaId) return // respuesta obsoleta, se ignora
         setPedidos(data.data || [])
         setTotal(data.pagination?.total ?? 0)
+        setUltimaActualizacion(Date.now())
         setError(null)
         setAvisoDesactualizado(null)
       })
@@ -111,21 +94,47 @@ export default function PedidosLiveCliente({ titulo }) {
         clearTimeout(timer)
         if (cargaIdRef.current === miCargaId) {
           setCargandoInicial(false)
-          setActualizando(false)
+          setActualizandoLista(false)
         }
       })
   }, [t])
 
-  // Carga inicial.
+  const cargarStats = useCallback(() => {
+    abortStatsRef.current?.abort()
+    const controller = new AbortController()
+    abortStatsRef.current = controller
+    fetch('/api/live-orders/stats', { signal: controller.signal, cache: 'no-store' })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || data.success === false) return null
+        return data.data
+      })
+      .then((data) => {
+        if (data) setStats(data)
+      })
+      .catch(() => {
+        // KPIs no críticos — si falla, se conservan los últimos valores válidos.
+      })
+  }, [])
+
+  // Carga inicial: lista, KPIs y opciones de filtro en paralelo.
   useEffect(() => {
-    cargarPedidos('', 1, porPagina)
-    return () => abortListaRef.current?.abort()
+    cargarPedidos('', 1, porPagina, FILTROS_VACIOS)
+    cargarStats()
+    fetch('/api/live-orders/filters', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.success) setOpcionesFiltro(data.data)
+      })
+      .catch(() => {})
+    return () => {
+      abortListaRef.current?.abort()
+      abortStatsRef.current?.abort()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Búsqueda con debounce — cancela la solicitud anterior automáticamente
-  // (cargarPedidos aborta el fetch en curso antes de lanzar uno nuevo). Toda
-  // búsqueda nueva vuelve a la página 1.
+  // Búsqueda con debounce — toda búsqueda nueva vuelve a la página 1.
   const primerRenderBusqueda = useRef(true)
   useEffect(() => {
     if (primerRenderBusqueda.current) {
@@ -135,65 +144,57 @@ export default function PedidosLiveCliente({ titulo }) {
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       setPagina(1)
-      cargarPedidos(busqueda, 1, porPagina)
+      cargarPedidos(busqueda, 1, porPagina, filtros)
     }, 350)
     return () => clearTimeout(debounceRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busqueda])
 
-  // Cambio de página o tamaño de página — carga inmediata (sin debounce).
+  // Cambio de filtros (selects) — inmediato, vuelve a página 1.
+  const primerRenderFiltros = useRef(true)
+  useEffect(() => {
+    if (primerRenderFiltros.current) {
+      primerRenderFiltros.current = false
+      return
+    }
+    setPagina(1)
+    cargarPedidos(busqueda, 1, porPagina, filtros)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtros])
+
+  // Cambio de página o tamaño de página — inmediato, sin debounce.
   const primerRenderPagina = useRef(true)
   useEffect(() => {
     if (primerRenderPagina.current) {
       primerRenderPagina.current = false
       return
     }
-    cargarPedidos(busqueda, pagina, porPagina)
+    cargarPedidos(busqueda, pagina, porPagina, filtros)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagina, porPagina])
 
-  // Actualización automática silenciosa — no reinicia el spinner central,
-  // no borra los pedidos ya mostrados, y mantiene la búsqueda/página actual.
+  // Polling silencioso de la tabla — mantiene búsqueda/filtros/página.
   useEffect(() => {
     pollingRef.current = setInterval(() => {
-      cargarPedidos(busqueda, pagina, porPagina)
+      cargarPedidos(busqueda, pagina, porPagina, filtros)
     }, INTERVALO_POLLING_MS)
     return () => clearInterval(pollingRef.current)
-  }, [busqueda, pagina, porPagina, cargarPedidos])
+  }, [busqueda, pagina, porPagina, filtros, cargarPedidos])
 
-  const reintentar = () => cargarPedidos(busqueda, pagina, porPagina)
+  // Polling de KPIs — más lento porque cuenta TODO el dataset, no la página.
+  useEffect(() => {
+    statsPollingRef.current = setInterval(cargarStats, INTERVALO_STATS_MS)
+    return () => clearInterval(statsPollingRef.current)
+  }, [cargarStats])
 
-  const cargarDetalle = async (orderId) => {
-    detalleAbortRef.current[orderId]?.abort()
-    const controller = new AbortController()
-    detalleAbortRef.current[orderId] = controller
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_DETALLE_MS)
+  const reintentar = () => cargarPedidos(busqueda, pagina, porPagina, filtros)
 
-    setDetalle((prev) => ({ ...prev, [orderId]: { cargando: true } }))
-    try {
-      const res = await fetch(`/api/live-orders/${orderId}`, { signal: controller.signal, cache: 'no-store' })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data.success === false) throw new Error(data.error || t('pedidosLive.errorCargarDetalle'))
-      setDetalle((prev) => ({ ...prev, [orderId]: { cargando: false, items: data.data?.items || [] } }))
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        setDetalle((prev) => ({ ...prev, [orderId]: { cargando: false, error: t('pedidosLive.errorCargarDetalle') } }))
-        return
-      }
-      setDetalle((prev) => ({ ...prev, [orderId]: { cargando: false, error: err.message } }))
-    } finally {
-      clearTimeout(timer)
-    }
+  const onFiltroChange = (campo, valor) => {
+    setFiltros((prev) => ({ ...prev, [campo]: valor }))
   }
-
-  const toggleDetalle = (orderId) => {
-    if (abiertoId === orderId) {
-      setAbiertoId(null)
-      return
-    }
-    setAbiertoId(orderId)
-    if (detalle[orderId] && !detalle[orderId].error) return // ya cargado, no reconsultar
-    cargarDetalle(orderId)
+  const onLimpiarFiltros = () => {
+    setBusqueda('')
+    setFiltros(FILTROS_VACIOS)
   }
 
   // Carga inicial en curso, sin datos previos que mostrar todavía.
@@ -231,20 +232,35 @@ export default function PedidosLiveCliente({ titulo }) {
     )
   }
 
-  const pedidosFiltrados = pedidos || []
+  const pedidosVisibles = pedidos || []
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina))
+  const totalGlobal = stats?.total ?? total
+  const estadoConexion = actualizandoLista ? 'actualizando' : avisoDesactualizado ? 'sinConexion' : 'vivo'
 
   return (
     <>
-      <div className="page-header">
-        <h1>{titulo}</h1>
-        <p className="subtitle">
-          {t('pedidosLive.subtituloPedidos', { count: total })}
-          {actualizando && <span className="spinner-sm" aria-hidden="true" />}
-        </p>
+      <div className="page-header live-orders-header">
+        <div>
+          <h1>{titulo}</h1>
+          <p className="subtitle">
+            {t('pedidosLive.subtituloPedidos', { count: totalGlobal, formattedCount: formatearNumero(totalGlobal, i18n.language) })}
+          </p>
+        </div>
+        <ConnectionStatus estado={estadoConexion} ultimaActualizacion={ultimaActualizacion} />
       </div>
 
-      <div className="card">
+      <LiveOrdersKpiCards stats={stats} />
+
+      <LiveOrdersFilters
+        busqueda={busqueda}
+        onBusquedaChange={setBusqueda}
+        filtros={filtros}
+        onFiltroChange={onFiltroChange}
+        onLimpiar={onLimpiarFiltros}
+        opciones={opcionesFiltro}
+      />
+
+      <div className="card live-orders-tabla-card">
         {avisoDesactualizado && (
           <div className="alerta alerta-error">
             <span>{t('pedidosLive.noSePudoActualizar')}</span>
@@ -254,130 +270,17 @@ export default function PedidosLiveCliente({ titulo }) {
           </div>
         )}
 
-        <div className="lista-toolbar">
-          <div className="search-box">
-            <IconSearch className="icon-search" />
-            <input
-              type="text"
-              placeholder={t('pedidosLive.buscarPlaceholder')}
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
-        </div>
+        <p className="live-orders-polling-hint">{t('pedidosLive.actualizacionAutomatica')}</p>
 
-        {pedidosFiltrados.length === 0 ? (
+        {pedidosVisibles.length === 0 ? (
           <div className="empty">
             <p>{t('pedidosLive.sinResultados', { busqueda })}</p>
           </div>
         ) : (
-          <div className="tabla-wrap">
-            <table className="tabla-pedidos">
-              <thead>
-                <tr>
-                  <th>{t('pedidosLive.colPedido')}</th>
-                  <th>{t('pedidosLive.colMarketplace')}</th>
-                  <th>{t('pedidosLive.colCuenta')}</th>
-                  <th>{t('pedidosLive.colCliente')}</th>
-                  <th>{t('pedidosLive.colEstatus')}</th>
-                  <th>{t('pedidosLive.colTotal')}</th>
-                  <th>{t('pedidosLive.colFecha')}</th>
-                  <th>{t('pedidosLive.colUbicacion')}</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {pedidosFiltrados.map((p) => {
-                  const d = detalle[p.orderId]
-                  const abierto = abiertoId === p.orderId
-                  return (
-                    <Fragment key={p.orderId}>
-                      <tr>
-                        <td data-label={t('pedidosLive.colPedido')}>
-                          <div className="pedido-nombre">
-                            #{p.orderId}
-                            {p.webOrderId && <span className="tag-empty">{p.webOrderId}</span>}
-                          </div>
-                        </td>
-                        <td data-label={t('pedidosLive.colMarketplace')}>{p.source || '—'}</td>
-                        <td data-label={t('pedidosLive.colCuenta')}>{p.accountName || '—'}</td>
-                        <td data-label={t('pedidosLive.colCliente')}>{p.cliente || '—'}</td>
-                        <td data-label={t('pedidosLive.colEstatus')}>
-                          <span className={`badge-estatus ${claseEstatus(p.estatus)}`}>
-                            {p.estatus || t('pedidosLive.sinEstatus')}
-                          </span>
-                        </td>
-                        <td data-label={t('pedidosLive.colTotal')}>
-                          <span className="numero-grande">{formatMoneda(p.total, p.moneda, i18n.language)}</span>
-                        </td>
-                        <td data-label={t('pedidosLive.colFecha')}>{formatFecha(p.enteredDate, i18n.language)}</td>
-                        <td data-label={t('pedidosLive.colUbicacion')}>{p.ubicacion || '—'}</td>
-                        <td>
-                          <div className="acciones">
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => toggleDetalle(p.orderId)}
-                            >
-                              <IconBox />
-                              {abierto ? t('pedidosLive.ocultar') : t('pedidosLive.ver')}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                      {abierto && (
-                        <tr className="fila-detalle">
-                          <td colSpan={9}>
-                            {!d || d.cargando ? (
-                              <p className="detalle-cargando">
-                                <IconRefresh /> {t('pedidosLive.cargandoDetalle')}
-                              </p>
-                            ) : d.error ? (
-                              <p className="detalle-error">
-                                {d.error}{' '}
-                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => cargarDetalle(p.orderId)}>
-                                  <IconRetry /> {t('common.reintentar')}
-                                </button>
-                              </p>
-                            ) : d.items.length === 0 ? (
-                              <p className="detalle-vacio">{t('pedidosLive.sinArticulos')}</p>
-                            ) : (
-                              <table className="tabla-detalle-items">
-                                <thead>
-                                  <tr>
-                                    <th>{t('pedidosLive.colSku')}</th>
-                                    <th>{t('pedidosLive.colDescripcion')}</th>
-                                    <th>{t('pedidosLive.colCant')}</th>
-                                    <th>{t('pedidosLive.colPallet')}</th>
-                                    <th>{t('pedidosLive.colUltimoMovimiento')}</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {d.items.map((it) => (
-                                    <tr key={it.orderItemsId}>
-                                      <td>{it.sku || '—'}</td>
-                                      <td>{it.itemDescription || '—'}</td>
-                                      <td>{it.qty ?? '—'}</td>
-                                      <td>{it.binCode || '—'}</td>
-                                      <td>
-                                        {it.ultimoMovimiento
-                                          ? `${it.ultimoMovimiento.tipoMovimiento} · ${it.ultimoMovimiento.movidoPor} (${formatFecha(it.ultimoMovimiento.fecha, i18n.language)})`
-                                          : '—'}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <LiveOrdersTable pedidos={pedidosVisibles} onVerDetalle={(orderId) => {
+            const fila = pedidosVisibles.find((p) => p.orderId === orderId)
+            if (fila) setDetalleResumen(fila)
+          }} />
         )}
 
         {!error && total > 0 && (
@@ -406,6 +309,14 @@ export default function PedidosLiveCliente({ titulo }) {
           </div>
         )}
       </div>
+
+      {detalleResumen && (
+        <LiveOrderDetailModal
+          resumen={detalleResumen}
+          onClose={() => setDetalleResumen(null)}
+          cacheRef={detalleCacheRef}
+        />
+      )}
     </>
   )
 }
