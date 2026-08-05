@@ -509,7 +509,41 @@
     "tagUltimoMomentoTitle": "Este SKU no venía en la lista original del pedido — se agregó durante el surtido",
     "confirmarAgregarSku": "¿Agregar {{cantidad}} pieza(s) del SKU {{sku}} como ya surtidas? Se registrará como un SKU de último momento, no incluido en la lista original.",
     "errorAgregarSku": "No se pudo agregar el SKU",
-    "agregarSkuBtn": "Agregar"
+    "agregarSkuBtn": "Agregar",
+    "grupo": {
+      "skuCount_one": "{{count}} SKU",
+      "skuCount_other": "{{count}} SKU",
+      "solicitadas": "solicitadas",
+      "surtidas": "surtidas",
+      "pendientes": "pendientes",
+      "grupoPorDefinir_one": "{{count}} grupo con cantidad por definir",
+      "grupoPorDefinir_other": "{{count}} grupos con cantidad por definir",
+      "solicitadoGrupo": "Solicitado grupo",
+      "surtidoGrupo": "Surtido grupo",
+      "pendienteGrupo": "Pendiente grupo",
+      "excedente": "Excedente",
+      "porDefinir": "Por definir",
+      "metaSku": "Meta del SKU",
+      "metaSkuNoAplica": "No aplica",
+      "aportaAlGrupo": "Aporta al grupo",
+      "estadoSinIniciar": "Sin iniciar",
+      "estadoEnProceso": "En proceso",
+      "estadoCompleto": "Completo",
+      "estadoExcedido": "Excedido +{{n}}",
+      "estadoPorDefinir": "Por definir",
+      "avisoPorDefinir": "Este grupo todavía no tiene una cantidad solicitada definida. Las piezas surtidas se contabilizan, pero el grupo permanece \"Por definir\" hasta que se establezca una meta."
+    },
+    "resumenPedido": {
+      "totalSolicitado": "Total solicitado",
+      "totalSurtido": "Total surtido",
+      "totalPendiente": "Total pendiente",
+      "gruposCompletos": "Grupos completos",
+      "gruposEnProceso": "Grupos en proceso",
+      "gruposExcedidos": "Grupos excedidos",
+      "gruposPorDefinir": "Grupos por definir",
+      "deConMetaDefinida": "de {{n}} con meta definida",
+      "desgloseSurtido": "{{definido}} con meta · {{porDefinir}} por definir"
+    }
   },
   "historial": {
     "titulo": "Historial de pedidos",

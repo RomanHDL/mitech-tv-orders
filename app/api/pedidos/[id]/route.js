@@ -5,6 +5,7 @@ import { MARCAS, PULGADAS, CONDICIONES, UNIDADES, SKU_REGEX } from '@/lib/catalo
 import { getUsuario, requireModule } from '@/lib/auth'
 import { registrarEvento } from '@/lib/eventos'
 import { calcularTotales } from '@/lib/estado-pedido'
+import { createGroupKey } from '@/lib/surtido-grupos'
 import { getServerT } from '@/lib/i18n-server'
 
 // Un SKU puede llevar varias condiciones a la vez (ej. la misma partida
@@ -81,6 +82,7 @@ export async function PATCH(req, { params }) {
       projection: {
         televisiones: 1, creadoPor: 1, creadoPorRol: 1,
         cantidadTotal: 1, numeroPedido: 1, pedidoNombre: 1, condiciones: 1,
+        metasGrupo: 1,
       },
     }
   )
@@ -107,7 +109,13 @@ export async function PATCH(req, { params }) {
   if (!tv) {
     return NextResponse.json({ error: t('apiPedidos.tvNoExiste') }, { status: 400 })
   }
-  if (!tv.sinLimite && cantidadSurtida > tv.cantidad) {
+  // Si el grupo (marca+pulgadas) de este TV tiene una meta CONJUNTA definida
+  // en metasGrupo, cada SKU aporta libremente al total del grupo — el tope
+  // por SKU (tv.cantidad) deja de aplicar, igual que ya pasaba con
+  // sinLimite. Sin esa entrada, se preserva la validación histórica.
+  const grupoKey = createGroupKey(tv.marca, tv.pulgadas)
+  const grupoTieneMeta = !!pedido.metasGrupo && Object.prototype.hasOwnProperty.call(pedido.metasGrupo, grupoKey)
+  if (!tv.sinLimite && !grupoTieneMeta && cantidadSurtida > tv.cantidad) {
     return NextResponse.json({ error: t('apiPedidos.excedeSurtido') }, { status: 400 })
   }
 

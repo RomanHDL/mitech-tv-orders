@@ -509,7 +509,41 @@
     "tagUltimoMomentoTitle": "This SKU wasn't on the order's original list — it was added during fulfillment",
     "confirmarAgregarSku": "Add {{cantidad}} unit(s) of SKU {{sku}} as already fulfilled? It will be recorded as a last-minute SKU, not part of the original list.",
     "errorAgregarSku": "Couldn't add the SKU",
-    "agregarSkuBtn": "Add"
+    "agregarSkuBtn": "Add",
+    "grupo": {
+      "skuCount_one": "{{count}} SKU",
+      "skuCount_other": "{{count}} SKUs",
+      "solicitadas": "requested",
+      "surtidas": "fulfilled",
+      "pendientes": "pending",
+      "grupoPorDefinir_one": "{{count}} group with quantity to be defined",
+      "grupoPorDefinir_other": "{{count}} groups with quantity to be defined",
+      "solicitadoGrupo": "Group requested",
+      "surtidoGrupo": "Group fulfilled",
+      "pendienteGrupo": "Group pending",
+      "excedente": "Excess",
+      "porDefinir": "To be defined",
+      "metaSku": "SKU target",
+      "metaSkuNoAplica": "Not applicable",
+      "aportaAlGrupo": "Contributes to group",
+      "estadoSinIniciar": "Not started",
+      "estadoEnProceso": "In progress",
+      "estadoCompleto": "Complete",
+      "estadoExcedido": "Exceeded +{{n}}",
+      "estadoPorDefinir": "To be defined",
+      "avisoPorDefinir": "This group doesn't have a defined requested quantity yet. Fulfilled pieces are still counted, but the group stays \"To be defined\" until a target is set."
+    },
+    "resumenPedido": {
+      "totalSolicitado": "Total requested",
+      "totalSurtido": "Total fulfilled",
+      "totalPendiente": "Total pending",
+      "gruposCompletos": "Complete groups",
+      "gruposEnProceso": "Groups in progress",
+      "gruposExcedidos": "Exceeded groups",
+      "gruposPorDefinir": "Groups to be defined",
+      "deConMetaDefinida": "of {{n}} with a defined target",
+      "desgloseSurtido": "{{definido}} with target · {{porDefinir}} to be defined"
+    }
   },
   "historial": {
     "titulo": "Order history",

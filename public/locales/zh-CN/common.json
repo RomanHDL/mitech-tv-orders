@@ -509,7 +509,41 @@
     "tagUltimoMomentoTitle": "该SKU不在订单原始清单中——是在配货过程中添加的",
     "confirmarAgregarSku": "将SKU {{sku}} 的 {{cantidad}} 件标记为已配货？将记录为临时SKU，不属于原始清单。",
     "errorAgregarSku": "无法添加该SKU",
-    "agregarSkuBtn": "添加"
+    "agregarSkuBtn": "添加",
+    "grupo": {
+      "skuCount_one": "{{count}} 个 SKU",
+      "skuCount_other": "{{count}} 个 SKU",
+      "solicitadas": "需求",
+      "surtidas": "已配货",
+      "pendientes": "待处理",
+      "grupoPorDefinir_one": "{{count}} 个组数量待定",
+      "grupoPorDefinir_other": "{{count}} 个组数量待定",
+      "solicitadoGrupo": "组需求量",
+      "surtidoGrupo": "组已配货",
+      "pendienteGrupo": "组待处理",
+      "excedente": "超出量",
+      "porDefinir": "待定",
+      "metaSku": "SKU 目标",
+      "metaSkuNoAplica": "不适用",
+      "aportaAlGrupo": "贡献至该组",
+      "estadoSinIniciar": "未开始",
+      "estadoEnProceso": "进行中",
+      "estadoCompleto": "已完成",
+      "estadoExcedido": "超出 +{{n}}",
+      "estadoPorDefinir": "待定",
+      "avisoPorDefinir": "该组尚未设定需求数量。已配货的数量仍会被记录，但该组会一直显示“待定”，直到设定目标为止。"
+    },
+    "resumenPedido": {
+      "totalSolicitado": "总需求",
+      "totalSurtido": "总已配货",
+      "totalPendiente": "总待处理",
+      "gruposCompletos": "已完成的组",
+      "gruposEnProceso": "进行中的组",
+      "gruposExcedidos": "超出的组",
+      "gruposPorDefinir": "待定的组",
+      "deConMetaDefinida": "共 {{n}} 个已设定目标",
+      "desgloseSurtido": "{{definido}} 已设目标 · {{porDefinir}} 待定"
+    }
   },
   "historial": {
     "titulo": "订单历史记录",

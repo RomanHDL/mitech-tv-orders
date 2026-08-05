@@ -37,6 +37,7 @@ export default async function SurtirPage({ params }) {
     comentariosActualizadoPorNombre: pedido.comentariosActualizadoPorNombre || null,
     estadoOperativo: pedido.estadoOperativo || null,
     historialEstados: pedido.historialEstados || [],
+    metasGrupo: pedido.metasGrupo || {},
     televisiones: (pedido.televisiones || []).map((tv) => ({
       marca: tv.marca,
       pulgadas: tv.pulgadas,

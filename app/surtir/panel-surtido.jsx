@@ -3,18 +3,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { unidadLabel, estadoLabel, MARCAS, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
+import { estadoLabel, MARCAS, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
 import { normalizeOrderStatus } from '@/lib/estado-pedido'
 import { localeDe } from '@/lib/intl-format'
+import { calculateOrderSummary, groupProductsByBrandAndSize } from '@/lib/surtido-grupos'
 import ComentariosPedido from '../components/comentarios-pedido'
 import StepperEtapas from '../pedidos/stepper-etapas'
+import BrandSection from './brand-section'
+import OrderSupplySummary from './order-supply-summary'
 import {
   IconAlert,
   IconCheck,
-  IconMinus,
   IconPlus,
   IconPrinter,
-  IconRefresh,
 } from '../components/icons'
 
 const CONDICIONES_MAS_EXTRA = CONDICIONES.filter((c) => !CONDICIONES_FRECUENTES.includes(c))
@@ -142,30 +143,24 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
     }
   }, [])
 
-  const grupos = useMemo(() => {
-    const mapa = {}
-    tvs.forEach((tv, idx) => {
-      if (!mapa[tv.marca]) mapa[tv.marca] = []
-      mapa[tv.marca].push({ ...tv, _idx: idx })
-    })
-    return Object.keys(mapa).sort().map((marca) => ({
-      marca,
-      items: mapa[marca].sort((a, b) => a.pulgadas - b.pulgadas),
-    }))
-  }, [tvs])
+  // Agrupación de dos niveles (marca → pulgadas) — derivada, nunca muta
+  // `tvs`. La meta le pertenece al grupo (marca+pulgadas), no a cada SKU;
+  // ver lib/surtido-grupos.js para la regla completa (incluye el caso de
+  // grupos de un solo SKU y de metas todavía por definir).
+  const brandSections = useMemo(
+    () => groupProductsByBrandAndSize(tvs, pedido.metasGrupo),
+    [tvs, pedido.metasGrupo],
+  )
+  const orderSummary = useMemo(() => calculateOrderSummary(brandSections), [brandSections])
 
-  const sumaCantidades = tvs.reduce((s, tv) => s + (tv.cantidad || 0), 0)
-  const totalRequerido =
-    typeof pedido.cantidadTotal === 'number' && pedido.cantidadTotal > 0
-      ? pedido.cantidadTotal
-      : sumaCantidades
-  const totalSurtido = tvs.reduce((s, tv) => {
-    const surt = tv.cantidadSurtida || 0
-    if (tv.sinLimite || (tv.cantidad || 0) === 0) return s + surt
-    return s + Math.min(tv.cantidad || 0, surt)
-  }, 0)
-  const progreso = totalRequerido > 0 ? Math.round((totalSurtido / totalRequerido) * 100) : 0
-  const pendienteCantidad = Math.max(0, totalRequerido - totalSurtido)
+  const progreso = orderSummary.totalRequestedDefined > 0
+    ? Math.round((orderSummary.totalSuppliedDefined / orderSummary.totalRequestedDefined) * 100)
+    : 0
+  // Pendiente general = suma del pendiente de cada grupo CON meta definida —
+  // nunca resta la suma absoluta de todos los SKU, para que un grupo por
+  // definir con piezas ya surtidas no altere el pendiente de los grupos que
+  // sí tienen meta real.
+  const pendienteCantidad = orderSummary.totalPending
 
   const estado = normalizeOrderStatus({ progresoPct: progreso, estadoOperativo: pedido.estadoOperativo })
   const esAdmin = rol === 'admin'
@@ -438,31 +433,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         </button>
       </div>
 
-      <div className="resumen-surtido">
-        <div className="resumen-surtido-progreso">
-          <div className="resumen-surtido-titulo-fila">
-            <span>{t('surtir.piezasSurtidas', { surt: totalSurtido, req: totalRequerido })}</span>
-            <span className="resumen-surtido-pct">{progreso}%</span>
-          </div>
-          <div className="progreso-track">
-            <div className={`progreso-fill ${progreso >= 100 ? 'completa' : ''}`} style={{ width: `${Math.min(100, progreso)}%` }} />
-          </div>
-        </div>
-        <div className="resumen-surtido-cifras">
-          <div className="resumen-cifra resumen-solicitadas">
-            <span className="dato-label">{t('surtir.solicitadas')}</span>
-            <span className="dato-valor-grande">{totalRequerido}</span>
-          </div>
-          <div className="resumen-cifra resumen-surtidas">
-            <span className="dato-label">{t('surtir.surtidas')}</span>
-            <span className="dato-valor-grande">{totalSurtido}</span>
-          </div>
-          <div className="resumen-cifra resumen-pendientes">
-            <span className="dato-label">{t('surtir.pendientes2')}</span>
-            <span className="dato-valor-grande">{pendienteCantidad}</span>
-          </div>
-        </div>
-      </div>
+      <OrderSupplySummary orderSummary={orderSummary} />
 
       <ComentariosPedido
         ref={comentariosRef}
@@ -474,142 +445,10 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         placeholder={t('surtir.comentariosPedidoPlaceholder')}
       />
 
-      <div className="filas-surtido">
-        <div className="fila-surtido-cabecera">
-          <span>{t('surtir.colProducto')}</span>
-          <span>{t('common.solicitado')} · {t('common.surtido')} · {t('common.pendiente')}</span>
-          <span>{t('surtir.colCantidad')}</span>
-          <span>{t('surtir.colAccion')}</span>
-        </div>
-        {grupos.map(({ items }) => items.map((tv) => {
-          const idx = tv._idx
-          const esSinLimite = !!tv.sinLimite
-          const surtida = esSinLimite ? (tv.cantidadSurtida || 0) : Math.min(tv.cantidad, tv.cantidadSurtida || 0)
-          const pendienteTv = esSinLimite ? null : Math.max(0, tv.cantidad - surtida)
-          const pctTv = esSinLimite ? null : (tv.cantidad > 0 ? Math.round((surtida / tv.cantidad) * 100) : 0)
-          const completo = !esSinLimite && surtida >= tv.cantidad
-          const enProgreso = surtida > 0 && !completo
-          const claseFila = completo ? 'fila-surtido-completo' : enProgreso ? 'fila-surtido-parcial' : 'fila-surtido-pendiente'
-          const claseProgreso = completo ? 'completa' : enProgreso ? 'avanzando' : ''
-          const condTv = tv.condiciones?.join(' ') || ''
-          const descTv = `${tv.marca} ${tv.pulgadas}"${condTv ? ' ' + condTv : ''}${tv.modelo ? ' ' + tv.modelo : ''}`
-          const unidadTxt = unidadLabel(t, tv.cantidad || 1, tv.unidad)
-
-          return (
-            <div key={idx} className={`fila-surtido-fila ${claseFila}`}>
-              <div className="fila-surtido-producto">
-                <div className="fila-surtido-top">
-                  <span className="fila-surtido-marca">{tv.marca}</span>
-                  <span className="fila-surtido-pulgadas">{tv.pulgadas}&quot;</span>
-                  {tv.esUltimoMomento && (
-                    <span className="tag tag-extra" title={t('surtir.tagUltimoMomentoTitle')}>
-                      <IconAlert width={11} height={11} /> {t('surtir.tagUltimoMomento')}
-                    </span>
-                  )}
-                  {tv.condiciones?.map((c) => (
-                    <span key={c} className={`tag tag-${c.toLowerCase()}`}>{c}</span>
-                  ))}
-                  <span className={`fila-surtido-pct ${claseProgreso}`}>
-                    {pctTv === null ? '—' : `${pctTv}%`}
-                  </span>
-                </div>
-                {pctTv !== null && (
-                  <div className="fila-surtido-bar">
-                    <div className={`fila-surtido-bar-fill ${claseProgreso}`} style={{ width: `${pctTv}%` }} />
-                  </div>
-                )}
-                <div className="fila-surtido-sub">
-                  <span>{t('surtir.modeloEtiqueta')} <b>{tv.modelo || '—'}</b></span>
-                  <span>· {t('surtir.skuEtiqueta')} <b>{tv.modelo || '—'}</b></span>
-                  {tv.modelosAlternativos?.length > 0 && (
-                    <span className="tv-alt-hint">
-                      {t('common.tambienValido', { lista: tv.modelosAlternativos.join(', ') })}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="fila-surtido-controles">
-                <div className="fila-surtido-metricas">
-                  <div className="fila-surtido-metrica">
-                    <span className="fila-surtido-metrica-label">{t('common.solicitado')}</span>
-                    <span className="fila-surtido-metrica-valor">{esSinLimite ? t('pedidoForm.sinLimite') : tv.cantidad}</span>
-                  </div>
-                  <div className="fila-surtido-metrica">
-                    <span className="fila-surtido-metrica-label">{t('common.surtido')}</span>
-                    <span className="fila-surtido-metrica-valor ok">{surtida}</span>
-                  </div>
-                  <div className="fila-surtido-metrica">
-                    <span className="fila-surtido-metrica-label">{t('common.pendiente')}</span>
-                    <span className="fila-surtido-metrica-valor warn">{pendienteTv === null ? '—' : pendienteTv}</span>
-                  </div>
-                </div>
-
-                <div className="stepper-cantidad">
-                  <button
-                    type="button"
-                    onClick={() => actualizar(idx, surtida - 1, { inmediato: true })}
-                    disabled={surtida === 0}
-                    aria-label={t('surtir.restarUno')}
-                    title={t('surtir.restarUno')}
-                  >
-                    <IconMinus />
-                  </button>
-                  <input
-                    type="number"
-                    min="0"
-                    max={esSinLimite ? undefined : tv.cantidad}
-                    value={surtida}
-                    onChange={(e) => actualizar(idx, e.target.value, { descripcion: descTv })}
-                    aria-label={t('surtir.cantidadSurtidaLabel')}
-                    className="stepper-cantidad-input"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => actualizar(idx, surtida + 1, { inmediato: true })}
-                    disabled={completo}
-                    aria-label={t('surtir.sumarUno')}
-                    title={t('surtir.sumarUno')}
-                  >
-                    <IconPlus />
-                  </button>
-                </div>
-
-                <div className="fila-surtido-acciones">
-                  <button
-                    type="button"
-                    className="btn-mini-action btn-listo"
-                    onClick={() => {
-                      if (esSinLimite) return
-                      if (confirm(t('surtir.confirmarMarcarSurtidas', { cantidad: tv.cantidad - surtida, unidad: unidadTxt, desc: descTv }))) {
-                        actualizar(idx, tv.cantidad, { inmediato: true })
-                      }
-                    }}
-                    disabled={completo || esSinLimite}
-                    aria-label={t('surtir.completar')}
-                    title={t('surtir.completarTitle')}
-                  >
-                    <IconCheck />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-mini-action btn-reset"
-                    onClick={() => {
-                      if (confirm(t('surtir.confirmarRestablecer'))) {
-                        actualizar(idx, 0, { inmediato: true })
-                      }
-                    }}
-                    disabled={surtida === 0}
-                    aria-label={t('surtir.reiniciar')}
-                    title={t('surtir.restablecerA0')}
-                  >
-                    <IconRefresh />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        }))}
+      <div className="secciones-surtido">
+        {brandSections.map((brandSection) => (
+          <BrandSection key={brandSection.key} brandSection={brandSection} onActualizar={actualizar} />
+        ))}
       </div>
 
       <div className="bloque-sku-extra">
