@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
+import { ordenarPorMarcaYPulgadas } from '@/lib/orden-televisiones'
 import {
   IconAlert,
   IconArrowDown,
@@ -67,7 +68,12 @@ export default function PedidoForm({
   const [sinLimitePorDefecto, setSinLimitePorDefecto] = useState(false)
   const [tvs, setTvs] = useState(
     initialData?.televisiones?.length
-      ? initialData.televisiones.map((tv) => ({
+      // Mismo orden "canónico" que ya usa Surtir (agrupado por marca,
+      // ordenado por pulgadas dentro de cada marca) — solo al ABRIR un
+      // pedido ya existente para editarlo. La captura interactiva de un
+      // pedido nuevo (initialData vacío) no se toca: las filas se siguen
+      // agregando en el orden en que el usuario las escribe.
+      ? ordenarPorMarcaYPulgadas(initialData.televisiones).map((tv) => ({
           marca: tv.marca || '',
           pulgadas: tv.pulgadas !== undefined ? String(tv.pulgadas) : '',
           // Compatibilidad con pedidos creados antes de que una partida

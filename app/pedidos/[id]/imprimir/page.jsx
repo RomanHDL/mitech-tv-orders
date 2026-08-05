@@ -7,6 +7,7 @@ import { calcularTotales, diasHastaLimite, normalizeOrderStatus } from '@/lib/es
 import { getServerT, getServerLang } from '@/lib/i18n-server'
 import { localeDe } from '@/lib/intl-format'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
+import { ordenarPorMarcaYPulgadas } from '@/lib/orden-televisiones'
 import {
   IconBox, IconCalendar, IconCheck, IconClipboardList, IconClock, IconUser,
 } from '../../../components/icons'
@@ -96,11 +97,12 @@ export default async function ImprimirPage({ params }) {
   const lang = await getServerLang()
   const usuario = await getUsuario()
 
-  // Mismo orden en que quedaron guardadas en el pedido — .map() nunca
-  // reordena, solo normaliza `condiciones`. No hay ningún .sort()/.reverse()
-  // ni reagrupación por marca aquí: la tabla "Avance por SKU" debe verse
-  // exactamente como en el detalle original del pedido.
-  const televisiones = (pedido.televisiones || []).map((tvRaw) => ({
+  // Mismo orden "canónico" que ya usa el módulo Surtir (agrupado por marca,
+  // ordenado por pulgadas dentro de cada marca) — ver lib/orden-televisiones.js.
+  // Antes esta tabla usaba el orden crudo del arreglo guardado, que dejaba
+  // los SKUs agregados después (ej. "agregar SKU de último momento") pegados
+  // al final en vez de junto a sus hermanos del mismo tamaño.
+  const televisiones = ordenarPorMarcaYPulgadas(pedido.televisiones || []).map((tvRaw) => ({
     ...tvRaw,
     condiciones: Array.isArray(tvRaw.condiciones) ? tvRaw.condiciones : (tvRaw.condicion ? [tvRaw.condicion] : []),
   }))
