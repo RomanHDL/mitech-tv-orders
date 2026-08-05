@@ -7,7 +7,7 @@ import { calcularTotales, diasHastaLimite, normalizeOrderStatus } from '@/lib/es
 import { getServerT, getServerLang } from '@/lib/i18n-server'
 import { localeDe } from '@/lib/intl-format'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
-import { ordenarPorMarcaYPulgadas } from '@/lib/orden-televisiones'
+import { groupProductsByBrandAndSize } from '@/lib/surtido-grupos'
 import {
   IconBox, IconCalendar, IconCheck, IconClipboardList, IconClock, IconUser,
 } from '../../../components/icons'
@@ -49,37 +49,52 @@ function tiempoRestante(t, estado, dias, pendiente) {
   return { texto: t('imprimir.diasFaltantes', { count: dias }), tono: 'verde' }
 }
 
-// Avance real de UNA partida (SKU) — misma fórmula que calcularTotales() a
-// nivel de pedido, aplicada por renglón. "Sin límite" no tiene techo contra
-// el cual medir avance/pendiente: se muestra aparte (S/L), no se fuerza a
-// un porcentaje inventado. Coincide con el criterio ya usado en
-// pedido-detalle-modal.jsx (estadoPartida) para no divergir del resto de
-// la app en ese caso particular.
-function calcularAvanceSku(tv) {
-  const surtidaCruda = tv.cantidadSurtida || 0
+// Avance real de UNA partida (SKU) — la meta pertenece al GRUPO (marca +
+// pulgadas), no a cada SKU individual: misma fuente de verdad que Surtir/
+// Nuevo/Editar (lib/surtido-grupos.js), nunca metasGrupo hardcodeado aquí.
+// Solo cuando el grupo tiene un único SKU con meta definida existe una meta
+// "propia" de esa partida (getIndividualSkuTarget); si el grupo tiene varios
+// SKU, la meta es compartida y no se le puede atribuir a ningún renglón en
+// particular — se marca con "metaCompartida" en vez de repetir un número que
+// no le pertenece a esa fila.
+function calcularAvanceSku(tv, group) {
+  const surtida = Number(tv.cantidadSurtida) || 0
+  const individualTarget = group.summary.individualTarget
 
-  if (tv.sinLimite) {
+  if (individualTarget !== null && individualTarget !== undefined) {
+    const solicitada = individualTarget
+    const surtidaAcotada = Math.min(solicitada, surtida)
+    const pendiente = Math.max(0, solicitada - surtida)
+    const avancePct = solicitada > 0 ? Math.round((surtidaAcotada / solicitada) * 100) : 0
+
+    let estado
+    if (solicitada === 0) estado = 'SIN_SOLICITUD'
+    else if (surtida >= solicitada) estado = 'COMPLETO'
+    else if (surtida > 0) estado = 'PARCIAL'
+    else estado = 'PENDIENTE'
+
+    return { solicitada, surtida, pendiente, avancePct, metaCompartida: false, estado }
+  }
+
+  if (group.products.length > 1) {
     return {
       solicitada: null,
-      surtida: surtidaCruda,
+      surtida,
       pendiente: null,
       avancePct: null,
-      estado: surtidaCruda > 0 ? 'PARCIAL' : 'PENDIENTE',
+      metaCompartida: true,
+      estado: surtida > 0 ? 'PARCIAL' : 'PENDIENTE',
     }
   }
 
-  const solicitada = tv.cantidad || 0
-  const surtida = Math.min(solicitada, surtidaCruda)
-  const pendiente = Math.max(0, solicitada - surtida)
-  const avancePct = solicitada > 0 ? Math.round((surtida / solicitada) * 100) : 0
-
-  let estado
-  if (solicitada === 0) estado = 'SIN_SOLICITUD'
-  else if (surtida >= solicitada) estado = 'COMPLETO'
-  else if (surtida > 0) estado = 'PARCIAL'
-  else estado = 'PENDIENTE'
-
-  return { solicitada, surtida, pendiente, avancePct, estado }
+  return {
+    solicitada: null,
+    surtida,
+    pendiente: null,
+    avancePct: null,
+    metaCompartida: false,
+    estado: 'SIN_SOLICITUD',
+  }
 }
 
 const ESTADO_SKU_CLASE = {
@@ -97,17 +112,23 @@ export default async function ImprimirPage({ params }) {
   const lang = await getServerLang()
   const usuario = await getUsuario()
 
-  // Mismo orden "canónico" que ya usa el módulo Surtir (agrupado por marca,
-  // ordenado por pulgadas dentro de cada marca) — ver lib/orden-televisiones.js.
-  // Antes esta tabla usaba el orden crudo del arreglo guardado, que dejaba
-  // los SKUs agregados después (ej. "agregar SKU de último momento") pegados
-  // al final en vez de junto a sus hermanos del mismo tamaño.
-  const televisiones = ordenarPorMarcaYPulgadas(pedido.televisiones || []).map((tvRaw) => ({
+  const televisiones = (pedido.televisiones || []).map((tvRaw) => ({
     ...tvRaw,
     condiciones: Array.isArray(tvRaw.condiciones) ? tvRaw.condiciones : (tvRaw.condicion ? [tvRaw.condicion] : []),
   }))
 
-  const filasSku = televisiones.map((tv) => ({ tv, avance: calcularAvanceSku(tv) }))
+  // Mismo agrupamiento/orden "canónico" que ya usan Surtir/Nuevo/Editar
+  // (marca por primera aparición, pulgadas ascendente, SKUs en su orden
+  // original dentro del grupo) — ver lib/surtido-grupos.js. Reemplaza el
+  // viejo ordenarPorMarcaYPulgadas + cálculo por SKU aislado: ahora la meta
+  // de cada renglón se resuelve vía el grupo (marca+pulgadas), igual que en
+  // el resto de la app.
+  const brandSections = groupProductsByBrandAndSize(televisiones, pedido.metasGrupo)
+  const filasSku = brandSections.flatMap((brand) =>
+    brand.sizes.flatMap((group) =>
+      group.products.map((tv) => ({ tv, avance: calcularAvanceSku(tv, group) })),
+    ),
+  )
   const marcasDistintas = [...new Set(televisiones.map((tv) => tv.marca).filter(Boolean))].sort()
 
   const { totalRequerido, totalSurtido, progresoPct, pendiente } = calcularTotales(pedido)
@@ -286,12 +307,18 @@ export default async function ImprimirPage({ params }) {
                     ))}
                   </span>
                 </td>
-                <td className="num">{tv.sinLimite ? t('pedidoForm.sinLimite') : avance.solicitada}</td>
+                <td className="num">
+                  {avance.solicitada === null
+                    ? (avance.metaCompartida ? t('imprimir.metaCompartida') : t('surtir.grupo.porDefinir'))
+                    : avance.solicitada}
+                </td>
                 <td className="num">{avance.surtida}</td>
-                <td className="num">{tv.sinLimite ? '—' : avance.pendiente}</td>
+                <td className="num">{avance.pendiente === null ? '—' : avance.pendiente}</td>
                 <td>
-                  {tv.sinLimite ? (
-                    <span className="print-avance-sinlimite">{t('imprimir.sinLimiteAbrev')}</span>
+                  {avance.avancePct === null ? (
+                    <span className="print-avance-sinlimite">
+                      {avance.metaCompartida ? t('imprimir.metaCompartida') : t('surtir.grupo.porDefinir')}
+                    </span>
                   ) : (
                     <div className="print-avance-celda">
                       <div className="print-avance-track">

@@ -280,7 +280,22 @@
     "capturaModelo": "TV #{{n}}: captura el modelo / SKU (mín. 3 letras o números)",
     "cantidadInvalida": "TV #{{n}}: cantidad inválida",
     "sumaExcede": "La suma de cantidades ({{suma}}) excede la cantidad total del pedido ({{limite}}).",
-    "sumaNoCoincide": "La suma de cantidades ({{suma}}) no coincide con la cantidad total del pedido ({{limite}})."
+    "sumaNoCoincide": "La suma de cantidades ({{suma}}) no coincide con la cantidad total del pedido ({{limite}}).",
+    "metasExcedenTotal": "La suma de metas definidas ({{suma}}) excede la cantidad total del pedido ({{limite}}).",
+    "grupo": {
+      "grupos": "Grupos",
+      "gruposCount_one": "{{count}} grupo",
+      "gruposCount_other": "{{count}} grupos",
+      "piezasSolicitadas": "{{n}} piezas solicitadas",
+      "solicitadoGrupo": "Solicitado (grupo)",
+      "solicitadoGrupoYSku": "Solicitado (grupo y SKU)",
+      "cantidadPorDefinir": "Cantidad por definir",
+      "metaUnicoSku": "Meta de este SKU",
+      "avisoMetaConjunta": "Esta meta ({{n}}) se reparte entre los {{count}} SKU de este grupo.",
+      "metasDefinidas": "Metas definidas",
+      "pendientePorAsignar": "Pendiente por asignar",
+      "gruposPorDefinir": "Grupos por definir"
+    }
   },
   "eventosDetalle": {
     "cargaIniciada": "Carga iniciada",
@@ -314,6 +329,7 @@
     "sesionInvalida": "Sesión inválida"
   },
   "apiPedidos": {
+    "metasGrupoInvalidas": "Metas de grupo inválidas",
     "condicionesInvalidas": "Condiciones inválidas",
     "cantidadTotalInvalida": "Cantidad total inválida",
     "pedidoNoEncontrado": "Pedido no encontrado",
@@ -837,6 +853,7 @@
     "colAvance": "Avance",
     "colEstado": "Estado",
     "sinSolicitud": "Sin solicitud",
+    "metaCompartida": "Meta compartida",
     "skuDiferentes": "SKU diferentes",
     "generadoPor": "Generado por",
     "paginaDe": "Página {{actual}} de {{total}}"

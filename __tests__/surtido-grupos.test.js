@@ -5,6 +5,7 @@ import {
   calculateGroupSummary,
   calculateOrderSummary,
   createGroupKey,
+  filtrarMetasHuerfanas,
   getGroupStatus,
   getIndividualSkuTarget,
   groupProductsByBrandAndSize,
@@ -321,5 +322,49 @@ describe('SKU agregado de último momento se coloca en el grupo correcto', () =>
     expect(sony).toBeDefined()
     expect(sony.sizes[0].requested).toBeNull()
     expect(sony.sizes[0].summary.status).toBe(GROUP_STATUS.UNDEFINED)
+  })
+})
+
+describe('filtrarMetasHuerfanas — limpia metasGrupo sin dejar metas de grupos que ya no existen', () => {
+  it('conserva las metas cuyo groupKey sigue teniendo al menos un SKU', () => {
+    const limpio = filtrarMetasHuerfanas(METAS_LORENA, pedidoLorena())
+    expect(limpio).toEqual(METAS_LORENA)
+  })
+
+  it('descarta una meta cuyo único SKU fue eliminado (marca+pulgadas ya no existen)', () => {
+    const sinSamsung70 = pedidoLorena().filter((t) => !(t.marca === 'Samsung' && t.pulgadas === 70))
+    const limpio = filtrarMetasHuerfanas(METAS_LORENA, sinSamsung70)
+    expect(limpio).not.toHaveProperty('SAMSUNG-70')
+    expect(Object.keys(limpio)).toHaveLength(5)
+  })
+
+  it('descarta una meta cuando el único SKU del grupo cambió de marca o pulgadas', () => {
+    const conCambio = pedidoLorena().map((t) =>
+      t.marca === 'Samsung' && t.pulgadas === 85 ? { ...t, pulgadas: 90 } : t,
+    )
+    const limpio = filtrarMetasHuerfanas(METAS_LORENA, conCambio)
+    expect(limpio).not.toHaveProperty('SAMSUNG-85')
+    expect(limpio).not.toHaveProperty('SAMSUNG-90') // nunca se inventa una meta nueva, solo se filtra
+  })
+
+  it('conserva una meta explícitamente null ("por definir") mientras el grupo siga existiendo', () => {
+    const limpio = filtrarMetasHuerfanas(METAS_LORENA, pedidoLorena())
+    expect(limpio['SAMSUNG-85']).toBeNull()
+    expect(Object.prototype.hasOwnProperty.call(limpio, 'SAMSUNG-85')).toBe(true)
+  })
+
+  it('no muta el objeto metasGrupo original', () => {
+    const original = { ...METAS_LORENA }
+    filtrarMetasHuerfanas(METAS_LORENA, pedidoLorena().slice(0, 1))
+    expect(METAS_LORENA).toEqual(original)
+  })
+
+  it('metasGrupo null/undefined devuelve objeto vacío en vez de lanzar', () => {
+    expect(filtrarMetasHuerfanas(null, pedidoLorena())).toEqual({})
+    expect(filtrarMetasHuerfanas(undefined, pedidoLorena())).toEqual({})
+  })
+
+  it('arreglo de televisiones vacío descarta todas las metas', () => {
+    expect(filtrarMetasHuerfanas(METAS_LORENA, [])).toEqual({})
   })
 })

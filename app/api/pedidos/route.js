@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
-import { MARCAS, PULGADAS, CONDICIONES, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
+import { PULGADAS, CONDICIONES, UNIDADES, SKU_REGEX, marcaValida } from '@/lib/catalogos'
 import { getUsuario } from '@/lib/auth'
 import { registrarEvento } from '@/lib/eventos'
+import { normalizarMarca } from '@/lib/importar-pedido'
+import { filtrarMetasHuerfanas, isRequestedQuantityDefined } from '@/lib/surtido-grupos'
 import { getServerT } from '@/lib/i18n-server'
 
 export async function POST(req) {
@@ -46,9 +48,10 @@ export async function POST(req) {
 
   const tvsLimpias = []
   for (const [i, tv] of televisiones.entries()) {
-    if (!MARCAS.includes(tv.marca)) {
+    if (!marcaValida(tv.marca)) {
       return NextResponse.json({ error: t('pedidoForm.marcaInvalida', { n: i + 1 }) }, { status: 400 })
     }
+    const marca = normalizarMarca(tv.marca.trim().replace(/\s+/g, ' '))
     const pulgadas = Number(tv.pulgadas)
     if (!PULGADAS.includes(pulgadas)) {
       return NextResponse.json({ error: t('pedidoForm.pulgadasInvalidas', { n: i + 1 }) }, { status: 400 })
@@ -63,11 +66,9 @@ export async function POST(req) {
         { status: 400 }
       )
     }
-    const tvSinLimite = !!tv.sinLimite
-    const cantidad = Number(tv.cantidad) || 0
-    if (!tvSinLimite && (!Number.isInteger(cantidad) || cantidad < 1)) {
-      return NextResponse.json({ error: t('pedidoForm.cantidadInvalida', { n: i + 1 }) }, { status: 400 })
-    }
+    // La meta/cantidad ya no se captura por SKU (le pertenece al grupo
+    // marca+pulgadas, ver metasGrupo) — todo TV nuevo se guarda "sin límite"
+    // a nivel individual; cantidad queda en 0 y no participa en ninguna suma.
     const unidad = UNIDADES.includes(tv.unidad) ? tv.unidad : 'pieza'
     // SKUs alternativos (cualquiera de ellos sirve para este mismo renglón).
     // Campo opcional/aditivo: se limpia igual que el SKU principal y se
@@ -77,26 +78,49 @@ export async function POST(req) {
           .map((m) => (typeof m === 'string' ? m.trim().toUpperCase() : ''))
           .filter((m) => SKU_REGEX.test(m) && m !== sku)
       : []
-    // Las TVs "Sin límite" se guardan con cantidad: 0. El total del pedido
-    // lo lleva cantidadTotal (a nivel pedido), no la suma de cantidades.
     tvsLimpias.push({
-      marca: tv.marca,
+      marca,
       pulgadas,
       condiciones: [...new Set(tv.condiciones)],
       modelo: sku,
       modelosAlternativos,
-      cantidad: tvSinLimite ? 0 : cantidad,
+      cantidad: 0,
       unidad,
-      sinLimite: tvSinLimite,
+      sinLimite: true,
       cantidadSurtida: 0,
     })
   }
 
+  // Metas por grupo (marca+pulgadas) — reemplaza la cantidad por SKU como
+  // fuente real de "cuánto se solicitó". Formato: { "LG-65": 30, ... } con
+  // null explícito para "por definir" (nunca 0). Se descarta cualquier
+  // clave que ya no corresponda a un SKU real del pedido (metasGrupo del
+  // cliente puede llegar desfasado si el usuario borró filas justo antes
+  // de enviar).
+  let metasGrupoLimpias = {}
+  if (body.groupTargets !== null && body.groupTargets !== undefined) {
+    if (typeof body.groupTargets !== 'object' || Array.isArray(body.groupTargets)) {
+      return NextResponse.json({ error: t('apiPedidos.metasGrupoInvalidas') }, { status: 400 })
+    }
+    for (const [key, valor] of Object.entries(body.groupTargets)) {
+      if (isRequestedQuantityDefined(valor)) {
+        const n = Number(valor)
+        if (!Number.isInteger(n) || n < 0) {
+          return NextResponse.json({ error: t('apiPedidos.metasGrupoInvalidas') }, { status: 400 })
+        }
+        metasGrupoLimpias[key] = n
+      } else {
+        metasGrupoLimpias[key] = null
+      }
+    }
+    metasGrupoLimpias = filtrarMetasHuerfanas(metasGrupoLimpias, tvsLimpias)
+  }
+
   if (cantidadTotalLimpia !== null) {
-    const sumaTvs = tvsLimpias.reduce((s, tv) => s + (tv.sinLimite ? 0 : tv.cantidad), 0)
-    if (sumaTvs > cantidadTotalLimpia) {
+    const sumaMetas = Object.values(metasGrupoLimpias).reduce((s, v) => s + (isRequestedQuantityDefined(v) ? v : 0), 0)
+    if (sumaMetas > cantidadTotalLimpia) {
       return NextResponse.json(
-        { error: t('pedidoForm.sumaExcede', { suma: sumaTvs, limite: cantidadTotalLimpia }) },
+        { error: t('pedidoForm.sumaExcede', { suma: sumaMetas, limite: cantidadTotalLimpia }) },
         { status: 400 }
       )
     }
@@ -110,6 +134,7 @@ export async function POST(req) {
     condiciones,
     cantidadTotal: cantidadTotalLimpia,
     televisiones: tvsLimpias,
+    metasGrupo: metasGrupoLimpias,
     fecha: fechaCreacion,
     fechaLimite,
     creadoPor: usuario?.userId || null,

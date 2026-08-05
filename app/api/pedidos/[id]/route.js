@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { MARCAS, PULGADAS, CONDICIONES, UNIDADES, SKU_REGEX } from '@/lib/catalogos'
+import { PULGADAS, CONDICIONES, UNIDADES, SKU_REGEX, marcaValida } from '@/lib/catalogos'
 import { getUsuario, requireModule } from '@/lib/auth'
 import { registrarEvento } from '@/lib/eventos'
 import { calcularTotales } from '@/lib/estado-pedido'
-import { createGroupKey } from '@/lib/surtido-grupos'
+import { normalizarMarca } from '@/lib/importar-pedido'
+import { createGroupKey, filtrarMetasHuerfanas, isRequestedQuantityDefined } from '@/lib/surtido-grupos'
 import { getServerT } from '@/lib/i18n-server'
 
 // Un SKU puede llevar varias condiciones a la vez (ej. la misma partida
@@ -212,7 +213,7 @@ export async function PUT(req, { params }) {
     {
       projection: {
         televisiones: 1, numeroPedido: 1, pedidoNombre: 1, condiciones: 1,
-        fechaLimite: 1, cantidadTotal: 1,
+        fechaLimite: 1, cantidadTotal: 1, metasGrupo: 1,
       },
     }
   )
@@ -223,9 +224,10 @@ export async function PUT(req, { params }) {
 
   const tvsLimpias = []
   for (const [i, tv] of televisiones.entries()) {
-    if (!MARCAS.includes(tv.marca)) {
+    if (!marcaValida(tv.marca)) {
       return NextResponse.json({ error: t('pedidoForm.marcaInvalida', { n: i + 1 }) }, { status: 400 })
     }
+    const marca = normalizarMarca(tv.marca.trim().replace(/\s+/g, ' '))
     const pulgadas = Number(tv.pulgadas)
     if (!PULGADAS.includes(pulgadas)) {
       return NextResponse.json({ error: t('pedidoForm.pulgadasInvalidas', { n: i + 1 }) }, { status: 400 })
@@ -233,12 +235,6 @@ export async function PUT(req, { params }) {
     if (!Array.isArray(tv.condiciones) || tv.condiciones.length === 0 || tv.condiciones.some((c) => !CONDICIONES.includes(c))) {
       return NextResponse.json({ error: t('pedidoForm.faltaCondicion', { n: i + 1 }) }, { status: 400 })
     }
-    const tvSinLimite = !!tv.sinLimite
-    const cantidad = Number(tv.cantidad) || 0
-    if (!tvSinLimite && (!Number.isInteger(cantidad) || cantidad < 1)) {
-      return NextResponse.json({ error: t('pedidoForm.cantidadInvalida', { n: i + 1 }) }, { status: 400 })
-    }
-    const cantidadFinal = tvSinLimite ? 0 : cantidad
     const unidad = UNIDADES.includes(tv.unidad) ? tv.unidad : 'pieza'
     const modelo = typeof tv.modelo === 'string' ? tv.modelo.trim().toUpperCase() : ''
     if (!SKU_REGEX.test(modelo)) {
@@ -256,15 +252,13 @@ export async function PUT(req, { params }) {
     // tratan como líneas independientes.
     const matching = tvsExistentes.find(
       (v) =>
-        v.marca === tv.marca &&
+        normalizarMarca((v.marca || '').trim()) === marca &&
         v.pulgadas === pulgadas &&
         (v.modelo || '') === modelo &&
         (v.unidad || 'pieza') === unidad &&
         condicionKey(v) === [...condicionesLimpias].sort().join(',')
     )
-    const cantidadSurtida = matching
-      ? (tvSinLimite ? (matching.cantidadSurtida || 0) : Math.min(cantidadFinal, matching.cantidadSurtida || 0))
-      : 0
+    const cantidadSurtida = matching?.cantidadSurtida || 0
 
     // SKUs alternativos (cualquiera de ellos sirve para este mismo renglón).
     // Campo opcional/aditivo: se limpia igual que el SKU principal y se
@@ -275,24 +269,46 @@ export async function PUT(req, { params }) {
           .filter((m) => SKU_REGEX.test(m) && m !== modelo)
       : []
 
+    // La meta/cantidad ya no se captura por SKU (le pertenece al grupo
+    // marca+pulgadas, ver metasGrupo) — cantidad queda en 0 y sinLimite
+    // siempre true; solo cantidadSurtida (el progreso real) se preserva.
     tvsLimpias.push({
-      marca: tv.marca,
+      marca,
       pulgadas,
       condiciones: condicionesLimpias,
       modelo,
       modelosAlternativos,
-      cantidad: cantidadFinal,
+      cantidad: 0,
       unidad,
-      sinLimite: tvSinLimite,
+      sinLimite: true,
       cantidadSurtida,
     })
   }
 
+  let metasGrupoLimpias = {}
+  if (body.groupTargets !== null && body.groupTargets !== undefined) {
+    if (typeof body.groupTargets !== 'object' || Array.isArray(body.groupTargets)) {
+      return NextResponse.json({ error: t('apiPedidos.metasGrupoInvalidas') }, { status: 400 })
+    }
+    for (const [key, valor] of Object.entries(body.groupTargets)) {
+      if (isRequestedQuantityDefined(valor)) {
+        const n = Number(valor)
+        if (!Number.isInteger(n) || n < 0) {
+          return NextResponse.json({ error: t('apiPedidos.metasGrupoInvalidas') }, { status: 400 })
+        }
+        metasGrupoLimpias[key] = n
+      } else {
+        metasGrupoLimpias[key] = null
+      }
+    }
+    metasGrupoLimpias = filtrarMetasHuerfanas(metasGrupoLimpias, tvsLimpias)
+  }
+
   if (cantidadTotalLimpia !== null) {
-    const sumaTvs = tvsLimpias.reduce((s, tv) => s + (tv.sinLimite ? 0 : tv.cantidad), 0)
-    if (sumaTvs > cantidadTotalLimpia) {
+    const sumaMetas = Object.values(metasGrupoLimpias).reduce((s, v) => s + (isRequestedQuantityDefined(v) ? v : 0), 0)
+    if (sumaMetas > cantidadTotalLimpia) {
       return NextResponse.json(
-        { error: t('pedidoForm.sumaExcede', { suma: sumaTvs, limite: cantidadTotalLimpia }) },
+        { error: t('pedidoForm.sumaExcede', { suma: sumaMetas, limite: cantidadTotalLimpia }) },
         { status: 400 }
       )
     }
@@ -307,6 +323,7 @@ export async function PUT(req, { params }) {
         condiciones,
         cantidadTotal: cantidadTotalLimpia,
         televisiones: tvsLimpias,
+        metasGrupo: metasGrupoLimpias,
         fechaLimite,
       },
     }
@@ -322,12 +339,21 @@ export async function PUT(req, { params }) {
   if ((existing.numeroPedido || '') !== numeroPedido.trim()) cambios.push(t('eventosDetalle.numeroPedidoActualizado'))
   if ((existing.pedidoNombre || '') !== pedidoNombre.trim()) cambios.push(t('eventosDetalle.nombreActualizado'))
 
-  const sumaAntes = tvsExistentes.reduce((s, tv) => s + (tv.sinLimite ? 0 : tv.cantidad || 0), 0)
-  const sumaDespues = tvsLimpias.reduce((s, tv) => s + (tv.sinLimite ? 0 : tv.cantidad), 0)
+  // El progreso solicitado ahora vive en metasGrupo (por grupo), no en
+  // tv.cantidad (siempre 0 en el nuevo modelo) — la suma de metas definidas
+  // es lo que hay que comparar para detectar un cambio real de cantidades.
+  const sumaMetasDe = (metas) =>
+    Object.values(metas || {}).reduce((s, v) => s + (isRequestedQuantityDefined(v) ? v : 0), 0)
+  const sumaAntes = sumaMetasDe(existing.metasGrupo)
+  const sumaDespues = sumaMetasDe(metasGrupoLimpias)
   const cambioCantidades = sumaAntes !== sumaDespues
   const mismasLineas =
     tvsExistentes.length === tvsLimpias.length &&
-    tvsExistentes.every((v, i) => v.marca === tvsLimpias[i].marca && v.modelo === tvsLimpias[i].modelo && condicionKey(v) === condicionKey(tvsLimpias[i]))
+    tvsExistentes.every((v, i) =>
+      normalizarMarca((v.marca || '').trim()) === tvsLimpias[i].marca &&
+      v.modelo === tvsLimpias[i].modelo &&
+      condicionKey(v) === condicionKey(tvsLimpias[i])
+    )
 
   const usuarioEdita = await getUsuario()
   if (cambios.length > 0 || cambioCantidades) {

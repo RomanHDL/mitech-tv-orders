@@ -1398,6 +1398,12 @@ select.select-dueno {
 .resumen-fila-marcas .resumen-fila-icono { background: #ffedd5; color: #c2410c; }
 .resumen-fila-tvs .resumen-fila-icono { background: #ede9fe; color: #6d28d9; }
 .resumen-fila-pallets .resumen-fila-icono { background: var(--primary-light); color: var(--primary); }
+.resumen-fila-grupos .resumen-fila-icono { background: #e0f2fe; color: #0369a1; }
+.resumen-fila-metas-definidas .resumen-fila-numero { color: var(--green-dark); }
+.resumen-fila-pendiente-asignar .resumen-fila-numero { color: var(--primary); }
+.resumen-fila-grupos-por-definir { background: var(--primary-light); border-radius: 8px; padding: 0.65rem 0.6rem; }
+.resumen-fila-grupos-por-definir .resumen-fila-label,
+.resumen-fila-grupos-por-definir .resumen-fila-numero { color: var(--primary); }
 .resumen-fila-label { flex: 1; font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
 .resumen-fila-numero {
   font-size: 1.15rem;
@@ -3776,10 +3782,51 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
   background: var(--primary-light);
 }
 .size-group-filas { display: flex; flex-direction: column; }
+.size-group-aviso-meta-conjunta {
+  margin: 0;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-top: 1px dashed var(--border);
+}
+
+/* Captura de meta a nivel de grupo (Nuevo/Editar) — reemplaza las métricas
+   de solo-lectura de Surtir por un input editable + checkbox "por definir". */
+.group-target-input {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+.group-target-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.group-target-controles { display: flex; align-items: center; gap: 0.5rem; }
+.group-target-numero {
+  width: 6rem;
+  height: 2.3rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 0.6rem;
+  text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: var(--card);
+}
+.group-target-numero:disabled { background: var(--bg); color: var(--text-subtle); cursor: not-allowed; }
+.group-target-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 
 @media (max-width: 900px) {
   .size-group-header { flex-direction: column; align-items: stretch; }
   .size-group-metricas { max-width: none; grid-template-columns: repeat(2, 1fr); }
+  .group-target-input { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 600px) {
   .brand-section-header h2 { font-size: 1.3rem; }
@@ -4066,6 +4113,79 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
   .fila-surtido-metricas { width: auto; flex: 1 1 160px; }
   .stepper-cantidad { width: auto; flex: 0 0 auto; }
   .fila-surtido-acciones { justify-self: start; }
+}
+
+/* Fila editable — Nuevo/Editar pedido. Comparte fondo/hover/borde con
+   .fila-surtido-fila pero reemplaza el grid fijo de 4 columnas (pensado
+   para las métricas de surtido) por un layout flexible de campos. */
+.fila-surtido-fila.fila-editable-producto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  grid-template-columns: none;
+}
+.fila-editable-campos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex: 1;
+}
+.fila-editable-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 6.5rem;
+}
+.fila-editable-campo span {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-subtle);
+}
+.fila-editable-campo input,
+.fila-editable-campo select {
+  height: 2.3rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 0.6rem;
+  font-size: 0.85rem;
+  background: var(--card);
+}
+.fila-editable-campo input[aria-invalid='true'] { border-color: var(--red); }
+.fila-editable-campo-sku { min-width: 9rem; }
+.fila-editable-campo-sku input { font-weight: 700; letter-spacing: 0.02em; }
+.fila-editable-condicion { min-width: 10rem; }
+.fila-editable-condicion-wrap { position: relative; }
+.fila-editable-condicion-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  width: max-content;
+  max-width: 16rem;
+  padding: 0.6rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
+}
+.fila-editable-meta-info {
+  align-items: center;
+  text-align: center;
+}
+.fila-editable-meta-info strong { font-size: 1rem; color: var(--primary); font-variant-numeric: tabular-nums; }
+.fila-editable-acciones { display: flex; gap: 5px; justify-content: flex-end; }
+
+@media (max-width: 900px) {
+  .fila-surtido-fila.fila-editable-producto { padding: 12px 16px; }
+  .fila-editable-campos { gap: 0.6rem; }
+  .fila-editable-campo { min-width: 45%; flex: 1 1 45%; }
+  .fila-editable-acciones { justify-content: flex-start; }
 }
 
 /* En escritorio el wrapper de controles no debe partir el grid de 4

@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { estadoLabel, MARCAS, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
+import { estadoLabel, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
 import { normalizeOrderStatus } from '@/lib/estado-pedido'
 import { localeDe } from '@/lib/intl-format'
 import { calculateOrderSummary, groupProductsByBrandAndSize } from '@/lib/surtido-grupos'
 import ComentariosPedido from '../components/comentarios-pedido'
+import GroupedOrderProducts from '../components/grouped-order-products'
+import MarcasDatalist from '../components/marcas-datalist'
 import StepperEtapas from '../pedidos/stepper-etapas'
-import BrandSection from './brand-section'
 import OrderSupplySummary from './order-supply-summary'
 import {
   IconAlert,
@@ -445,11 +446,12 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         placeholder={t('surtir.comentariosPedidoPlaceholder')}
       />
 
-      <div className="secciones-surtido">
-        {brandSections.map((brandSection) => (
-          <BrandSection key={brandSection.key} brandSection={brandSection} onActualizar={actualizar} />
-        ))}
-      </div>
+      <GroupedOrderProducts
+        televisiones={tvs}
+        metasGrupo={pedido.metasGrupo}
+        mode="supply"
+        onActualizar={actualizar}
+      />
 
       <div className="bloque-sku-extra">
         {!mostrarFormExtra ? (
@@ -467,9 +469,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
               <p>{t('surtir.agregarSkuUltimoMomentoDesc')}</p>
             </div>
 
-            <datalist id="marcas-list-extra">
-              {MARCAS.map((m) => <option key={m} value={m} />)}
-            </datalist>
+            <MarcasDatalist id="marcas-list-extra" />
 
             <div className="form-sku-extra-campos">
               <label className="label">

@@ -280,7 +280,22 @@
     "capturaModelo": "第 {{n}} 台电视：请输入型号 / SKU（至少 3 个字母或数字）",
     "cantidadInvalida": "第 {{n}} 台电视：数量无效",
     "sumaExcede": "数量总和（{{suma}}）超过了订单总数量（{{limite}}）。",
-    "sumaNoCoincide": "数量总和（{{suma}}）与订单总数量（{{limite}}）不一致。"
+    "sumaNoCoincide": "数量总和（{{suma}}）与订单总数量（{{limite}}）不一致。",
+    "metasExcedenTotal": "已设定目标的总和（{{suma}}）超过了订单总数量（{{limite}}）。",
+    "grupo": {
+      "grupos": "分组",
+      "gruposCount_one": "{{count}} 个分组",
+      "gruposCount_other": "{{count}} 个分组",
+      "piezasSolicitadas": "已申请 {{n}} 件",
+      "solicitadoGrupo": "申请数量（分组）",
+      "solicitadoGrupoYSku": "申请数量（分组与 SKU）",
+      "cantidadPorDefinir": "数量待定",
+      "metaUnicoSku": "该 SKU 的目标数量",
+      "avisoMetaConjunta": "此目标（{{n}}）由该分组内的 {{count}} 个 SKU 共同分摊。",
+      "metasDefinidas": "已设定的目标",
+      "pendientePorAsignar": "待分配数量",
+      "gruposPorDefinir": "待定的分组"
+    }
   },
   "eventosDetalle": {
     "cargaIniciada": "开始装车",
@@ -314,6 +329,7 @@
     "sesionInvalida": "会话无效"
   },
   "apiPedidos": {
+    "metasGrupoInvalidas": "分组目标数量无效",
     "condicionesInvalidas": "条件无效",
     "cantidadTotalInvalida": "总数量无效",
     "pedidoNoEncontrado": "未找到订单",
@@ -837,6 +853,7 @@
     "colAvance": "进度",
     "colEstado": "状态",
     "sinSolicitud": "无需求",
+    "metaCompartida": "共享目标",
     "skuDiferentes": "不同 SKU 数",
     "generadoPor": "生成人",
     "paginaDe": "第 {{actual}} 页，共 {{total}} 页"

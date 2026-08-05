@@ -1,42 +1,57 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { MARCAS, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
+import { CONDICIONES_FRECUENTES, SKU_REGEX, marcaValida } from '@/lib/catalogos'
 import { ordenarPorMarcaYPulgadas } from '@/lib/orden-televisiones'
 import {
+  filtrarMetasHuerfanas,
+  groupProductsByBrandAndSize,
+  isRequestedQuantityDefined,
+} from '@/lib/surtido-grupos'
+import {
   IconAlert,
-  IconArrowDown,
   IconArrowRight,
-  IconArrowUp,
   IconBox,
-  IconChevronDown,
   IconClipboardList,
-  IconCopy,
   IconExcel,
   IconHelp,
   IconPlus,
-  IconTrash,
 } from './icons'
+import GroupedOrderProducts from './grouped-order-products'
+import MarcasDatalist from './marcas-datalist'
 import ImportarPedidoPanel from './importar-pedido-panel'
-
-// Condiciones que no caben en los accesos directos — se ofrecen en el
-// desplegable "Más condiciones" del selector de condición activa.
-const CONDICIONES_MAS = CONDICIONES.filter((c) => !CONDICIONES_FRECUENTES.includes(c))
 
 const tvVacia = (overrides = {}) => ({
   marca: '',
   pulgadas: '',
   condiciones: [CONDICIONES_FRECUENTES[0]],
   modelo: '',
-  cantidad: 1,
   unidad: 'pieza',
-  sinLimite: false,
   modelosAlternativos: [],
   ...overrides,
 })
+
+// Deriva un mapa { groupKey: requestedQuantity|null } con una entrada por
+// cada grupo (marca+pulgadas) que YA tiene al menos un SKU válido —
+// preserva las metas existentes (`base`) y agrega `null` ("por definir")
+// para cualquier grupo nuevo que todavía no tenga una entrada explícita.
+function sincronizarGroupTargets(tvs, base) {
+  const brandSections = groupProductsByBrandAndSize(
+    tvs.filter((tv) => tv.marca && tv.pulgadas),
+    base,
+  )
+  const siguiente = { ...base }
+  for (const brand of brandSections) {
+    for (const group of brand.sizes) {
+      if (!Object.prototype.hasOwnProperty.call(siguiente, group.key)) {
+        siguiente[group.key] = null
+      }
+    }
+  }
+  return siguiente
+}
 
 export default function PedidoForm({
   initialData,
@@ -60,19 +75,15 @@ export default function PedidoForm({
   )
   // Valores "activos" del toolbar: se aplican SOLO a las TVs nuevas que se
   // agreguen a partir de ahora (manual, duplicado o importación) — nunca de
-  // forma retroactiva a filas ya existentes, igual que pidió el operador.
+  // forma retroactiva a filas ya existentes.
   const [condicionActiva, setCondicionActiva] = useState(CONDICIONES_FRECUENTES[0])
-  const condicionEsExtra = CONDICIONES_MAS.includes(condicionActiva)
-  const [masCondicionesAbierto, setMasCondicionesAbierto] = useState(false)
   const [palletPorDefecto, setPalletPorDefecto] = useState(false)
-  const [sinLimitePorDefecto, setSinLimitePorDefecto] = useState(false)
+
   const [tvs, setTvs] = useState(
     initialData?.televisiones?.length
       // Mismo orden "canónico" que ya usa Surtir (agrupado por marca,
       // ordenado por pulgadas dentro de cada marca) — solo al ABRIR un
-      // pedido ya existente para editarlo. La captura interactiva de un
-      // pedido nuevo (initialData vacío) no se toca: las filas se siguen
-      // agregando en el orden en que el usuario las escribe.
+      // pedido ya existente para editarlo.
       ? ordenarPorMarcaYPulgadas(initialData.televisiones).map((tv) => ({
           marca: tv.marca || '',
           pulgadas: tv.pulgadas !== undefined ? String(tv.pulgadas) : '',
@@ -83,9 +94,7 @@ export default function PedidoForm({
             ? tv.condiciones
             : (tv.condicion ? [tv.condicion] : [CONDICIONES_FRECUENTES[0]]),
           modelo: tv.modelo || '',
-          cantidad: tv.cantidad || 1,
           unidad: tv.unidad || 'pieza',
-          sinLimite: Boolean(tv.sinLimite),
           modelosAlternativos: Array.isArray(tv.modelosAlternativos) ? tv.modelosAlternativos : [],
         }))
       : [tvVacia()]
@@ -93,81 +102,36 @@ export default function PedidoForm({
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
 
-  const inputRefs = useRef([])
-  const tablaRef = useRef(null)
-  const previousLength = useRef(tvs.length)
-  const masMenuRef = useRef(null)
-  const [filaCondicionAbierta, setFilaCondicionAbierta] = useState(null)
-  const condicionBtnRefs = useRef([])
-  const condicionPortalRef = useRef(null)
-  const [condicionPopoverRect, setCondicionPopoverRect] = useState(null)
-
-  // El popover de condición por fila se renderiza en un portal (document.body,
-  // position: fixed) en vez de dentro de la celda: la tabla scrollea
-  // horizontalmente (.tabla-wrap tiene overflow-x: auto) y un popover
-  // absoluto ahí adentro queda recortado/atrapado en ese scroll. Un portal
-  // lo saca de ese contenedor por completo.
+  // groupTargets: { "LG-65": 30, "SAMSUNG-85": null, ... } — la meta le
+  // pertenece al GRUPO (marca+pulgadas), nunca a cada SKU. Se siembra desde
+  // el pedido existente (metasGrupo) al editar; para un pedido nuevo, cada
+  // grupo que se va formando arranca en null ("por definir") hasta que el
+  // usuario captura una cantidad.
+  const [groupTargets, setGroupTargets] = useState(() =>
+    sincronizarGroupTargets(
+      initialData?.televisiones?.length ? tvs : [],
+      initialData?.metasGrupo || {},
+    )
+  )
+  // Mantiene groupTargets sincronizado cuando cambian marca/pulgadas/altas/
+  // bajas — nunca borra una meta ya capturada, solo agrega "por definir"
+  // para grupos nuevos. La limpieza de metas huérfanas ocurre al enviar.
   useEffect(() => {
-    if (filaCondicionAbierta == null) {
-      setCondicionPopoverRect(null)
-      return
-    }
-    const actualizarPosicion = () => {
-      const btn = condicionBtnRefs.current[filaCondicionAbierta]
-      if (!btn) return
-      const r = btn.getBoundingClientRect()
-      setCondicionPopoverRect({ top: r.bottom + 6, left: r.left, minWidth: r.width })
-    }
-    actualizarPosicion()
-    window.addEventListener('resize', actualizarPosicion)
-    window.addEventListener('scroll', actualizarPosicion, true)
-    return () => {
-      window.removeEventListener('resize', actualizarPosicion)
-      window.removeEventListener('scroll', actualizarPosicion, true)
-    }
-  }, [filaCondicionAbierta])
+    setGroupTargets((prev) => sincronizarGroupTargets(tvs, prev))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tvs])
 
-  // Cierra el desplegable "Más condiciones" del toolbar y el popover de
-  // condición por fila al hacer clic fuera o con Escape — mismo patrón que
-  // ya usa el menú de usuario del nav. El popover por fila vive en un
-  // portal, así que se revisan tanto el botón que lo abrió como su propio
-  // contenido (ninguno de los dos está dentro del otro en el DOM).
-  useEffect(() => {
-    function onClickFuera(e) {
-      if (masMenuRef.current && !masMenuRef.current.contains(e.target)) {
-        setMasCondicionesAbierto(false)
-      }
-      if (filaCondicionAbierta != null) {
-        const btn = condicionBtnRefs.current[filaCondicionAbierta]
-        const dentroBoton = btn && btn.contains(e.target)
-        const dentroPopover = condicionPortalRef.current && condicionPortalRef.current.contains(e.target)
-        if (!dentroBoton && !dentroPopover) setFilaCondicionAbierta(null)
-      }
-    }
-    function onKeyDown(e) {
-      if (e.key === 'Escape') {
-        setMasCondicionesAbierto(false)
-        setFilaCondicionAbierta(null)
-      }
-    }
-    document.addEventListener('mousedown', onClickFuera)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', onClickFuera)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [filaCondicionAbierta])
+  const productosRef = useRef(null)
 
-  // Enter avanza al siguiente campo enfocable de toda la tabla (SKU → Marca
-  // → Pulgada → Cantidad → SKU de la fila siguiente...), en vez de intentar
-  // enviar el formulario. En el último campo enfocable, agrega una TV nueva
-  // — mismo comportamiento que ya existía, generalizado a cualquier columna.
-  const onTablaKeyDown = (e) => {
+  // Enter avanza al siguiente campo enfocable de toda la sección de
+  // productos (SKU → Marca → Pulgada → ...), en vez de intentar enviar el
+  // formulario. En el último campo enfocable, agrega una TV nueva.
+  const onProductosKeyDown = (e) => {
     if (e.key !== 'Enter') return
     const tag = e.target.tagName
     if (tag !== 'INPUT' && tag !== 'SELECT') return
     e.preventDefault()
-    const focosables = Array.from(tablaRef.current?.querySelectorAll('tbody input, tbody select') || [])
+    const focosables = Array.from(productosRef.current?.querySelectorAll('input, select') || [])
     const idx = focosables.indexOf(e.target)
     if (idx === -1) return
     if (idx < focosables.length - 1) {
@@ -177,127 +141,50 @@ export default function PedidoForm({
     }
   }
 
-  useEffect(() => {
-    if (tvs.length > previousLength.current) {
-      const lastInput = inputRefs.current[tvs.length - 1]
-      if (lastInput) {
-        lastInput.focus()
-        lastInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
-    }
-    previousLength.current = tvs.length
-  }, [tvs.length])
+  const marcasUnicas = useMemo(
+    () => new Set(tvs.map((tv) => tv.marca).filter(Boolean)).size,
+    [tvs]
+  )
+
+  const brandSectionsActuales = useMemo(
+    () => groupProductsByBrandAndSize(tvs, groupTargets),
+    [tvs, groupTargets]
+  )
+  const gruposActuales = useMemo(
+    () => brandSectionsActuales.flatMap((b) => b.sizes),
+    [brandSectionsActuales]
+  )
+  const metasDefinidasTotal = useMemo(
+    () => gruposActuales.reduce((s, g) => s + (isRequestedQuantityDefined(g.requested) ? g.requested : 0), 0),
+    [gruposActuales]
+  )
+  const gruposPorDefinirCount = useMemo(
+    () => gruposActuales.filter((g) => !isRequestedQuantityDefined(g.requested)).length,
+    [gruposActuales]
+  )
 
   const limite = useMemo(() => {
     const n = Number(cantidadTotal)
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
   }, [cantidadTotal])
 
-  // Una TV "Sin límite" NO suma al cupo del pedido. Visualmente muestra el
-  // valor de "Cantidad total del pedido" cuando existe, pero para sumas vale 0.
-  const cantidadParaSuma = (tv) => {
-    if (tv.sinLimite) return 0
-    return Number(tv.cantidad) || 0
-  }
-
-  const totalUnidades = useMemo(
-    () => tvs.reduce((s, tv) => s + cantidadParaSuma(tv), 0),
-    [tvs]
-  )
-  const marcasUnicas = useMemo(
-    () => new Set(tvs.map((tv) => tv.marca).filter(Boolean)).size,
-    [tvs]
-  )
-  const pallets = useMemo(
-    () => tvs.reduce(
-      (s, tv) => s + (tv.unidad === 'pallet' ? cantidadParaSuma(tv) : 0),
-      0
-    ),
-    [tvs]
-  )
-  const piezas = useMemo(
-    () => tvs.reduce(
-      (s, tv) => s + (tv.unidad !== 'pallet' ? cantidadParaSuma(tv) : 0),
-      0
-    ),
-    [tvs]
-  )
-
-  const cupoRestante = limite > 0 ? Math.max(0, limite - totalUnidades) : Infinity
-  const pedidoCerrado = limite > 0 && totalUnidades >= limite
-  const pedidoExcedido = limite > 0 && totalUnidades > limite
+  const pendientePorAsignar = limite > 0 ? Math.max(0, limite - metasDefinidasTotal) : 0
+  const excedenteAsignado = limite > 0 ? Math.max(0, metasDefinidasTotal - limite) : 0
+  const progresoLimite = limite > 0 ? Math.min(100, Math.round((metasDefinidasTotal / limite) * 100)) : 0
 
   const updateTv = (i, campo, valor) =>
     setTvs((prev) => prev.map((tv, idx) => (idx === i ? { ...tv, [campo]: valor } : tv)))
 
-  // Para cantidad: respeta el cupo restante (suma de las demás TVs vs límite).
-  const updateCantidad = (i, raw) => {
-    if (raw === '') {
-      updateTv(i, 'cantidad', '')
-      return
-    }
-    let valor = Number(raw)
-    if (!Number.isFinite(valor) || valor < 0) valor = 0
-    if (limite > 0) {
-      const otrosTotal = tvs.reduce(
-        (s, t, idx) => (idx === i ? s : s + cantidadParaSuma(t)),
-        0
-      )
-      const maxPermitido = Math.max(0, limite - otrosTotal)
-      if (valor > maxPermitido) valor = maxPermitido
-    }
-    updateTv(i, 'cantidad', valor)
-  }
-
-  const toggleSinLimiteTv = (i) =>
-    setTvs((prev) =>
-      prev.map((tv, idx) =>
-        idx === i ? { ...tv, sinLimite: !tv.sinLimite, cantidad: !tv.sinLimite ? 1 : (tv.cantidad || 1) } : tv
-      )
-    )
-
-  // SKU/Modelo: solo alfanuméricos, mayúsculas, tal cual viene (máx 20).
-  const updateSku = (i, raw) => {
-    const limpio = String(raw).replace(/[^A-Za-z0-9]/g, '').slice(0, 20).toUpperCase()
-    updateTv(i, 'modelo', limpio)
-  }
-
-  const togglePallet = (i) =>
-    setTvs((prev) =>
-      prev.map((tv, idx) =>
-        idx === i ? { ...tv, unidad: tv.unidad === 'pallet' ? 'pieza' : 'pallet' } : tv
-      )
-    )
-
-  // Una misma partida/SKU puede aceptar varias condiciones a la vez (ej.
-  // GRA y GRB). Nunca se permite dejar el arreglo vacío — si solo queda una
-  // condición marcada, no se puede desmarcar.
-  const toggleCondicionEnFila = (i, codigo) =>
-    setTvs((prev) =>
-      prev.map((tv, idx) => {
-        if (idx !== i) return tv
-        const actuales = tv.condiciones || []
-        const yaEsta = actuales.includes(codigo)
-        if (yaEsta && actuales.length === 1) return tv
-        const siguientes = yaEsta ? actuales.filter((c) => c !== codigo) : [...actuales, codigo]
-        return { ...tv, condiciones: siguientes }
-      })
-    )
-
   const agregarTv = () => {
-    if (pedidoCerrado) return
     setTvs((prev) => [...prev, tvVacia({
       condiciones: [condicionActiva],
       unidad: palletPorDefecto ? 'pallet' : 'pieza',
-      sinLimite: sinLimitePorDefecto,
     })])
   }
   const eliminarTv = (i) => setTvs((prev) => prev.filter((_, idx) => idx !== i))
 
-  // Duplica una fila completa (todos sus valores actuales) justo debajo de
-  // ella — respeta el mismo tope de cantidad total que "Agregar televisión".
+  // Duplica una fila completa justo debajo de ella.
   const duplicarTv = (i) => {
-    if (pedidoCerrado) return
     setTvs((prev) => {
       const original = prev[i]
       if (!original) return prev
@@ -330,20 +217,31 @@ export default function PedidoForm({
     })
   }
 
-  // Carga en lote (pegar / Excel / foto). Mapea los items al estado de TVs.
-  // Si lo único que hay es la tarjeta vacía inicial, la reemplaza; si no, agrega.
-  // Las TVs importadas también son "nuevas", así que heredan los mismos
-  // valores activos del toolbar (condición / pallet / sin límite).
+  // Centraliza duplicar/mover/eliminar/actualizar-campo en un solo callback
+  // — EditableProductRow no conoce el arreglo completo, solo su propio
+  // índice real (idx = tv._idx, asignado por groupProductsByBrandAndSize).
+  const onFilaAccion = (idx, accion, payload) => {
+    if (accion === 'update') return updateTv(idx, payload.campo, payload.valor)
+    if (accion === 'duplicar') return duplicarTv(idx)
+    if (accion === 'moverArriba') return moverArriba(idx)
+    if (accion === 'moverAbajo') return moverAbajo(idx)
+    if (accion === 'eliminar') return eliminarTv(idx)
+  }
+
+  const onCambiarMeta = (groupKey, valor) =>
+    setGroupTargets((prev) => ({ ...prev, [groupKey]: valor }))
+
+  // Carga en lote (pegar / Excel / foto). Si lo único que hay es la tarjeta
+  // vacía inicial, la reemplaza; si no, agrega. No asigna cantidad
+  // individual: las metas se capturan por grupo, después de importar.
   const importarTvs = (items) => {
-    if (pedidoCerrado || !items?.length) return
+    if (!items?.length) return
     const nuevas = items.map((it) => ({
       marca: it.marca,
       pulgadas: it.pulgadas ? String(it.pulgadas) : '',
       condiciones: [condicionActiva],
       modelo: it.modelo,
-      cantidad: it.cantidad || 1,
       unidad: palletPorDefecto ? 'pallet' : (it.unidad || 'pieza'),
-      sinLimite: sinLimitePorDefecto,
       modelosAlternativos: it.modelosAlternativos || [],
     }))
     setTvs((prev) => {
@@ -362,33 +260,33 @@ export default function PedidoForm({
     if (tvs.length === 0) return setError(t('pedidoForm.agregaAlMenos'))
 
     for (const [i, tv] of tvs.entries()) {
-      if (!MARCAS.includes(tv.marca)) return setError(t('pedidoForm.marcaInvalida', { n: i + 1 }))
-      if (!PULGADAS.includes(Number(tv.pulgadas))) return setError(t('pedidoForm.pulgadasInvalidas', { n: i + 1 }))
-      if (!tv.condiciones?.length || tv.condiciones.some((c) => !CONDICIONES.includes(c))) {
-        return setError(t('pedidoForm.faltaCondicion', { n: i + 1 }))
-      }
+      if (!marcaValida(tv.marca)) return setError(t('pedidoForm.marcaInvalida', { n: i + 1 }))
+      if (!tv.pulgadas) return setError(t('pedidoForm.pulgadasInvalidas', { n: i + 1 }))
+      if (!tv.condiciones?.length) return setError(t('pedidoForm.faltaCondicion', { n: i + 1 }))
       if (!SKU_REGEX.test(tv.modelo || '')) {
         return setError(t('pedidoForm.capturaModelo', { n: i + 1 }))
       }
-      if (!tv.sinLimite && (!Number(tv.cantidad) || Number(tv.cantidad) < 1)) {
-        return setError(t('pedidoForm.cantidadInvalida', { n: i + 1 }))
-      }
     }
 
-    if (limite > 0) {
-      const haySinLimite = tvs.some((tv) => tv.sinLimite)
-      if (totalUnidades > limite) {
-        return setError(t('pedidoForm.sumaExcede', { suma: totalUnidades, limite }))
-      }
-      if (totalUnidades < limite && !haySinLimite) {
-        return setError(t('pedidoForm.sumaNoCoincide', { suma: totalUnidades, limite }))
-      }
+    const televisionesEnvio = tvs.map((tv) => ({
+      marca: tv.marca,
+      pulgadas: Number(tv.pulgadas),
+      condiciones: tv.condiciones,
+      modelo: tv.modelo.trim(),
+      unidad: tv.unidad === 'pallet' ? 'pallet' : 'pieza',
+      sinLimite: true,
+      cantidad: 0,
+      modelosAlternativos: tv.modelosAlternativos || [],
+    }))
+    const groupTargetsEnvio = filtrarMetasHuerfanas(groupTargets, televisionesEnvio)
+
+    if (limite > 0 && excedenteAsignado > 0) {
+      return setError(t('pedidoForm.metasExcedenTotal', { suma: metasDefinidasTotal, limite }))
     }
 
     // El pedido ya no pide sus propias "condiciones" por separado — se
     // construyen automáticamente a partir de las condiciones únicas que
-    // realmente se usaron en las televisiones capturadas (sin duplicar la
-    // captura). Cada TV puede aportar varias condiciones a la vez.
+    // realmente se usaron en las televisiones capturadas.
     const condicionesUnicas = [...new Set(tvs.flatMap((tv) => tv.condiciones || []))]
 
     setEnviando(true)
@@ -399,25 +297,14 @@ export default function PedidoForm({
         fechaLimite,
         condiciones: condicionesUnicas,
         cantidadTotal: limite > 0 ? limite : null,
-        televisiones: tvs.map((tv) => ({
-          marca: tv.marca,
-          pulgadas: Number(tv.pulgadas),
-          condiciones: tv.condiciones,
-          modelo: tv.modelo.trim(),
-          cantidad: tv.sinLimite ? (limite > 0 ? limite : 0) : Number(tv.cantidad),
-          unidad: tv.unidad === 'pallet' ? 'pallet' : 'pieza',
-          sinLimite: !!tv.sinLimite,
-          modelosAlternativos: tv.modelosAlternativos || [],
-        })),
+        televisiones: televisionesEnvio,
+        groupTargets: groupTargetsEnvio,
       })
     } catch (err) {
       setError(err.message)
       setEnviando(false)
     }
   }
-
-  const hayPallets = pallets > 0
-  const progresoLimite = limite > 0 ? Math.min(100, Math.round((totalUnidades / limite) * 100)) : 0
 
   return (
     <main className="pedido-nuevo-page">
@@ -493,22 +380,19 @@ export default function PedidoForm({
                 placeholder={t('pedidoForm.placeholderCantidadTotal')}
               />
               {limite > 0 && (
-                <div className={`limite-resumen ${pedidoCerrado ? 'lleno' : ''} ${pedidoExcedido ? 'excedido' : ''}`}>
+                <div className={`limite-resumen ${excedenteAsignado > 0 ? 'excedido' : (pendientePorAsignar === 0 ? 'lleno' : '')}`}>
                   <div className="limite-info">
                     <span className="limite-numero">
-                      {totalUnidades} <span className="limite-de">{t('pedidoForm.limiteDe')}</span> {limite}
+                      {metasDefinidasTotal} <span className="limite-de">{t('pedidoForm.limiteDe')}</span> {limite}
                     </span>
                     <span className="limite-pct">{progresoLimite}%</span>
                   </div>
                   <div className="progreso-track">
                     <div className="progreso-fill" style={{ width: `${progresoLimite}%` }} />
                   </div>
-                  {pedidoCerrado && !pedidoExcedido && (
-                    <div className="limite-mensaje">{t('pedidoForm.pedidoCompletoNoAgregar')}</div>
-                  )}
-                  {pedidoExcedido && (
+                  {excedenteAsignado > 0 && (
                     <div className="limite-mensaje error">
-                      {t('pedidoForm.excedidoPor', { n: totalUnidades - limite })}
+                      {t('pedidoForm.excedidoPor', { n: excedenteAsignado })}
                     </div>
                   )}
                 </div>
@@ -525,7 +409,7 @@ export default function PedidoForm({
               <p className="card-seccion-desc">{t('pedidoForm.importarDesc')}</p>
             </div>
           </header>
-          <ImportarPedidoPanel onImportar={importarTvs} disabled={pedidoCerrado} />
+          <ImportarPedidoPanel onImportar={importarTvs} disabled={false} />
         </section>
 
         <section className="card card-pedido-seccion card-televisiones">
@@ -541,15 +425,9 @@ export default function PedidoForm({
           </header>
 
           <div className="tv-toolbar">
-            <button
-              type="button"
-              onClick={agregarTv}
-              className="btn btn-primary"
-              disabled={pedidoCerrado}
-              title={pedidoCerrado ? t('pedidoForm.pedidoCompletoLimite') : undefined}
-            >
+            <button type="button" onClick={agregarTv} className="btn btn-primary">
               <IconPlus />
-              {pedidoCerrado ? t('pedidoForm.pedidoCompleto') : t('pedidoForm.agregarTelevision')}
+              {t('pedidoForm.agregarTelevision')}
             </button>
 
             <div className="tv-condicion-activa" role="group" aria-label={t('pedidoForm.condicionActivaLabel')}>
@@ -567,51 +445,6 @@ export default function PedidoForm({
                   {c}
                 </button>
               ))}
-
-              <div className="tv-condicion-mas" ref={masMenuRef}>
-                <button
-                  type="button"
-                  className={`tv-condicion-chip tv-condicion-mas-btn ${
-                    condicionEsExtra ? `tv-condicion-chip-${condicionActiva.toLowerCase()} activa` : ''
-                  }`}
-                  onClick={() => setMasCondicionesAbierto((v) => !v)}
-                  aria-expanded={masCondicionesAbierto}
-                  aria-haspopup="listbox"
-                  title={t('pedidoForm.verMasCondiciones')}
-                >
-                  {condicionEsExtra && <span className="tv-condicion-chip-dot" aria-hidden="true" />}
-                  {condicionEsExtra ? condicionActiva : (
-                    <>
-                      <span className="tv-condicion-mas-texto-completo">{t('pedidoForm.masCondicionesCompleto')}</span>
-                      <span className="tv-condicion-mas-texto-corto">{t('pedidoForm.masCondicionesCorto')}</span>
-                    </>
-                  )}
-                  <IconChevronDown />
-                </button>
-                {masCondicionesAbierto && (
-                  <div className="tv-condicion-mas-dropdown" role="listbox">
-                    {CONDICIONES_MAS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        role="option"
-                        aria-selected={condicionActiva === c}
-                        className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-condicion-mas-item ${
-                          condicionActiva === c ? 'activa' : ''
-                        }`}
-                        onClick={() => {
-                          setCondicionActiva(c)
-                          setMasCondicionesAbierto(false)
-                        }}
-                        title={t('pedidoForm.condicionTooltip', { c })}
-                      >
-                        <span className="tv-condicion-chip-dot" aria-hidden="true" />
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
             <button
@@ -624,22 +457,9 @@ export default function PedidoForm({
               <IconBox />
               {t('pedidoForm.pallet')}
             </button>
-
-            <button
-              type="button"
-              className={`tv-toolbar-toggle ${sinLimitePorDefecto ? 'activa' : ''}`}
-              onClick={() => setSinLimitePorDefecto((v) => !v)}
-              aria-pressed={sinLimitePorDefecto}
-              title={t('pedidoForm.sinLimiteTooltip')}
-            >
-              <span aria-hidden="true">∞</span>
-              {t('pedidoForm.sinLimite')}
-            </button>
           </div>
 
-          <datalist id="marcas-list">
-            {MARCAS.map((m) => <option key={m} value={m} />)}
-          </datalist>
+          <MarcasDatalist id="marcas-list" />
 
           {tvs.length === 0 ? (
             <div className="empty tv-empty-state">
@@ -650,256 +470,15 @@ export default function PedidoForm({
               </button>
             </div>
           ) : (
-            <>
-              <div className="tabla-wrap tv-tabla-wrap">
-                <table className="tabla-pedidos tv-tabla-moderna" ref={tablaRef} onKeyDown={onTablaKeyDown}>
-                  <thead>
-                    <tr>
-                      <th className="tv-col-num">#</th>
-                      <th>{t('pedidoForm.colSkuModelo')}</th>
-                      <th>{t('common.marca')}</th>
-                      <th>{t('pedidoForm.colPulgada')}</th>
-                      <th>{t('pedidoForm.colCantidad')}</th>
-                      <th>{t('pedidoForm.colTipo')}</th>
-                      <th className="tv-col-condicion">{t('pedidoForm.condicion')}</th>
-                      <th className="tv-col-acciones"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tvs.map((tv, i) => {
-                      const esPallet = tv.unidad === 'pallet'
-                      const esSinLimite = !!tv.sinLimite
-                      const otrosTotal = tvs.reduce(
-                        (s, t, idx) => (idx === i ? s : s + cantidadParaSuma(t)),
-                        0
-                      )
-                      const maxCantidad = limite > 0 ? Math.max(0, limite - otrosTotal) : undefined
-                      const skuOk = SKU_REGEX.test(tv.modelo || '')
-                      return (
-                        <tr key={i} className={esPallet ? 'es-pallet' : ''}>
-                          <td className="tv-col-num" data-label="#">{i + 1}</td>
-                          <td data-label={t('pedidoForm.colSkuModelo')}>
-                            <input
-                              ref={(el) => { if (el) inputRefs.current[i] = el }}
-                              type="text"
-                              value={tv.modelo}
-                              onChange={(e) => updateSku(i, e.target.value)}
-                              placeholder={t('pedidoForm.colSkuModelo')}
-                              pattern="[A-Za-z0-9]{3,20}"
-                              title={t('pedidoForm.skuTooltip')}
-                              minLength={3}
-                              maxLength={20}
-                              aria-invalid={tv.modelo && !skuOk ? 'true' : undefined}
-                              required
-                            />
-                            {tv.modelosAlternativos?.length > 0 && (
-                              <div className="tv-alt-hint">
-                                {t('common.tambienValido', { lista: tv.modelosAlternativos.join(', ') })}
-                              </div>
-                            )}
-                          </td>
-                          <td data-label={t('common.marca')}>
-                            <input
-                              list="marcas-list"
-                              value={tv.marca}
-                              onChange={(e) => updateTv(i, 'marca', e.target.value)}
-                              placeholder={t('common.marca')}
-                              required
-                            />
-                          </td>
-                          <td data-label={t('pedidoForm.colPulgada')}>
-                            <select
-                              value={tv.pulgadas}
-                              onChange={(e) => updateTv(i, 'pulgadas', e.target.value)}
-                              required
-                            >
-                              <option value="">—</option>
-                              {PULGADAS.map((p) => (
-                                <option key={p} value={p}>{p}&quot;</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td data-label={t('pedidoForm.colCantidad')}>
-                            {esSinLimite ? (
-                              <div
-                                className="cantidad-sin-limite"
-                                aria-label={limite > 0 ? t('pedidoForm.cantidadTotalPedidoAria', { n: limite }) : t('pedidoForm.cantidadSinLimiteAria')}
-                              >
-                                {limite > 0 ? (
-                                  <span className="cantidad-sin-limite-numero">{limite}</span>
-                                ) : (
-                                  <span className="cantidad-sin-limite-simbolo">∞</span>
-                                )}
-                              </div>
-                            ) : (
-                              <input
-                                type="number"
-                                min="1"
-                                max={maxCantidad}
-                                value={tv.cantidad}
-                                onChange={(e) => updateCantidad(i, e.target.value)}
-                                placeholder={esPallet ? t('pedidoForm.pallets') : t('pedidoForm.placeholderCant')}
-                                required
-                              />
-                            )}
-                          </td>
-                          <td data-label={t('pedidoForm.colTipo')}>
-                            <div className="tv-segment" role="group" aria-label={t('pedidoForm.tipoTelevisionAria')}>
-                              <button
-                                type="button"
-                                className={`tv-segment-btn ${esPallet ? 'activo' : ''}`}
-                                onClick={() => togglePallet(i)}
-                                aria-pressed={esPallet}
-                                title={t('pedidoForm.marcarPalletTitle')}
-                              >
-                                <IconBox /> {t('pedidoForm.pallet')}
-                              </button>
-                              <button
-                                type="button"
-                                className={`tv-segment-btn ${esSinLimite ? 'activo' : ''}`}
-                                onClick={() => toggleSinLimiteTv(i)}
-                                aria-pressed={esSinLimite}
-                                title={t('pedidoForm.marcarSinLimiteTitle')}
-                              >
-                                <span aria-hidden="true">∞</span> {t('pedidoForm.sinLimite')}
-                              </button>
-                            </div>
-                          </td>
-                          <td className="tv-col-condicion" data-label={t('pedidoForm.condicion')}>
-                            <button
-                              type="button"
-                              ref={(el) => { condicionBtnRefs.current[i] = el }}
-                              className="tv-fila-condicion-btn"
-                              onClick={() => setFilaCondicionAbierta((prev) => (prev === i ? null : i))}
-                              aria-expanded={filaCondicionAbierta === i}
-                              aria-haspopup="listbox"
-                              title={t('pedidoForm.editarCondicionTitle')}
-                            >
-                              <span className="tv-fila-condicion-resumen">
-                                {(tv.condiciones || []).slice(0, 2).map((c) => (
-                                  <span
-                                    key={c}
-                                    className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-fila-condicion-chip`}
-                                  >
-                                    <span className="tv-condicion-chip-dot" aria-hidden="true" />
-                                    {c}
-                                  </span>
-                                ))}
-                                {(tv.condiciones?.length || 0) > 2 && (
-                                  <span className="tv-fila-condicion-mas-badge">+{tv.condiciones.length - 2}</span>
-                                )}
-                              </span>
-                              <IconChevronDown />
-                            </button>
-                          </td>
-                          <td className="tv-col-acciones" data-label={t('historial.colAcciones')}>
-                            <div className="tv-acciones-fila">
-                              <button
-                                type="button"
-                                onClick={() => duplicarTv(i)}
-                                className="btn-icono"
-                                aria-label={t('pedidoForm.duplicarTvAria', { n: i + 1 })}
-                                title={t('pedidoForm.duplicarFilaTitle')}
-                                disabled={pedidoCerrado}
-                              >
-                                <IconCopy />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => moverArriba(i)}
-                                className="btn-icono"
-                                aria-label={t('pedidoForm.moverArribaAria', { n: i + 1 })}
-                                title={t('pedidoForm.moverArribaTitle')}
-                                disabled={i === 0}
-                              >
-                                <IconArrowUp />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => moverAbajo(i)}
-                                className="btn-icono"
-                                aria-label={t('pedidoForm.moverAbajoAria', { n: i + 1 })}
-                                title={t('pedidoForm.moverAbajoTitle')}
-                                disabled={i === tvs.length - 1}
-                              >
-                                <IconArrowDown />
-                              </button>
-                              {tvs.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarTv(i)}
-                                  className="btn-icono btn-icono-eliminar"
-                                  aria-label={t('pedidoForm.quitarAria', { n: i + 1 })}
-                                  title={t('pedidoForm.quitar')}
-                                >
-                                  <IconTrash />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {filaCondicionAbierta !== null && condicionPopoverRect && typeof document !== 'undefined' && createPortal(
-                <div
-                  ref={condicionPortalRef}
-                  className="tv-fila-condicion-dropdown-portal"
-                  role="listbox"
-                  aria-multiselectable="true"
-                  style={{
-                    position: 'fixed',
-                    top: condicionPopoverRect.top,
-                    left: condicionPopoverRect.left,
-                    minWidth: condicionPopoverRect.minWidth,
-                  }}
-                >
-                  {CONDICIONES.map((c) => {
-                    const seleccionada = (tvs[filaCondicionAbierta]?.condiciones || []).includes(c)
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        role="option"
-                        aria-selected={seleccionada}
-                        className={`tv-condicion-chip tv-condicion-chip-${c.toLowerCase()} tv-condicion-mas-item ${seleccionada ? 'activa' : ''}`}
-                        onClick={() => toggleCondicionEnFila(filaCondicionAbierta, c)}
-                      >
-                        <span className="tv-condicion-chip-dot" aria-hidden="true" />
-                        {c}
-                      </button>
-                    )
-                  })}
-                </div>,
-                document.body
-              )}
-
-              <div className="tv-footer-resumen">
-                <div className="tv-footer-item">
-                  <span className="tv-footer-label">{t('pedidoForm.modelos')}</span>
-                  <strong className="tv-footer-numero">{tvs.length}</strong>
-                </div>
-                <div className="tv-footer-item">
-                  <span className="tv-footer-label">{t('pedidoForm.marcas')}</span>
-                  <strong className="tv-footer-numero">{marcasUnicas}</strong>
-                </div>
-                <div className="tv-footer-item">
-                  <span className="tv-footer-label">{t('pedidoForm.tvsTotal')}</span>
-                  <strong className="tv-footer-numero">{piezas}</strong>
-                </div>
-                <div className="tv-footer-item">
-                  <span className="tv-footer-label">{t('pedidoForm.cantidadTotalCorta')}</span>
-                  <strong className="tv-footer-numero">{totalUnidades}</strong>
-                </div>
-                <div className="tv-footer-item">
-                  <span className="tv-footer-label">{t('pedidoForm.pallets')}</span>
-                  <strong className="tv-footer-numero">{pallets}</strong>
-                </div>
-              </div>
-            </>
+            <div ref={productosRef} onKeyDown={onProductosKeyDown}>
+              <GroupedOrderProducts
+                televisiones={tvs}
+                metasGrupo={groupTargets}
+                mode={initialData ? 'edit' : 'create'}
+                onFilaAccion={onFilaAccion}
+                onCambiarMeta={onCambiarMeta}
+              />
+            </div>
           )}
         </section>
 
@@ -917,22 +496,29 @@ export default function PedidoForm({
               <span className="resumen-fila-label">{t('pedidoForm.marcas')}</span>
               <strong className="resumen-fila-numero">{marcasUnicas}</strong>
             </div>
-            <div className="resumen-fila resumen-fila-tvs">
+            <div className="resumen-fila resumen-fila-grupos">
               <span className="resumen-fila-icono"><IconBox /></span>
-              <span className="resumen-fila-label">{t('pedidoForm.tvsTotal')}</span>
-              <strong className="resumen-fila-numero">{piezas}</strong>
+              <span className="resumen-fila-label">{t('pedidoForm.grupo.grupos')}</span>
+              <strong className="resumen-fila-numero">{gruposActuales.length}</strong>
             </div>
-            {hayPallets && (
-              <div className="resumen-fila resumen-fila-pallets">
-                <span className="resumen-fila-icono"><IconBox /></span>
-                <span className="resumen-fila-label">{t('pedidoForm.pallets')}</span>
-                <strong className="resumen-fila-numero">{pallets}</strong>
-              </div>
-            )}
             <div className="resumen-fila resumen-fila-total">
               <span className="resumen-fila-label">{t('pedidoForm.cantidadTotalCorta')}</span>
-              <strong className="resumen-fila-numero">{totalUnidades}</strong>
+              <strong className="resumen-fila-numero">{limite > 0 ? limite : '—'}</strong>
             </div>
+            <div className="resumen-fila resumen-fila-metas-definidas">
+              <span className="resumen-fila-label">{t('pedidoForm.grupo.metasDefinidas')}</span>
+              <strong className="resumen-fila-numero">{metasDefinidasTotal}</strong>
+            </div>
+            <div className="resumen-fila resumen-fila-pendiente-asignar">
+              <span className="resumen-fila-label">{t('pedidoForm.grupo.pendientePorAsignar')}</span>
+              <strong className="resumen-fila-numero">{limite > 0 ? pendientePorAsignar : '—'}</strong>
+            </div>
+            {gruposPorDefinirCount > 0 && (
+              <div className="resumen-fila resumen-fila-grupos-por-definir">
+                <span className="resumen-fila-label">{t('pedidoForm.grupo.gruposPorDefinir')}</span>
+                <strong className="resumen-fila-numero">{gruposPorDefinirCount}</strong>
+              </div>
+            )}
           </div>
 
           {error && (

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getDb } from '@/lib/mongodb'
-import { MARCAS, PULGADAS, CONDICIONES, SKU_REGEX } from '@/lib/catalogos'
+import { PULGADAS, CONDICIONES, SKU_REGEX, marcaValida } from '@/lib/catalogos'
 import { getUsuario, requireModule } from '@/lib/auth'
 import { registrarEvento } from '@/lib/eventos'
 import { calcularTotales } from '@/lib/estado-pedido'
+import { normalizarMarca } from '@/lib/importar-pedido'
 import { getServerT } from '@/lib/i18n-server'
 
 // Agrega un renglón de SKU no listado ("de último momento") durante el
@@ -33,9 +34,10 @@ export async function POST(req, { params }) {
   const modelo = typeof body.modelo === 'string' ? body.modelo.trim().toUpperCase() : ''
   const cantidadNum = Number(cantidad)
 
-  if (!MARCAS.includes(marca)) {
+  if (!marcaValida(marca)) {
     return NextResponse.json({ error: t('pedidoForm.marcaInvalida', { n: 1 }) }, { status: 400 })
   }
+  const marcaLimpia = normalizarMarca(marca.trim().replace(/\s+/g, ' '))
   if (!PULGADAS.includes(pulgadas)) {
     return NextResponse.json({ error: t('pedidoForm.pulgadasInvalidas', { n: 1 }) }, { status: 400 })
   }
@@ -82,7 +84,7 @@ export async function POST(req, { params }) {
   const { progresoPct: pctAntes } = calcularTotales(pedido)
 
   const nuevoTv = {
-    marca,
+    marca: marcaLimpia,
     pulgadas,
     condiciones: [...new Set(condiciones)],
     modelo,
@@ -115,7 +117,7 @@ export async function POST(req, { params }) {
     usuarioNombre: usuario?.nombre || null,
     detalle: t('eventosDetalle.skuUltimoMomentoAgregado', { sku: modelo, cantidad: cantidadNum }),
     detalleSecundario: t('eventosDetalle.articulosSurtidos', { surt: totalSurtido, req: totalRequerido }),
-    metadata: { sku: modelo, cantidad: cantidadNum, marca, pulgadas },
+    metadata: { sku: modelo, cantidad: cantidadNum, marca: marcaLimpia, pulgadas },
   })
 
   return NextResponse.json({ ok: true, tv: nuevoTv, index: televisionesDespues.length - 1 })

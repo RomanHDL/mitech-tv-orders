@@ -23,6 +23,7 @@ export default async function EditarPage({ params }) {
     fechaLimite: pedido.fechaLimite || '',
     condiciones: pedido.condiciones || [],
     cantidadTotal: pedido.cantidadTotal ?? null,
+    metasGrupo: pedido.metasGrupo || {},
     televisiones: (pedido.televisiones || []).map((tv) => ({
       marca: tv.marca,
       pulgadas: tv.pulgadas,
