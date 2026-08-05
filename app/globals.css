@@ -3445,10 +3445,16 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
   .historial-encabezado-acciones .btn-secondary { flex: 1; }
 }
 
-/* Imprimir solo el panel de detalle (botón "Imprimir" del panel lateral) */
+/* Imprimir solo el panel de detalle (botón "Imprimir" del panel lateral).
+   Acotado con :has() a cuando #panel-detalle-imprimible existe de verdad en
+   la página — sin esto, "body * { visibility: hidden }" es una regla
+   GLOBAL que corre en cualquier impresión de toda la app (incluida
+   /pedidos/[id]/imprimir, que no tiene ese id) y dejaba esas hojas en
+   blanco: todo quedaba oculto y nada calzaba con el selector de "visible". */
 @media print {
-  body * { visibility: hidden; }
-  #panel-detalle-imprimible, #panel-detalle-imprimible * { visibility: visible; }
+  body:has(#panel-detalle-imprimible) * { visibility: hidden; }
+  body:has(#panel-detalle-imprimible) #panel-detalle-imprimible,
+  body:has(#panel-detalle-imprimible) #panel-detalle-imprimible * { visibility: visible; }
   #panel-detalle-imprimible {
     position: absolute;
     top: 0; left: 0;
