@@ -96,6 +96,10 @@ export default async function ImprimirPage({ params }) {
   const lang = await getServerLang()
   const usuario = await getUsuario()
 
+  // Mismo orden en que quedaron guardadas en el pedido — .map() nunca
+  // reordena, solo normaliza `condiciones`. No hay ningún .sort()/.reverse()
+  // ni reagrupación por marca aquí: la tabla "Avance por SKU" debe verse
+  // exactamente como en el detalle original del pedido.
   const televisiones = (pedido.televisiones || []).map((tvRaw) => ({
     ...tvRaw,
     condiciones: Array.isArray(tvRaw.condiciones) ? tvRaw.condiciones : (tvRaw.condicion ? [tvRaw.condicion] : []),
