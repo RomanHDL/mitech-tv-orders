@@ -7,7 +7,7 @@ import { calcularTotales, diasHastaLimite, normalizeOrderStatus } from '@/lib/es
 import { getServerT, getServerLang } from '@/lib/i18n-server'
 import { localeDe } from '@/lib/intl-format'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
-import { groupProductsByBrandAndSize } from '@/lib/surtido-grupos'
+import { GROUP_STATUS, calculateBrandSummary, groupProductsByBrandAndSize } from '@/lib/surtido-grupos'
 import {
   IconBox, IconCalendar, IconCheck, IconClipboardList, IconClock, IconUser,
 } from '../../../components/icons'
@@ -76,24 +76,22 @@ function calcularAvanceSku(tv, group) {
     return { solicitada, surtida, pendiente, avancePct, metaCompartida: false, estado }
   }
 
-  if (group.products.length > 1) {
-    return {
-      solicitada: null,
-      surtida,
-      pendiente: null,
-      avancePct: null,
-      metaCompartida: true,
-      estado: surtida > 0 ? 'PARCIAL' : 'PENDIENTE',
-    }
-  }
-
+  // Sin meta propia — dos motivos posibles, y el renglón debe distinguirlos:
+  // (a) el grupo SÍ tiene meta pero la comparte entre varios SKU
+  //     ("Meta compartida"), o
+  // (b) el grupo todavía no tiene ninguna meta definida ("Por definir"),
+  //     sin importar si tiene uno o varios SKU (ej. Samsung 85").
+  // En ambos casos no hay número propio que mostrar, solo si el SKU ya
+  // aportó algo (Parcial) o no (Pendiente) — nunca "Sin solicitud" (ese
+  // texto queda solo para una meta explícita de 0, ver arriba).
+  const metaDefinida = group.requested !== null && group.requested !== undefined
   return {
     solicitada: null,
     surtida,
     pendiente: null,
     avancePct: null,
-    metaCompartida: false,
-    estado: 'SIN_SOLICITUD',
+    metaCompartida: metaDefinida && group.products.length > 1,
+    estado: surtida > 0 ? 'PARCIAL' : 'PENDIENTE',
   }
 }
 
@@ -102,6 +100,126 @@ const ESTADO_SKU_CLASE = {
   PARCIAL: 'parcial',
   PENDIENTE: 'pendiente',
   SIN_SOLICITUD: 'sin-solicitud',
+}
+
+// Etiqueta/clase del estado a nivel de GRUPO — solo para esta hoja impresa.
+// Reutiliza los mismos GROUP_STATUS que Surtir, pero con vocabulario propio
+// del reporte (p.ej. "Pendiente" en vez de "Sin iniciar", que es el término
+// que sí usa la pantalla de Surtir) — nunca toca groupStatusLabel() ni las
+// etiquetas que Surtir ya muestra en pantalla.
+const GRUPO_ESTADO_INFO = {
+  [GROUP_STATUS.COMPLETE]: { key: 'surtir.grupo.estadoCompleto', clase: 'completo' },
+  [GROUP_STATUS.IN_PROGRESS]: { key: 'surtir.grupo.estadoEnProceso', clase: 'en-proceso' },
+  [GROUP_STATUS.NOT_STARTED]: { key: 'common.pendiente', clase: 'pendiente' },
+  [GROUP_STATUS.EXCEEDED]: { key: 'surtir.grupo.estadoExcedido', clase: 'excedido' },
+  [GROUP_STATUS.UNDEFINED]: { key: 'surtir.grupo.estadoPorDefinir', clase: 'por-definir' },
+}
+
+function grupoEstadoBadge(t, summary) {
+  const info = GRUPO_ESTADO_INFO[summary.status]
+  return { texto: t(info.key, { n: summary.excess }), clase: info.clase }
+}
+
+// Un grupo (marca+pulgadas) completo: encabezado + fila de captions + sus
+// SKU. Extraído como función aparte (no JSX inline) para poder reutilizarlo
+// tanto suelto como envuelto junto al encabezado de marca (ver más abajo,
+// print-brand-block-intro) sin duplicar el markup.
+function renderSizeGroup(t, group) {
+  const requestedText = group.requested === null || group.requested === undefined
+    ? t('surtir.grupo.porDefinir')
+    : group.requested
+  const pendingText = group.summary.pending === null || group.summary.pending === undefined
+    ? '—'
+    : group.summary.pending
+  const estadoGrupo = grupoEstadoBadge(t, group.summary)
+
+  return (
+    <div key={group.key} className="print-size-group">
+      <header className="print-size-group-header">
+        <div className="print-size-group-nombre">
+          <h3>{group.brand} {group.size}&quot;</h3>
+          <span className="print-size-group-badge">
+            {t('surtir.grupo.skuCount', { count: group.products.length })}
+          </span>
+        </div>
+        <div className="print-size-group-metricas">
+          <div className="print-size-group-metrica">
+            <span>{t('surtir.grupo.solicitadoGrupo')}</span>
+            <strong>{requestedText}</strong>
+          </div>
+          <div className="print-size-group-metrica">
+            <span>{t('surtir.grupo.surtidoGrupo')}</span>
+            <strong>{group.summary.supplied}</strong>
+          </div>
+          <div className="print-size-group-metrica">
+            <span>{t('surtir.grupo.pendienteGrupo')}</span>
+            <strong>{pendingText}</strong>
+          </div>
+        </div>
+        <span className={`print-estado-badge print-size-group-estado ${estadoGrupo.clase}`}>
+          {estadoGrupo.texto}
+        </span>
+      </header>
+
+      <div className="print-sku-row print-sku-row-header">
+        <span />
+        <span />
+        <span className="num">{t('imprimir.colSolicitada')}</span>
+        <span className="num">{t('imprimir.colSurtida')}</span>
+        <span className="num">{t('common.pendiente')}</span>
+        <span>{t('imprimir.colAvance')}</span>
+        <span>{t('imprimir.colEstado')}</span>
+      </div>
+
+      {group.products.map((tv, i) => {
+        const avance = calcularAvanceSku(tv, group)
+        return (
+          <div key={tv._idx} className="print-sku-row">
+            <span className="print-sku-num">{i + 1}.</span>
+            <div className="print-sku-producto">
+              <span className="print-sku-modelo">{tv.modelo || '—'}</span>
+              <span className="print-sku-detalle">
+                {tv.marca} · {tv.pulgadas}″
+                {(tv.condiciones || []).length > 0 && (
+                  <span className="print-cond-mini">
+                    {tv.condiciones.map((c) => (
+                      <span key={c} className={`print-cond-chip cond-${c.toLowerCase()}`}>{c}</span>
+                    ))}
+                  </span>
+                )}
+              </span>
+            </div>
+            <span className="num print-sku-meta">
+              {avance.solicitada === null
+                ? (avance.metaCompartida ? t('imprimir.metaCompartida') : t('surtir.grupo.porDefinir'))
+                : avance.solicitada}
+            </span>
+            <span className="num print-sku-meta">{avance.surtida}</span>
+            <span className="num print-sku-meta">{avance.pendiente === null ? '—' : avance.pendiente}</span>
+            <span>
+              {avance.avancePct === null ? (
+                <span className="print-avance-sinlimite">
+                  {avance.metaCompartida ? t('imprimir.metaCompartida') : t('surtir.grupo.porDefinir')}
+                </span>
+              ) : (
+                <div className="print-avance-celda">
+                  <div className="print-avance-track">
+                    <div className="print-avance-fill" style={{ width: `${avance.avancePct}%` }} />
+                  </div>
+                  <span className="print-avance-pct">{avance.avancePct}%</span>
+                </div>
+              )}
+            </span>
+            <span>
+              <span className={`print-estado-badge ${ESTADO_SKU_CLASE[avance.estado]}`}>
+                {avance.estado === 'SIN_SOLICITUD' ? t('imprimir.sinSolicitud') : t(`common.${ESTADO_SKU_CLASE[avance.estado]}`)}
+              </span>
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export default async function ImprimirPage({ params }) {
@@ -124,12 +242,6 @@ export default async function ImprimirPage({ params }) {
   // de cada renglón se resuelve vía el grupo (marca+pulgadas), igual que en
   // el resto de la app.
   const brandSections = groupProductsByBrandAndSize(televisiones, pedido.metasGrupo)
-  const filasSku = brandSections.flatMap((brand) =>
-    brand.sizes.flatMap((group) =>
-      group.products.map((tv) => ({ tv, avance: calcularAvanceSku(tv, group) })),
-    ),
-  )
-  const marcasDistintas = [...new Set(televisiones.map((tv) => tv.marca).filter(Boolean))].sort()
 
   const { totalRequerido, totalSurtido, progresoPct, pendiente } = calcularTotales(pedido)
 
@@ -274,107 +386,43 @@ export default async function ImprimirPage({ params }) {
           </div>
         </div>
 
-        {/* 4) Avance por SKU */}
-        <h2 className="print-section-title">{t('imprimir.avancePorSkuTitulo')}</h2>
-        <p className="print-section-subtitulo">{t('imprimir.avancePorSkuSubtitulo')}</p>
+        {/* 4) Productos — marca → pulgadas → SKU. Nunca la tabla plana
+            anterior: la meta pertenece al grupo (marca+pulgadas), así que
+            cada nivel se resuelve con las mismas funciones de
+            lib/surtido-grupos.js que ya usan Surtir/Nuevo/Editar. */}
+        <div className="print-productos">
+          {brandSections.map((brand) => {
+            const resumenMarca = calculateBrandSummary(brand)
+            const [primerGrupo, ...restoGrupos] = brand.sizes
+            return (
+              <section key={brand.key} className="print-brand-block">
+                {/* El encabezado de marca y su PRIMER grupo viajan juntos como
+                    un solo bloque atómico (break-inside: avoid) — un simple
+                    "avoid" de un solo lado en el encabezado no bastaba: Chrome
+                    seguía dejando "SAMSUNG" solo al pie de una hoja con sus
+                    grupos abriendo la siguiente (comprobado con LORENA). Los
+                    demás grupos de la marca siguen sueltos y pueden fluir a
+                    más hojas con normalidad. */}
+                <div className="print-brand-block-intro">
+                  <header className="print-brand-block-header">
+                    <h2 className="print-brand-block-nombre">{brand.label.toUpperCase()}</h2>
+                    <p className="print-brand-block-resumen">
+                      {t('surtir.grupo.skuCount', { count: resumenMarca.skuCount })}
+                      {' · '}{t('surtir.resumenPedido.totalSolicitado')}: {resumenMarca.requestedDefinedTotal}
+                      {' · '}{t('surtir.grupo.surtidas')}: {resumenMarca.suppliedTotal}
+                      {' · '}{t('surtir.grupo.pendientes')}: {resumenMarca.pendingTotal}
+                      {resumenMarca.undefinedGroupsCount > 0 && (
+                        <> · {t('surtir.grupo.grupoPorDefinir', { count: resumenMarca.undefinedGroupsCount })}</>
+                      )}
+                    </p>
+                  </header>
+                  {primerGrupo && renderSizeGroup(t, primerGrupo)}
+                </div>
 
-        <table className="print-sku-table">
-          <thead>
-            <tr>
-              <th>{t('imprimir.colSku')}</th>
-              <th>{t('common.marca')}</th>
-              <th>{t('common.pulgadas')}</th>
-              <th>{t('imprimir.colCondicion')}</th>
-              <th className="num">{t('imprimir.colSolicitada')}</th>
-              <th className="num">{t('imprimir.colSurtida')}</th>
-              <th className="num">{t('common.pendiente')}</th>
-              <th>{t('imprimir.colAvance')}</th>
-              <th>{t('imprimir.colEstado')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filasSku.map(({ tv, avance }, i) => (
-              <tr key={i}>
-                <td className="print-sku-nombre">
-                  {tv.marca} {tv.pulgadas}″ {tv.modelo || '—'}
-                </td>
-                <td>{tv.marca || '—'}</td>
-                <td>{tv.pulgadas ? `${tv.pulgadas}″` : '—'}</td>
-                <td>
-                  <span className="print-cond-mini">
-                    {(tv.condiciones || []).map((c) => (
-                      <span key={c} className={`print-cond-chip cond-${c.toLowerCase()}`}>{c}</span>
-                    ))}
-                  </span>
-                </td>
-                <td className="num">
-                  {avance.solicitada === null
-                    ? (avance.metaCompartida ? t('imprimir.metaCompartida') : t('surtir.grupo.porDefinir'))
-                    : avance.solicitada}
-                </td>
-                <td className="num">{avance.surtida}</td>
-                <td className="num">{avance.pendiente === null ? '—' : avance.pendiente}</td>
-                <td>
-                  {avance.avancePct === null ? (
-                    <span className="print-avance-sinlimite">
-                      {avance.metaCompartida ? t('imprimir.metaCompartida') : t('surtir.grupo.porDefinir')}
-                    </span>
-                  ) : (
-                    <div className="print-avance-celda">
-                      <div className="print-avance-track">
-                        <div className="print-avance-fill" style={{ width: `${avance.avancePct}%` }} />
-                      </div>
-                      <span className="print-avance-pct">{avance.avancePct}%</span>
-                    </div>
-                  )}
-                </td>
-                <td>
-                  <span className={`print-estado-badge ${ESTADO_SKU_CLASE[avance.estado]}`}>
-                    {avance.estado === 'SIN_SOLICITUD' ? t('imprimir.sinSolicitud') : t(`common.${ESTADO_SKU_CLASE[avance.estado]}`)}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* 5) Resumen inferior */}
-        <div className="print-resumen-final">
-          <div className="print-resumen-card">
-            <span className="print-resumen-icon"><IconClipboardList /></span>
-            <div>
-              <div className="print-resumen-valor">{totalRequerido}</div>
-              <div className="print-resumen-label">{t('imprimir.totalSolicitada')}</div>
-            </div>
-          </div>
-          <div className="print-resumen-card">
-            <span className="print-resumen-icon"><IconCheck /></span>
-            <div>
-              <div className="print-resumen-valor">{totalSurtido}</div>
-              <div className="print-resumen-label">{t('imprimir.totalSurtida')}</div>
-            </div>
-          </div>
-          <div className="print-resumen-card">
-            <span className="print-resumen-icon"><IconClock /></span>
-            <div>
-              <div className="print-resumen-valor">{pendiente}</div>
-              <div className="print-resumen-label">{t('common.pendiente')}</div>
-            </div>
-          </div>
-          <div className="print-resumen-card">
-            <span className="print-resumen-icon"><IconBox /></span>
-            <div>
-              <div className="print-resumen-valor">{televisiones.length}</div>
-              <div className="print-resumen-label">{t('imprimir.skuDiferentes')}</div>
-            </div>
-          </div>
-          <div className="print-resumen-card">
-            <span className="print-resumen-icon"><IconClipboardList /></span>
-            <div>
-              <div className="print-resumen-valor">{marcasDistintas.length}</div>
-              <div className="print-resumen-label">{marcasDistintas.length === 1 ? t('common.marca') : t('pedidoForm.marcas')}</div>
-            </div>
-          </div>
+                {restoGrupos.map((group) => renderSizeGroup(t, group))}
+              </section>
+            )
+          })}
         </div>
 
         {/* Pie de página */}

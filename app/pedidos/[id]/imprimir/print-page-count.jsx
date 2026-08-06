@@ -3,16 +3,17 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-// A4 vertical a 96dpi: 297mm ≈ 1123px de alto. Menos ~14mm de margen arriba
-// y abajo (~106px) y un margen de seguridad para variación entre motores de
-// impresión: ~950px de contenido útil por hoja. Es una ESTIMACIÓN por altura
-// de contenido (mismo enfoque que ya usaba fit-to-page.jsx en este proyecto),
-// no un conteo exacto de páginas reales — el documento no tiene un footer
-// que se repita en cada hoja física (eso requeriría @page margin boxes, con
-// soporte inconsistente entre motores de impresión), así que este número
-// solo se muestra UNA vez, al final del documento, y por eso "N de N" es
-// siempre correcto para esa posición aunque no aparezca en las hojas previas.
-const ALTURA_UTIL_PAGINA_PX = 950
+// Carta vertical a 96dpi: 279.4mm ≈ 1056px de alto. Menos 8mm de margen
+// arriba y abajo (@page margin: 8mm, ~60px) y un margen de seguridad para
+// variación entre motores de impresión: ~960px de contenido útil por hoja.
+// Es una ESTIMACIÓN por altura de contenido (mismo enfoque que ya usaba
+// fit-to-page.jsx en este proyecto), no un conteo exacto de páginas reales —
+// el documento no tiene un footer que se repita en cada hoja física (eso
+// requeriría @page margin boxes, con soporte inconsistente entre motores de
+// impresión), así que este número solo se muestra UNA vez, al final del
+// documento, y por eso "N de N" es siempre correcto para esa posición aunque
+// no aparezca en las hojas previas.
+const ALTURA_UTIL_PAGINA_PX = 960
 
 export default function PrintPageCount() {
   const { t } = useTranslation()
