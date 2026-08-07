@@ -47,6 +47,15 @@ export function middleware(request) {
     return NextResponse.next()
   }
 
+  // Excepción EXACTA para el endpoint de solo lectura de pedidos (ver
+  // app/api/integrations/pedidos/route.js) — se autentica con su propia
+  // X-Integration-Key (MITECHNOLOGIES_INTEGRATIONS_KEY) dentro del handler,
+  // no con cookie de sesión humana. Preparación 2026-08-06, sin consumidor
+  // conectado todavía.
+  if (pathname === '/api/integrations/pedidos' && method === 'GET') {
+    return NextResponse.next()
+  }
+
   const rol = request.cookies.get('rol')?.value
   const isApi = pathname.startsWith('/api/')
 
