@@ -1,5 +1,5 @@
 import { estadoLabel } from '@/lib/catalogos'
-import { GROUP_STATUS, calculateBrandSummary } from '@/lib/surtido-grupos'
+import { ESTADO_SKU_CLASE, GROUP_STATUS, calcularAvanceSku, calculateBrandSummary } from '@/lib/surtido-grupos'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
 import {
   IconBox, IconCalendar, IconCheck, IconClipboardList, IconClock, IconUser,
@@ -7,59 +7,6 @@ import {
 import PrintButton from './print-button'
 import PrintPageCount from './print-page-count'
 import './imprimir.css'
-
-// Avance real de UNA partida (SKU) — la meta pertenece al GRUPO (marca +
-// pulgadas), no a cada SKU individual: misma fuente de verdad que Surtir/
-// Nuevo/Editar (lib/surtido-grupos.js), nunca metasGrupo hardcodeado aquí.
-// Solo cuando el grupo tiene un único SKU con meta definida existe una meta
-// "propia" de esa partida (getIndividualSkuTarget); si el grupo tiene varios
-// SKU, la meta es compartida y no se le puede atribuir a ningún renglón en
-// particular — se marca con "metaCompartida" en vez de repetir un número que
-// no le pertenece a esa fila.
-function calcularAvanceSku(tv, group) {
-  const surtida = Number(tv.cantidadSurtida) || 0
-  const individualTarget = group.summary.individualTarget
-
-  if (individualTarget !== null && individualTarget !== undefined) {
-    const solicitada = individualTarget
-    const surtidaAcotada = Math.min(solicitada, surtida)
-    const pendiente = Math.max(0, solicitada - surtida)
-    const avancePct = solicitada > 0 ? Math.round((surtidaAcotada / solicitada) * 100) : 0
-
-    let estado
-    if (solicitada === 0) estado = 'SIN_SOLICITUD'
-    else if (surtida >= solicitada) estado = 'COMPLETO'
-    else if (surtida > 0) estado = 'PARCIAL'
-    else estado = 'PENDIENTE'
-
-    return { solicitada, surtida, pendiente, avancePct, metaCompartida: false, estado }
-  }
-
-  // Sin meta propia — dos motivos posibles, y el renglón debe distinguirlos:
-  // (a) el grupo SÍ tiene meta pero la comparte entre varios SKU
-  //     ("Meta compartida"), o
-  // (b) el grupo todavía no tiene ninguna meta definida ("Por definir"),
-  //     sin importar si tiene uno o varios SKU (ej. Samsung 85").
-  // En ambos casos no hay número propio que mostrar, solo si el SKU ya
-  // aportó algo (Parcial) o no (Pendiente) — nunca "Sin solicitud" (ese
-  // texto queda solo para una meta explícita de 0, ver arriba).
-  const metaDefinida = group.requested !== null && group.requested !== undefined
-  return {
-    solicitada: null,
-    surtida,
-    pendiente: null,
-    avancePct: null,
-    metaCompartida: metaDefinida && group.products.length > 1,
-    estado: surtida > 0 ? 'PARCIAL' : 'PENDIENTE',
-  }
-}
-
-const ESTADO_SKU_CLASE = {
-  COMPLETO: 'completo',
-  PARCIAL: 'parcial',
-  PENDIENTE: 'pendiente',
-  SIN_SOLICITUD: 'sin-solicitud',
-}
 
 // Etiqueta/clase del estado a nivel de GRUPO — solo para esta hoja impresa.
 // Reutiliza los mismos GROUP_STATUS que Surtir, pero con vocabulario propio

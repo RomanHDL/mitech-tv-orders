@@ -418,6 +418,7 @@
     "sinPedidosFiltro": "No se encontraron pedidos con los filtros actuales.",
     "limpiarFiltros": "Limpiar filtros",
     "descargarExcelTitle": "Descargar pedidos en Excel",
+    "descargarExcelPedidoTitle": "Descargar este pedido en Excel",
     "incluyePallets": "Incluye pallets",
     "confirmarEliminarPedido": "¿Eliminar el pedido \"{{nombre}}\"? Esta acción no se puede deshacer.",
     "errorAsignarDueno": "No se pudo asignar dueño",

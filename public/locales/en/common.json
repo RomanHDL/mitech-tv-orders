@@ -418,6 +418,7 @@
     "sinPedidosFiltro": "No orders found for the current filters.",
     "limpiarFiltros": "Clear filters",
     "descargarExcelTitle": "Download orders as Excel",
+    "descargarExcelPedidoTitle": "Download this order as Excel",
     "incluyePallets": "Includes pallets",
     "confirmarEliminarPedido": "Delete order \"{{nombre}}\"? This action cannot be undone.",
     "errorAsignarDueno": "Couldn't assign owner",

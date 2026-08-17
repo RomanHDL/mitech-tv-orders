@@ -418,6 +418,7 @@
     "sinPedidosFiltro": "没有符合当前筛选条件的订单。",
     "limpiarFiltros": "清除筛选",
     "descargarExcelTitle": "下载订单 Excel",
+    "descargarExcelPedidoTitle": "下载此订单为 Excel",
     "incluyePallets": "包含托盘",
     "confirmarEliminarPedido": "删除订单“{{nombre}}”？此操作无法撤销。",
     "errorAsignarDueno": "无法分配负责人",

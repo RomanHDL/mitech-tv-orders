@@ -51,6 +51,7 @@ async function obtenerPedidos() {
       fechaLimite: p.fechaLimite || '',
       cantidadTotal:
         typeof p.cantidadTotal === 'number' && p.cantidadTotal > 0 ? p.cantidadTotal : null,
+      metasGrupo: p.metasGrupo || {},
       totalTvs: totalRequerido,
       pendiente,
       cantidadModelos: tvs.length,
