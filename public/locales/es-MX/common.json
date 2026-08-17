@@ -872,6 +872,23 @@
     "generadoPor": "Generado por",
     "paginaDe": "Página {{actual}} de {{total}}"
   },
+  "excelPedido": {
+    "tituloPrincipal": "AVANCE DEL PEDIDO",
+    "avanceGeneral": "AVANCE GENERAL DEL PEDIDO",
+    "skuTotales": "SKU TOTALES",
+    "solicitadas": "SOLICITADAS",
+    "surtidas": "SURTIDAS",
+    "pendientes": "PENDIENTES",
+    "progresoTexto": "{{pct}}% SURTIDO · {{surtido}} de {{solicitado}} piezas · {{pendiente}} pendientes",
+    "colNumero": "#",
+    "colSku": "SKU",
+    "colCondicion": "CONDICIÓN",
+    "colSolicitado": "SOLICITADO",
+    "colSurtido": "SURTIDO",
+    "colPendiente": "PENDIENTE",
+    "colEstado": "ESTADO",
+    "leyenda": "Leyenda: Azul = solicitado · Verde = surtido · Naranja = pendiente · Morado = meta compartida / parcial"
+  },
   "importar": {
     "tabPegar": "Pegar",
     "tabFoto": "Foto",

@@ -25,7 +25,6 @@ import {
 import { estadoLabel, ESTADOS_OPERATIVOS } from '@/lib/catalogos'
 import { cumplimientoTexto, estaVencido } from '@/lib/estado-pedido'
 import { localeDe, formatearNumero } from '@/lib/intl-format'
-import { construirFilasPedido } from '@/lib/pedido-excel'
 import PedidoDetalleModal from './pedido-detalle-modal'
 
 const ESTADO_ICONO = {
@@ -181,20 +180,6 @@ function descargarPedidosXLSX(pedidos, t, lang) {
 
   const hoy = new Date().toISOString().slice(0, 10)
   XLSX.writeFile(wb, `pedidos-${hoy}.xlsx`)
-}
-
-// Descarga UN SOLO pedido como su propio archivo .xlsx (a diferencia de
-// descargarPedidosXLSX, que junta todos los pedidos filtrados en un mismo
-// libro) — agrupado marca → pulgadas → SKU, misma fuente de verdad que
-// Surtir y la hoja de impresión (ver lib/pedido-excel.js).
-function descargarPedidoIndividualXLSX(pedido, t, lang) {
-  const { filas, merges, colWidths, nombreArchivo } = construirFilasPedido(pedido, t, lang)
-  const ws = XLSX.utils.aoa_to_sheet(filas)
-  ws['!merges'] = merges
-  ws['!cols'] = colWidths
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Pedido')
-  XLSX.writeFile(wb, nombreArchivo)
 }
 
 function tagClass(c) {
@@ -533,15 +518,14 @@ export default function ListaCliente({ pedidos, rol, usuarios = [] }) {
                     </Link>
                   </td>
                   <td className="td-icono">
-                    <button
-                      type="button"
+                    <a
+                      href={`/api/pedidos/${p.id}/exportar-excel`}
                       className="btn-icono"
                       title={t('pedidos.descargarExcelPedidoTitle')}
                       aria-label={t('pedidos.descargarExcelPedidoTitle')}
-                      onClick={() => descargarPedidoIndividualXLSX(p, t, i18n.language)}
                     >
                       <IconExcel />
-                    </button>
+                    </a>
                   </td>
                   <td data-label={t('pedidos.colNumeroPedido')}>
                     <button

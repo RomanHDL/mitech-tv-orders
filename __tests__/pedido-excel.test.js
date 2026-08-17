@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { construirFilasPedido } from '@/lib/pedido-excel'
+import { construirReportePedido } from '@/lib/pedido-excel'
 import esMX from '../public/locales/es-MX/common.json'
 
 function buscarClave(dict, clave) {
@@ -7,7 +7,7 @@ function buscarClave(dict, clave) {
 }
 
 // Mismo "t" simplificado que usa lib/i18n-server.js — suficiente para
-// probar el contenido real de las filas sin depender de react-i18next.
+// probar el contenido real del reporte sin depender de react-i18next.
 function t(clave, params) {
   let claveFinal = clave
   if (params && typeof params.count === 'number') {
@@ -74,74 +74,106 @@ const PEDIDO_LORENA = {
   ],
 }
 
-describe('construirFilasPedido — LORENA', () => {
-  const { filas, merges, colWidths, nombreArchivo } = construirFilasPedido(PEDIDO_LORENA, t, 'es-MX')
+function grupo(reporte, marca, texto) {
+  return reporte.marcas.find((m) => m.etiqueta === marca).grupos.find((g) => g.etiqueta.startsWith(texto))
+}
 
-  it('título con el nombre del pedido en mayúsculas', () => {
-    expect(filas[0]).toEqual(['LORENA'])
-  })
+describe('construirReportePedido — LORENA', () => {
+  const reporte = construirReportePedido(PEDIDO_LORENA, t)
 
   it('nombre de archivo incluye número y nombre, sin caracteres inválidos', () => {
-    expect(nombreArchivo).toBe('pedido-24072026-LORENA.xlsx')
+    expect(reporte.nombreArchivo).toBe('pedido-24072026-LORENA.xlsx')
+  })
+
+  it('encabezado dinámico: nombre · número de pedido', () => {
+    expect(reporte.encabezado.subtitulo).toContain('LORENA')
+    expect(reporte.encabezado.subtitulo).toContain('24072026')
   })
 
   it('resumen general usa los totales agrupados correctos (no la meta legacy)', () => {
-    const idxEncabezado = filas.findIndex((f) => f[0] === t('imprimir.totalSku'))
-    // Fila de valores del resumen: [totalSku, totalSolicitado, totalSurtido, totalPendiente, pct]
-    const fila = filas[idxEncabezado + 1]
-    expect(fila[0]).toBe(16) // total SKU
-    expect(fila[1]).toBe(140) // total solicitado (suma de metas definidas)
-    expect(fila[2]).toBe(48) // total surtido real
-    expect(fila[3]).toBe(92) // total pendiente
-    expect(fila[4]).toBe('34%')
+    expect(reporte.resumen.totalSku).toBe(16)
+    expect(reporte.resumen.totalSolicitado).toBe(140)
+    expect(reporte.resumen.totalSurtido).toBe(48)
+    expect(reporte.resumen.totalPendiente).toBe(92)
+    expect(reporte.resumen.progresoPct).toBe(34)
+    expect(reporte.resumen.textoProgreso).toContain('34%')
   })
 
-  it('incluye encabezado de marca LG y SAMSUNG', () => {
-    const textos = filas.map((f) => f[0])
-    expect(textos.some((x) => String(x).startsWith('LG —'))).toBe(true)
-    expect(textos.some((x) => String(x).startsWith('SAMSUNG —'))).toBe(true)
+  it('las marcas salen dinámicamente en el orden de aparición (nunca hardcodeadas)', () => {
+    const etiquetas = reporte.marcas.map((m) => m.etiqueta)
+    expect(etiquetas).toEqual(['LG', 'SAMSUNG'])
   })
 
-  it('fila de grupo LG 65" muestra meta/surtido/pendiente del GRUPO', () => {
-    const fila = filas.find((f) => f[1] === 'LG 65"')
-    expect(fila[3]).toBe(30) // solicitado grupo
-    expect(fila[4]).toBe(6) // surtido grupo
-    expect(fila[5]).toBe(24) // pendiente grupo
+  it('resumen de marca incluye SKU/solicitado/surtido/pendiente reales', () => {
+    const lg = reporte.marcas.find((m) => m.etiqueta === 'LG')
+    expect(lg.resumenTexto).toContain('6 SKU')
+    expect(lg.resumenTexto).toContain('60') // solicitado LG: 30+30
+    expect(lg.resumenTexto).toContain('9') // surtido LG: 6 (LG65) + 3 (LG75)
+  })
+
+  it('grupo LG 65" muestra solicitado/surtido/pendiente del GRUPO, no de un SKU', () => {
+    const g = grupo(reporte, 'LG', 'LG 65"')
+    expect(g.solicitado).toEqual({ tipo: 'numero', valor: 30 })
+    expect(g.surtido).toBe(6)
+    expect(g.pendiente).toEqual({ tipo: 'numero', valor: 24 })
+    expect(g.estado.categoria).toBe('en-proceso')
   })
 
   it('SKU dentro de un grupo compartido no repite la meta del grupo (nunca "30")', () => {
-    const fila = filas.find((f) => f[1] === 'SNTV007271')
-    expect(fila[3]).toBe(t('imprimir.metaCompartida'))
-    expect(fila[3]).not.toBe(30)
-    expect(fila[4]).toBe(3) // surtido propio del SKU
+    const g = grupo(reporte, 'LG', 'LG 65"')
+    const sku = g.skus.find((s) => s.modelo === 'SNTV007271')
+    expect(sku.solicitado.tipo).toBe('metaCompartida')
+    expect(sku.solicitado.valor).not.toBe(30)
+    expect(sku.surtido).toBe(3)
+    expect(sku.pendiente).toEqual({ tipo: 'vacio' })
   })
 
-  it('Samsung 70" (único SKU con meta) muestra su meta individual', () => {
-    const fila = filas.find((f) => f[1] === 'SNTV007705')
-    expect(fila[3]).toBe(30)
-    expect(fila[5]).toBe(30) // pendiente individual
+  it('Samsung 70" (único SKU con meta) muestra su meta individual y su pendiente real', () => {
+    const g = grupo(reporte, 'SAMSUNG', 'Samsung 70"')
+    expect(g.solicitado).toEqual({ tipo: 'numero', valor: 30 })
+    const sku = g.skus[0]
+    expect(sku.modelo).toBe('SNTV007705')
+    expect(sku.solicitado).toEqual({ tipo: 'numero', valor: 30 })
+    expect(sku.pendiente).toEqual({ tipo: 'numero', valor: 30 })
+    expect(sku.estado.categoria).toBe('pendiente')
   })
 
-  it('Samsung 85" (grupo por definir) nunca inventa una meta', () => {
-    const filaGrupo = filas.find((f) => f[1] === 'Samsung 85"')
-    expect(filaGrupo[3]).toBe(t('surtir.grupo.porDefinir'))
-    const filaSku = filas.find((f) => f[1] === 'SNTV007264')
-    expect(filaSku[3]).toBe(t('surtir.grupo.porDefinir'))
-  })
-
-  it('todas las filas tienen como máximo 7 columnas', () => {
-    filas.forEach((f) => expect(f.length).toBeLessThanOrEqual(7))
-  })
-
-  it('los merges apuntan a filas reales dentro del rango generado', () => {
-    merges.forEach((m) => {
-      expect(m.s.r).toBeGreaterThanOrEqual(0)
-      expect(m.s.r).toBeLessThan(filas.length)
-      expect(m.e.c).toBe(6)
+  it('Samsung 85" (grupo por definir) nunca inventa una meta, ni en el grupo ni en sus SKU', () => {
+    const g = grupo(reporte, 'SAMSUNG', 'Samsung 85"')
+    expect(g.solicitado.tipo).toBe('porDefinir')
+    expect(g.pendiente).toEqual({ tipo: 'vacio' })
+    expect(g.estado.categoria).toBe('por-definir')
+    g.skus.forEach((sku) => {
+      expect(sku.solicitado.tipo).toBe('porDefinir')
+      expect(sku.pendiente).toEqual({ tipo: 'vacio' })
     })
   })
 
-  it('define 7 anchos de columna', () => {
-    expect(colWidths).toHaveLength(7)
+  it('respeta el orden original de los SKU dentro del grupo (nunca alfabético)', () => {
+    const g = grupo(reporte, 'LG', 'LG 75"')
+    expect(g.skus.map((s) => s.modelo)).toEqual(['SNTV007263', 'SNTV007447', 'SNTV005313', 'SNTV007744'])
+  })
+
+  it('conserva todas las condiciones, incluidas múltiples por SKU', () => {
+    const g = grupo(reporte, 'SAMSUNG', 'Samsung 75"')
+    const sku = g.skus.find((s) => s.modelo === 'SNTV007618')
+    expect(sku.condiciones).toEqual(['GRA', 'GRB', 'GRC'])
+  })
+
+  it('grupo completo (Samsung 65") cae en la categoría "completo"', () => {
+    const g = grupo(reporte, 'SAMSUNG', 'Samsung 65"')
+    expect(g.pendiente).toEqual({ tipo: 'numero', valor: 0 })
+    expect(g.estado.categoria).toBe('completo')
+  })
+
+  it('incluye leyenda y encabezados de columna', () => {
+    expect(reporte.leyenda).toBeTruthy()
+    expect(reporte.columnas.sku).toBeTruthy()
+    expect(reporte.columnas.solicitado).toBeTruthy()
+  })
+
+  it('nunca pierde ningún SKU (16 en total)', () => {
+    const total = reporte.marcas.flatMap((m) => m.grupos).flatMap((g) => g.skus).length
+    expect(total).toBe(16)
   })
 })

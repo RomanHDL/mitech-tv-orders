@@ -872,6 +872,23 @@
     "generadoPor": "生成人",
     "paginaDe": "第 {{actual}} 页，共 {{total}} 页"
   },
+  "excelPedido": {
+    "tituloPrincipal": "订单进度",
+    "avanceGeneral": "订单总体进度",
+    "skuTotales": "SKU 总数",
+    "solicitadas": "需求",
+    "surtidas": "已配货",
+    "pendientes": "待处理",
+    "progresoTexto": "已配货 {{pct}}% · {{surtido}}/{{solicitado}} 件 · 待处理 {{pendiente}}",
+    "colNumero": "#",
+    "colSku": "SKU",
+    "colCondicion": "成色",
+    "colSolicitado": "需求",
+    "colSurtido": "已配货",
+    "colPendiente": "待处理",
+    "colEstado": "状态",
+    "leyenda": "图例：蓝色=需求 · 绿色=已配货 · 橙色=待处理 · 紫色=共享目标/部分"
+  },
   "importar": {
     "tabPegar": "粘贴",
     "tabFoto": "照片",
