@@ -526,6 +526,18 @@
     "confirmarAgregarSku": "将SKU {{sku}} 的 {{cantidad}} 件标记为已配货？将记录为临时SKU，不属于原始清单。",
     "errorAgregarSku": "无法添加该SKU",
     "agregarSkuBtn": "添加",
+    "skuBuscador": {
+      "titulo": "搜索SKU以配货",
+      "placeholder": "完整SKU或末尾4位数字…",
+      "boton": "搜索",
+      "encontradoTitulo": "已找到SKU",
+      "noEncontradoTitulo": "未找到SKU",
+      "noEncontradoDesc": "SKU {{sku}} 不属于订单 {{pedido}}。请检查代码后重试。",
+      "multipleTitulo_one": "找到 {{count}} 个匹配 \"{{query}}\" 的结果：",
+      "multipleTitulo_other": "找到 {{count}} 个匹配 \"{{query}}\" 的结果：",
+      "confirmarAvance": "确认进度",
+      "avanceActualizado": "进度已更新"
+    },
     "grupo": {
       "skuCount_one": "{{count}} 个 SKU",
       "skuCount_other": "{{count}} 个 SKU",
@@ -854,6 +866,7 @@
     "colEstado": "状态",
     "sinSolicitud": "无需求",
     "metaCompartida": "共享目标",
+    "metaCorta": "目标",
     "skuDiferentes": "不同 SKU 数",
     "generadoPor": "生成人",
     "paginaDe": "第 {{actual}} 页，共 {{total}} 页"

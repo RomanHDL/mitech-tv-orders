@@ -342,38 +342,34 @@ body { background: #fff; }
 .print-size-group-metrica strong { display: block; font-size: 0.92rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .print-size-group-estado { flex-shrink: 0; }
 
+/* Fila compacta de una sola línea — marca/pulgadas viven en el encabezado
+   del grupo (no se repiten aquí). Meta/Pendiente por SKU solo aparecen
+   cuando el grupo tiene un único SKU con meta propia; en grupos con meta
+   compartida o por definir, la fila solo muestra Surtido + Estado (esos
+   dos números ya se resumen en el encabezado del grupo). */
 .print-sku-row {
-  display: grid;
-  grid-template-columns: 1.4rem minmax(9rem, 1fr) 6rem 4.5rem 4.5rem 6.5rem 6rem;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.32rem 0.9rem;
-  border-bottom: 1px solid #eee;
-  font-size: 0.72rem;
-}
-.print-size-group > .print-sku-row:last-child { border-bottom: none; }
-.print-sku-row .num { text-align: right; }
-.print-sku-row-header {
-  background: #f9fafb;
-  color: #777;
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 0.28rem 0.9rem;
-}
-.print-sku-num { color: #999; font-variant-numeric: tabular-nums; }
-.print-sku-producto { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
-.print-sku-modelo { font-weight: 700; color: #111; }
-.print-sku-detalle {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.66rem;
-  color: #666;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  padding: 0.2rem 0.9rem;
+  border-bottom: 1px solid #eee;
+  font-size: 0.74rem;
 }
-.print-sku-meta { font-variant-numeric: tabular-nums; }
+.print-size-group > .print-sku-row:last-child { border-bottom: none; }
+.print-sku-num { color: #999; font-variant-numeric: tabular-nums; flex-shrink: 0; width: 1.3rem; }
+.print-sku-modelo { font-weight: 700; color: #111; flex-shrink: 0; white-space: nowrap; }
+.print-sku-metricas {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin-left: auto;
+  padding-right: 0.7rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.print-sku-metrica { color: #666; font-size: 0.68rem; font-variant-numeric: tabular-nums; }
+.print-sku-metrica b { color: #111; font-weight: 800; }
 
 .print-cond-mini { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; }
 .print-cond-chip {
@@ -396,18 +392,6 @@ body { background: #fff; }
 .print-cond-chip.cond-dma { background: #f97316; }
 .print-cond-chip.cond-dmt { background: #92400e; }
 .print-cond-chip.cond-dnp { background: #14b8a6; }
-
-.print-avance-celda { display: flex; align-items: center; gap: 0.45rem; min-width: 5.5rem; }
-.print-avance-track { flex: 1; height: 0.45rem; background: #e5e5e5; border-radius: 999px; overflow: hidden; }
-.print-avance-fill { height: 100%; background: #111; border-radius: 999px; }
-.print-avance-pct { font-size: 0.7rem; font-weight: 800; min-width: 2.2rem; text-align: right; }
-.print-avance-sinlimite {
-  display: inline-block;
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: #666;
-  letter-spacing: 0.04em;
-}
 
 .print-estado-badge {
   display: inline-block;
@@ -454,16 +438,8 @@ body { background: #fff; }
   .print-title-row { flex-direction: column; }
   .print-size-group-header { flex-direction: column; align-items: stretch; }
   .print-size-group-metricas { justify-content: space-between; }
-  .print-sku-row {
-    grid-template-columns: 1.4rem 1fr;
-    grid-template-areas: "num prod" ". meta";
-    row-gap: 0.2rem;
-  }
-  .print-sku-row-header { display: none; }
-  .print-sku-num { grid-area: num; }
-  .print-sku-producto { grid-area: prod; }
-  .print-sku-row > .print-sku-meta,
-  .print-sku-row > span:not(.print-sku-num) { grid-area: meta; }
+  .print-sku-row { flex-wrap: wrap; row-gap: 0.2rem; }
+  .print-sku-metricas { margin-left: 1.8rem; padding-right: 0; }
 }
 
 /* ─── Impresión ────────────────────────────────────────── */
@@ -515,47 +491,50 @@ body { background: #fff; }
      cual arriba. Reduce paddings/márgenes/tipografía para que un pedido
      típico (10-25 SKU) quepa en pocas hojas Carta; pedidos más grandes
      siguen fluyendo a más hojas de forma natural (no hay límite forzado). */
-  .print-brand-logo { height: 26px; }
-  .print-title-row { padding-bottom: 0.5rem; margin-bottom: 0.6rem; }
-  .print-pedido-nombre { font-size: 1.45rem; }
-  .print-numero-box { padding: 0.35rem 0.9rem; }
-  .print-numero-valor { font-size: 1.1rem; }
+  .print-brand-logo { height: 24px; }
+  .print-title-row { padding-bottom: 0.35rem; margin-bottom: 0.45rem; }
+  .print-pedido-nombre { font-size: 1.3rem; }
+  .print-numero-box { padding: 0.25rem 0.8rem; }
+  .print-numero-valor { font-size: 1rem; }
 
-  .print-info-grid { padding: 0.5rem 0.65rem; margin-bottom: 0.55rem; gap: 0.6rem; }
+  .print-info-grid { padding: 0.35rem 0.6rem; margin-bottom: 0.4rem; gap: 0.6rem; }
   .print-info-label { margin-bottom: 0.05rem; }
-  .print-info-value { font-size: 0.8rem; }
+  .print-info-value { font-size: 0.78rem; }
 
-  .print-condiciones { margin-bottom: 0.55rem; }
-  .print-comentarios { margin-bottom: 0.55rem; padding: 0.4rem 0.6rem; }
+  .print-condiciones { margin-bottom: 0.4rem; }
+  .print-comentarios { margin-bottom: 0.4rem; padding: 0.3rem 0.6rem; }
 
-  .print-section-title { margin: 0.8rem 0 0.5rem; font-size: 0.72rem; }
-  .print-section-subtitulo { margin: -0.35rem 0 0.5rem; font-size: 0.66rem; }
+  .print-section-title { margin: 0.5rem 0 0.35rem; font-size: 0.7rem; }
+  .print-section-subtitulo { margin: -0.25rem 0 0.35rem; font-size: 0.66rem; }
 
-  .print-kpi-grid { gap: 0.5rem; margin-bottom: 0.55rem; }
-  .print-kpi-card { padding: 0.4rem 0.55rem; gap: 0.45rem; }
-  .print-kpi-icon { width: 1.65rem; height: 1.65rem; }
-  .print-kpi-icon svg { width: 12px; height: 12px; }
-  .print-kpi-valor { font-size: 1.15rem; }
-  .print-kpi-label { font-size: 0.56rem; }
+  .print-kpi-grid { gap: 0.5rem; margin-bottom: 0.4rem; }
+  .print-kpi-card { padding: 0.3rem 0.5rem; gap: 0.4rem; }
+  .print-kpi-icon { width: 1.5rem; height: 1.5rem; }
+  .print-kpi-icon svg { width: 11px; height: 11px; }
+  .print-kpi-valor { font-size: 1.05rem; }
+  .print-kpi-label { font-size: 0.54rem; }
 
-  .print-progreso { margin-bottom: 0.2rem; }
-  .print-progreso-track { height: 0.6rem; }
-  .print-progreso-texto { margin-top: 0.25rem; font-size: 0.7rem; }
+  .print-progreso { margin-bottom: 0.15rem; }
+  .print-progreso-track { height: 0.5rem; }
+  .print-progreso-texto { margin-top: 0.2rem; font-size: 0.68rem; }
 
-  .print-productos { margin-top: 0.8rem; }
-  .print-brand-block { margin-bottom: 0.6rem; }
-  .print-brand-block-header { padding: 0.4rem 0.8rem 0.45rem; }
-  .print-brand-block-nombre { font-size: 1.1rem; }
-  .print-brand-block-resumen { font-size: 0.66rem; }
+  .print-productos { margin-top: 0.35rem; }
+  .print-brand-block { margin-bottom: 0.25rem; }
+  .print-brand-block-header { padding: 0.16rem 0.8rem 0.2rem; }
+  .print-brand-block-nombre { font-size: 0.95rem; }
+  .print-brand-block-resumen { font-size: 0.62rem; margin-top: 0.05rem; }
 
-  .print-size-group-header { padding: 0.35rem 0.7rem; }
-  .print-size-group-nombre h3 { font-size: 0.8rem; }
-  .print-size-group-metricas { gap: 0.8rem; }
-  .print-size-group-metrica { min-width: 2.6rem; }
-  .print-size-group-metrica strong { font-size: 0.8rem; }
+  .print-size-group-header { padding: 0.15rem 0.6rem; }
+  .print-size-group-nombre h3 { font-size: 0.74rem; }
+  .print-size-group-badge { font-size: 0.54rem; }
+  .print-size-group-metricas { gap: 0.6rem; }
+  .print-size-group-metrica { min-width: 2.3rem; }
+  .print-size-group-metrica span { font-size: 0.5rem; }
+  .print-size-group-metrica strong { font-size: 0.72rem; }
 
-  .print-sku-row { padding: 0.22rem 0.7rem; font-size: 0.64rem; }
-  .print-sku-row-header { padding: 0.2rem 0.7rem; font-size: 0.52rem; }
+  .print-sku-row { padding: 0.08rem 0.7rem; font-size: 0.66rem; }
+  .print-sku-metrica { font-size: 0.6rem; }
+  .print-estado-badge { padding: 0.08rem 0.5rem; font-size: 0.58rem; }
 
-  .print-footer { margin-top: 0.5rem; padding-top: 0.4rem; font-size: 0.62rem; }
+  .print-footer { margin-top: 0.35rem; padding-top: 0.3rem; font-size: 0.6rem; }
 }

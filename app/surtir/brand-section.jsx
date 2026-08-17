@@ -7,7 +7,7 @@ import SizeGroupSection from './size-group-section'
 // Encabezado grande y centrado por marca, seguido de sus grupos de
 // pulgadas. Puramente de presentación — la agrupación real ya viene
 // resuelta en `brandSection` (groupProductsByBrandAndSize).
-export default function BrandSection({ brandSection, mode = 'supply', onActualizar, onFilaAccion, onCambiarMeta }) {
+export default function BrandSection({ brandSection, mode = 'supply', onActualizar, onFilaAccion, onCambiarMeta, highlightedIdx }) {
   const { t } = useTranslation()
   const resumen = calculateBrandSummary(brandSection)
   const esCaptura = mode === 'create' || mode === 'edit'
@@ -46,6 +46,7 @@ export default function BrandSection({ brandSection, mode = 'supply', onActualiz
           onActualizar={onActualizar}
           onFilaAccion={onFilaAccion}
           onCambiarMeta={onCambiarMeta}
+          highlightedIdx={highlightedIdx}
         />
       ))}
     </section>

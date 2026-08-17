@@ -6,12 +6,13 @@ import { useTranslation } from 'react-i18next'
 import { estadoLabel, PULGADAS, CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX } from '@/lib/catalogos'
 import { normalizeOrderStatus } from '@/lib/estado-pedido'
 import { localeDe } from '@/lib/intl-format'
-import { calculateOrderSummary, groupProductsByBrandAndSize } from '@/lib/surtido-grupos'
+import { calculateOrderSummary, flattenGroupedProducts, groupProductsByBrandAndSize } from '@/lib/surtido-grupos'
 import ComentariosPedido from '../components/comentarios-pedido'
 import GroupedOrderProducts from '../components/grouped-order-products'
 import MarcasDatalist from '../components/marcas-datalist'
 import StepperEtapas from '../pedidos/stepper-etapas'
 import OrderSupplySummary from './order-supply-summary'
+import SkuQuickSearch from './sku-quick-search'
 import {
   IconAlert,
   IconCheck,
@@ -153,6 +154,18 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
     [tvs, pedido.metasGrupo],
   )
   const orderSummary = useMemo(() => calculateOrderSummary(brandSections), [brandSections])
+  // Misma agrupación aplanada — el buscador rápido de SKU opera sobre estos
+  // mismos objetos (product._idx apunta al TV real en `tvs`), nunca crea un
+  // segundo estado independiente.
+  const flatProducts = useMemo(() => flattenGroupedProducts(brandSections), [brandSections])
+  const pedidoEtiqueta = pedido.numeroPedido ? `${pedido.pedidoNombre} · ${pedido.numeroPedido}` : pedido.pedidoNombre
+
+  const [highlightedIdx, setHighlightedIdx] = useState(null)
+  useEffect(() => {
+    if (highlightedIdx === null) return
+    const tId = setTimeout(() => setHighlightedIdx(null), 2500)
+    return () => clearTimeout(tId)
+  }, [highlightedIdx])
 
   const progreso = orderSummary.totalRequestedDefined > 0
     ? Math.round((orderSummary.totalSuppliedDefined / orderSummary.totalRequestedDefined) * 100)
@@ -446,11 +459,19 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
         placeholder={t('surtir.comentariosPedidoPlaceholder')}
       />
 
+      <SkuQuickSearch
+        products={flatProducts}
+        onActualizar={actualizar}
+        onEncontrado={setHighlightedIdx}
+        pedidoEtiqueta={pedidoEtiqueta}
+      />
+
       <GroupedOrderProducts
         televisiones={tvs}
         metasGrupo={pedido.metasGrupo}
         mode="supply"
         onActualizar={actualizar}
+        highlightedIdx={highlightedIdx}
       />
 
       <div className="bloque-sku-extra">

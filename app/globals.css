@@ -3694,6 +3694,119 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
 .orden-resumen-progreso .progreso-track { flex: 1; }
 .orden-resumen-progreso-pct { font-size: 1rem; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* ─── Buscador rápido de SKU (Surtir) ─────────────────────────────
+   Herramienta adicional sobre el diseño agrupado — nunca lo reemplaza.
+   Compacto a propósito: una caja de búsqueda + un panel de resultado. */
+.sku-buscador { margin-bottom: 0.25rem; }
+.sku-buscador-caja {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.sku-buscador-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.sku-buscador-fila { display: flex; gap: 0.6rem; }
+.sku-buscador-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.sku-buscador-input:focus { outline: 2px solid var(--primary); outline-offset: -2px; }
+.sku-buscador-btn { flex-shrink: 0; }
+
+.sku-buscador-confirmado {
+  margin: 0.6rem 0 0;
+  animation: fadeInUp 0.2s ease-out;
+}
+
+.sku-buscador-resultado {
+  margin-top: 0.6rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+}
+.sku-buscador-no-encontrado { border-color: var(--red-light); background: var(--red-light); }
+.sku-buscador-no-encontrado strong { display: flex; align-items: center; gap: 0.4rem; color: var(--red-dark); }
+.sku-buscador-no-encontrado p { margin: 0.4rem 0 0; color: var(--text-muted); font-size: 0.88rem; }
+
+.sku-buscador-multiple strong { display: block; margin-bottom: 0.6rem; font-size: 0.88rem; }
+.sku-buscador-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.sku-buscador-lista button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--tx), border-color var(--tx);
+}
+.sku-buscador-lista button:hover { background: var(--primary-soft); border-color: var(--primary); }
+.sku-buscador-lista-modelo { font-weight: 800; }
+.sku-buscador-lista-detalle { display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); font-size: 0.85rem; }
+
+.sku-buscador-encontrado { border-color: var(--green-light); }
+.sku-buscador-encontrado-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.sku-buscador-encontrado-header strong { display: flex; align-items: center; gap: 0.4rem; color: var(--green-dark); font-size: 0.9rem; }
+.sku-buscador-encontrado-desc { display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); font-size: 0.85rem; }
+.sku-buscador-encontrado-modelo { font-size: 1.3rem; font-weight: 900; margin-top: 0.2rem; letter-spacing: 0.01em; }
+
+.sku-buscador-metricas { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.85rem; }
+.sku-buscador-metrica {
+  flex: 1 1 6rem;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  text-align: center;
+}
+.sku-buscador-metrica span { display: block; font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-subtle); }
+.sku-buscador-metrica strong { display: block; font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.sku-buscador-avance {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.sku-buscador-avance-label { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); }
+.sku-buscador-confirmar { margin-left: auto; }
+
+@media (max-width: 640px) {
+  .sku-buscador-fila { flex-direction: column; }
+  .sku-buscador-btn { width: 100%; justify-content: center; }
+  .sku-buscador-encontrado-header { flex-direction: column; align-items: flex-start; }
+  .sku-buscador-avance { flex-direction: column; align-items: stretch; }
+  .sku-buscador-confirmar { margin-left: 0; width: 100%; justify-content: center; }
+}
+
 /* ─── Secciones de marca + grupos de pulgadas (Surtir agrupado) ───── */
 .secciones-surtido { display: flex; flex-direction: column; gap: 1.5rem; }
 
@@ -3997,6 +4110,15 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
   background: var(--primary-soft);
   box-shadow: inset 4px 0 0 var(--primary);
 }
+
+/* Resaltado temporal (~2.5s) de la fila encontrada por el buscador rápido
+   de SKU — nunca hace scroll obligatorio, solo marca visualmente dónde
+   está esa fila dentro de su sección. Se desvanece solo, sin JS extra. */
+@keyframes desvanecerResaltado {
+  0%, 55% { background: var(--yellow-light); box-shadow: inset 4px 0 0 var(--yellow); }
+  100% { background: transparent; box-shadow: inset 4px 0 0 transparent; }
+}
+.fila-surtido-fila.fila-surtido-resaltada { animation: desvanecerResaltado 2.5s ease-out forwards; }
 
 .fila-surtido-producto { min-width: 0; }
 .fila-surtido-top {
@@ -4329,6 +4451,7 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
 
 .login-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   background: #fff;
@@ -4601,6 +4724,73 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
   font-weight: 500;
 }
 
+/* ─── Login responsive (tablet/celular) ──────────────────────────────
+   Único breakpoint que decide "escritorio vs. apilado" para el login:
+   por debajo de 820px (cubre tablets en portrait como 768px) se apila
+   hero arriba + form abajo. Los tres tamaños siguientes solo afinan
+   tipografía/paddings del mismo layout apilado, nunca lo rediseñan. */
+@media (max-width: 820px) {
+  .login-page { grid-template-columns: 1fr; }
+  .login-hero {
+    padding: 2rem 1.5rem;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .login-hero-titulo { font-size: 2rem; }
+  .login-hero-tagline { font-size: 0.95rem; margin-bottom: 1.25rem; }
+  .login-hero-features { gap: 0.4rem; }
+  .login-hero-features li { font-size: 0.85rem; }
+  .login-hero-logo { padding: 0.75rem 1rem; margin-bottom: 1.5rem; }
+  .login-hero-logo img { height: 38px; }
+
+  .login-form-panel { padding: 2rem 1.5rem; }
+  .login-card { padding: 2rem 1.75rem; max-width: 460px; }
+  .login-titulo { font-size: 1.65rem; }
+
+  /* El selector de idioma es absoluto (top:1rem;right:1rem) y el reset
+     genérico de `select { width: 100% }` lo estira a todo el ancho de la
+     tarjeta — inofensivo en escritorio (la tarjeta es angosta y el título
+     tiene suficiente padding arriba), pero en pantallas chicas el padding
+     de la tarjeta se reduce y termina superponiéndose con "Iniciar sesión".
+     Se acota su ancho SOLO en este rango y se reserva espacio para el
+     título — nunca se toca el selector en escritorio. */
+  .login-card .language-switcher { width: auto; min-width: 4.4rem; }
+  .login-titulo { margin-top: 1.85rem; }
+}
+
+@media (max-width: 600px) {
+  .login-hero { padding: 1.5rem 1.25rem; }
+  .login-hero-titulo { font-size: 1.85rem; }
+
+  .login-form-panel { padding: 1.5rem 1rem; }
+  .login-card { padding: 1.75rem 1.25rem; }
+  .login-titulo { font-size: 1.5rem; }
+}
+
+@media (max-width: 480px) {
+  .login-hero { padding: 1.5rem 1rem; }
+  .login-hero-titulo { font-size: 1.6rem; }
+  .login-hero-features { display: none; }
+
+  .login-form-panel { padding: 1.25rem 1rem; }
+  .login-card { padding: 1.5rem 1rem 1.25rem; border-radius: var(--radius); }
+  .login-titulo { font-size: 1.4rem; }
+}
+
+@media (max-width: 360px) {
+  .login-hero { padding: 1.1rem 0.85rem; }
+  .login-hero-logo { padding: 0.6rem 0.85rem; margin-bottom: 1rem; }
+  .login-hero-logo img { height: 32px; }
+  .login-hero-titulo { font-size: 1.4rem; margin-bottom: 0.5rem; }
+  .login-hero-tagline { font-size: 0.85rem; margin-bottom: 0; }
+
+  .login-form-panel { padding: 1rem; }
+  .login-card { padding: 1.25rem 0.9rem 1rem; }
+  .login-titulo { font-size: 1.3rem; }
+  .login-subtitulo { font-size: 0.85rem; margin-bottom: 1.25rem; }
+  .login-btn-nfc, .login-form .btn-large { font-size: 0.88rem; }
+}
+
 /* ─── Loading ─────────────────────────────────────────── */
 
 .loading-screen {
@@ -4728,34 +4918,6 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
   /* Touch targets mas grandes */
   .btn { min-height: 40px; }
   .btn-sm { min-height: 36px; padding: 0.5rem 0.8rem; }
-
-  /* Login: stack vertical en mobile (hero compacto arriba, form abajo) */
-  .login-page {
-    grid-template-columns: 1fr;
-  }
-  .login-hero {
-    padding: 2rem 1.5rem;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-  .login-hero-titulo { font-size: 2.2rem; }
-  .login-hero-tagline { font-size: 0.95rem; margin-bottom: 1.25rem; }
-  .login-hero-features { gap: 0.4rem; }
-  .login-hero-features li { font-size: 0.85rem; }
-  .login-hero-logo { padding: 0.75rem 1rem; margin-bottom: 1.5rem; }
-  .login-hero-logo img { height: 38px; }
-
-  .login-form-panel { padding: 2rem 1rem; }
-  .login-card { padding: 2rem 1.5rem; }
-  .login-titulo { font-size: 1.65rem; }
-}
-
-@media (max-width: 480px) {
-  .login-hero { padding: 1.75rem 1.2rem; }
-  .login-hero-titulo { font-size: 1.85rem; }
-  .login-hero-features { display: none; }
-  .login-form-panel { padding: 1.5rem 1rem; }
-  .login-card { padding: 1.75rem 1.25rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4788,10 +4950,6 @@ tr.fila-seleccionada td { background: var(--primary-light) !important; }
 
   /* Headings mas chicos */
   h1 { font-size: 1.55rem; }
-
-  /* Login icon */
-  .login-card { padding: 1.75rem 1.2rem 1.5rem; border-radius: var(--radius); }
-  .login-titulo { font-size: 1.55rem; }
 }
 
 /* ─── Pallets vinculados (integración Cubicaje) ────────────────────── */

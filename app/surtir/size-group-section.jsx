@@ -20,7 +20,7 @@ const CLASE_ESTADO = {
 //
 // mode: 'supply' (Surtir, diseño aprobado sin cambios) | 'create' | 'edit'
 // (Nuevo/Editar pedido — la meta se CAPTURA aquí, sin controles de surtido).
-export default function SizeGroupSection({ group, mode = 'supply', onActualizar, onFilaAccion, onCambiarMeta }) {
+export default function SizeGroupSection({ group, mode = 'supply', onActualizar, onFilaAccion, onCambiarMeta, highlightedIdx }) {
   const { t } = useTranslation()
   const { summary } = group
   const esCaptura = mode === 'create' || mode === 'edit'
@@ -96,6 +96,7 @@ export default function SizeGroupSection({ group, mode = 'supply', onActualizar,
               tv={tv}
               individualTarget={summary.individualTarget}
               onActualizar={onActualizar}
+              resaltada={tv._idx === highlightedIdx}
             />
           )
         )}

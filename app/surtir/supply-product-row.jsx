@@ -9,7 +9,7 @@ import { IconAlert, IconCheck, IconMinus, IconPlus, IconRefresh } from '../compo
 // celdas "Meta del SKU" / "Aporta al grupo", que reemplazan el viejo
 // "Solicitado" individual cuando el grupo tiene más de un SKU (la meta ya
 // no le pertenece a cada SKU, le pertenece al grupo).
-export default function SupplyProductRow({ tv, individualTarget, onActualizar }) {
+export default function SupplyProductRow({ tv, individualTarget, onActualizar, resaltada = false }) {
   const { t } = useTranslation()
   const idx = tv._idx
   const esSinLimite = !!tv.sinLimite
@@ -26,7 +26,7 @@ export default function SupplyProductRow({ tv, individualTarget, onActualizar })
   const tieneMetaIndividual = individualTarget !== null && individualTarget !== undefined
 
   return (
-    <div key={idx} className={`fila-surtido-fila ${claseFila}`}>
+    <div key={idx} className={`fila-surtido-fila ${claseFila} ${resaltada ? 'fila-surtido-resaltada' : ''}`}>
       <div className="fila-surtido-producto">
         <div className="fila-surtido-top">
           <span className="fila-surtido-marca">{tv.marca}</span>

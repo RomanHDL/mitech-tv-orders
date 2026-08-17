@@ -526,6 +526,18 @@
     "confirmarAgregarSku": "¿Agregar {{cantidad}} pieza(s) del SKU {{sku}} como ya surtidas? Se registrará como un SKU de último momento, no incluido en la lista original.",
     "errorAgregarSku": "No se pudo agregar el SKU",
     "agregarSkuBtn": "Agregar",
+    "skuBuscador": {
+      "titulo": "Buscar SKU para surtir",
+      "placeholder": "SKU completo o últimos 4 dígitos…",
+      "boton": "Buscar",
+      "encontradoTitulo": "SKU encontrado",
+      "noEncontradoTitulo": "SKU no encontrado",
+      "noEncontradoDesc": "El SKU {{sku}} no pertenece al pedido {{pedido}}. Revisa el código e inténtalo de nuevo.",
+      "multipleTitulo_one": "Encontramos {{count}} coincidencia para \"{{query}}\":",
+      "multipleTitulo_other": "Encontramos {{count}} coincidencias para \"{{query}}\":",
+      "confirmarAvance": "Confirmar avance",
+      "avanceActualizado": "Avance actualizado"
+    },
     "grupo": {
       "skuCount_one": "{{count}} SKU",
       "skuCount_other": "{{count}} SKU",
@@ -854,6 +866,7 @@
     "colEstado": "Estado",
     "sinSolicitud": "Sin solicitud",
     "metaCompartida": "Meta compartida",
+    "metaCorta": "Meta",
     "skuDiferentes": "SKU diferentes",
     "generadoPor": "Generado por",
     "paginaDe": "Página {{actual}} de {{total}}"

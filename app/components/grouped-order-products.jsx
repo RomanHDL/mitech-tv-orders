@@ -18,6 +18,7 @@ export default function GroupedOrderProducts({
   onActualizar,
   onFilaAccion,
   onCambiarMeta,
+  highlightedIdx,
 }) {
   const brandSections = groupProductsByBrandAndSize(televisiones, metasGrupo)
 
@@ -31,6 +32,7 @@ export default function GroupedOrderProducts({
           onActualizar={onActualizar}
           onFilaAccion={onFilaAccion}
           onCambiarMeta={onCambiarMeta}
+          highlightedIdx={highlightedIdx}
         />
       ))}
     </div>
