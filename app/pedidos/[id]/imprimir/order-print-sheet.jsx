@@ -1,10 +1,12 @@
+'use client'
+
+import { useTranslation } from 'react-i18next'
 import { estadoLabel } from '@/lib/catalogos'
 import { ESTADO_SKU_CLASE, GROUP_STATUS, calcularAvanceSku, calculateBrandSummary } from '@/lib/surtido-grupos'
 import { LOGO_MITECH } from '@/lib/logo-mitech'
 import {
   IconBox, IconCalendar, IconCheck, IconClipboardList, IconClock, IconUser,
 } from '../../../components/icons'
-import PrintButton from './print-button'
 import PrintPageCount from './print-page-count'
 import './imprimir.css'
 
@@ -112,7 +114,6 @@ function renderSizeGroup(t, group) {
 // tanto la ruta real (app/pedidos/[id]/imprimir/page.jsx) como cualquier
 // vista de previsualización puedan renderizar EXACTAMENTE la misma hoja.
 export default function OrderPrintSheet({
-  t,
   pedido,
   brandSections,
   televisiones,
@@ -127,9 +128,8 @@ export default function OrderPrintSheet({
   progresoPct,
   pendiente,
 }) {
+  const { t } = useTranslation()
   return (
-    <main className="imprimir-shell">
-      <PrintButton />
       <div id="print-order-root" className="print-hoja">
         {/* 1) Encabezado superior */}
         <div className="print-brand-row">
@@ -299,6 +299,5 @@ export default function OrderPrintSheet({
           <PrintPageCount />
         </footer>
       </div>
-    </main>
   )
 }

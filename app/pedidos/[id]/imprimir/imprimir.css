@@ -26,6 +26,8 @@ body { background: #fff; }
   position: fixed;
   top: 1.5rem; right: 1.5rem;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.5rem;
   z-index: 100;
 }
@@ -47,6 +49,32 @@ body { background: #fff; }
 .btn-imprimir:hover { background: #16304c; transform: translateY(-1px); }
 .btn-volver { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
 .btn-volver:hover { background: #f1f5f9; }
+
+/* Selector de vista (completa/simple) — grupo de 2 botones tipo segmented
+   control, junto a Volver/Imprimir. Nunca se imprime (vive dentro de
+   .acciones-imprimir, ya oculto por completo en @media print). */
+.toggle-vista-impresion {
+  display: flex;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.toggle-vista-impresion button {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 0.15s;
+}
+.toggle-vista-impresion button + button { border-left: 1px solid #cbd5e1; }
+.toggle-vista-impresion button:hover { background: #f1f5f9; }
+.toggle-vista-impresion button.activo { background: #1e3a5f; color: #fff; }
 
 /* ─── 1) Encabezado superior ───────────────────────────── */
 .print-brand-row {
@@ -428,10 +456,86 @@ body { background: #fff; }
 }
 .print-footer span:last-child { font-weight: 700; white-space: nowrap; }
 
+/* ─── Vista SIMPLE (piso de surtido) ──────────────────────
+   Letra grande, blanco y negro, sin KPIs/fechas/colores — misma
+   agrupación marca → pulgadas → SKU que la vista completa, presentación
+   mínima para leer rápido en el piso. */
+.print-simple-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 3px solid #111;
+}
+.print-simple-logo { height: 40px; width: auto; flex-shrink: 0; }
+.print-simple-header-texto { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; }
+.print-simple-pedido-nombre { margin: 0; font-size: 2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.01em; }
+.print-simple-numero { font-size: 1.1rem; font-weight: 700; color: #444; }
+.print-simple-ref { font-size: 0.75rem; color: #666; font-weight: 700; flex-shrink: 0; }
+
+.print-simple-marca {
+  margin-bottom: 2rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.print-simple-marca-nombre {
+  margin: 0 0 1rem;
+  font-size: 2.1rem;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: 0.04em;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #111;
+}
+
+.print-simple-grupo {
+  margin-bottom: 1.1rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.print-simple-grupo-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  padding: 0.5rem 0;
+  border-bottom: 1.5px solid #111;
+  margin-bottom: 0.5rem;
+}
+.print-simple-grupo-pulgadas { font-size: 1.4rem; font-weight: 900; }
+.print-simple-grupo-metricas { display: flex; gap: 1.1rem; flex-wrap: wrap; font-size: 0.95rem; color: #333; }
+.print-simple-grupo-metricas b { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+
+.print-simple-sku-lista { display: flex; flex-direction: column; }
+.print-simple-sku-fila {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.5rem 0.2rem;
+  border-bottom: 1px solid #ddd;
+  font-size: 1.1rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.print-simple-sku-lista .print-simple-sku-fila:last-child { border-bottom: none; }
+.print-simple-sku-modelo { font-weight: 800; font-variant-numeric: tabular-nums; }
+.print-simple-sku-cond { font-size: 0.95rem; color: #444; font-weight: 600; }
+.print-simple-sku-llevamos { margin-left: auto; font-size: 1rem; white-space: nowrap; }
+.print-simple-sku-llevamos b { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+
+.print-simple-footer { margin-top: 1rem; padding-top: 0.6rem; border-top: 1px solid #ccc; text-align: center; font-size: 0.75rem; color: #666; }
+
 /* ─── Responsive móvil (pantalla, no impresión) ────────── */
 @media (max-width: 640px) {
-  .acciones-imprimir { top: 1rem; right: 1rem; gap: 0.4rem; }
+  .acciones-imprimir { top: 1rem; right: 1rem; left: 1rem; gap: 0.4rem; }
   .btn-imprimir, .btn-volver { padding: 0.55rem 0.85rem; font-size: 0.82rem; border-radius: 6px; }
+  .toggle-vista-impresion button { padding: 0.55rem 0.7rem; font-size: 0.78rem; }
+  .print-simple-header { flex-wrap: wrap; }
+  .print-simple-pedido-nombre { font-size: 1.5rem; }
+  .print-simple-marca-nombre { font-size: 1.6rem; }
+  .print-simple-sku-fila { flex-wrap: wrap; font-size: 1rem; }
+  .print-simple-sku-llevamos { margin-left: 0; }
   .print-hoja { padding: 1rem; }
   .print-info-grid { grid-template-columns: repeat(2, 1fr); }
   .print-kpi-grid { grid-template-columns: repeat(2, 1fr); }

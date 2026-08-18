@@ -56,8 +56,17 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ error: t('estadoApi.pedidoNoEncontrado') }, { status: 404 })
   }
 
-  const { pendiente } = calcularTotales(pedido)
-  const actual = normalizeOrderStatus({ ...pedido, pendiente })
+  const { pendiente, progresoPct } = calcularTotales(pedido)
+  // BUG previo: se pasaba `{ ...pedido, pendiente }` — el documento crudo de
+  // Mongo nunca tiene `progresoPct` (siempre se calcula, nunca se guarda),
+  // así que normalizeOrderStatus recibía progresoPct=undefined y derivaba
+  // "PENDIENTE" sin importar el avance real, salvo que estadoOperativo ya
+  // tuviera un valor guardado. Eso hacía que `estadoAnterior` quedara mal
+  // registrado en el historial y que, en el caso de un pedido que ya había
+  // llegado a una etapa (p. ej. ya estaba en CARGANDO) y se reintentaba la
+  // MISMA transición, el error "transición inválida" no diera la pista
+  // correcta de en qué etapa real estaba el pedido.
+  const actual = normalizeOrderStatus({ estadoOperativo: pedido.estadoOperativo, progresoPct })
 
   if (actual === 'CANCELADO') {
     return NextResponse.json({ error: t('estadoApi.yaCancelado') }, { status: 400 })

@@ -870,7 +870,10 @@
     "metaCorta": "目标",
     "skuDiferentes": "不同 SKU 数",
     "generadoPor": "生成人",
-    "paginaDe": "第 {{actual}} 页，共 {{total}} 页"
+    "paginaDe": "第 {{actual}} 页，共 {{total}} 页",
+    "vistaLabel": "打印视图",
+    "vistaCompleta": "完整视图",
+    "vistaSimple": "简易视图"
   },
   "excelPedido": {
     "tituloPrincipal": "订单进度",

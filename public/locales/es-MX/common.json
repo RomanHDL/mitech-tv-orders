@@ -870,7 +870,10 @@
     "metaCorta": "Meta",
     "skuDiferentes": "SKU diferentes",
     "generadoPor": "Generado por",
-    "paginaDe": "Página {{actual}} de {{total}}"
+    "paginaDe": "Página {{actual}} de {{total}}",
+    "vistaLabel": "Vista de impresión",
+    "vistaCompleta": "Vista completa",
+    "vistaSimple": "Vista simple"
   },
   "excelPedido": {
     "tituloPrincipal": "AVANCE DEL PEDIDO",

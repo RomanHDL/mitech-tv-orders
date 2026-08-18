@@ -7,7 +7,7 @@ import { estadoLabel } from '@/lib/catalogos'
 import { getServerT, getServerLang } from '@/lib/i18n-server'
 import { localeDe } from '@/lib/intl-format'
 import { groupProductsByBrandAndSize } from '@/lib/surtido-grupos'
-import OrderPrintSheet from './order-print-sheet'
+import PrintViewSwitcher from './print-view-switcher'
 
 async function obtenerPedido(id) {
   if (!ObjectId.isValid(id)) return null
@@ -83,8 +83,7 @@ export default async function ImprimirPage({ params }) {
   const pedidoRef = String(pedido._id).slice(-6).toUpperCase()
 
   return (
-    <OrderPrintSheet
-      t={t}
+    <PrintViewSwitcher
       pedido={pedido}
       brandSections={brandSections}
       televisiones={televisiones}
@@ -101,3 +100,4 @@ export default async function ImprimirPage({ params }) {
     />
   )
 }
+

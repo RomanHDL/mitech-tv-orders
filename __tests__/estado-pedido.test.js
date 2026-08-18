@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcularTotales } from '@/lib/estado-pedido'
+import { calcularTotales, normalizeOrderStatus } from '@/lib/estado-pedido'
 
 function tv(overrides = {}) {
   return {
@@ -95,5 +95,44 @@ describe('calcularTotales — pedidos con metasGrupo (marca+pulgadas)', () => {
   it('con metasGrupo, cantidadTotal manual se ignora (metasGrupo manda)', () => {
     const pedido = { ...pedidoLorena, cantidadTotal: 9999 }
     expect(calcularTotales(pedido).totalRequerido).toBe(140)
+  })
+
+  // Pedido con metas por grupo ya 100% surtido (todas las metas definidas
+  // cumplidas, sin cantidadTotal manual) y sin estadoOperativo todavía
+  // (fresco, nunca se avanzó de fase a mano) — el caso real de "ya terminé
+  // pero no me deja avanzar de fase".
+  it('pedido 100% completo (con metasGrupo) llega a TERMINADO', () => {
+    const pedidoCompleto = {
+      cantidadTotal: null,
+      metasGrupo: { 'LG-65': 30 },
+      estadoOperativo: null,
+      televisiones: [
+        tv({ marca: 'LG', pulgadas: 65, modelo: 'SNTV007271', cantidadSurtida: 15 }),
+        tv({ marca: 'LG', pulgadas: 65, modelo: 'SNTV007305', cantidadSurtida: 15 }),
+      ],
+    }
+    const { progresoPct } = calcularTotales(pedidoCompleto)
+    expect(progresoPct).toBe(100)
+    // Forma correcta de usarlo (app/api/pedidos/[id]/estado/route.js): pasar
+    // estadoOperativo + progresoPct explícitos, NUNCA el documento crudo de
+    // Mongo completo (que jamás trae progresoPct guardado).
+    const actual = normalizeOrderStatus({ estadoOperativo: pedidoCompleto.estadoOperativo, progresoPct })
+    expect(actual).toBe('TERMINADO')
+  })
+
+  it('BUG documentado: pasar el documento crudo de Mongo (sin progresoPct) siempre da PENDIENTE', () => {
+    const pedidoCompleto = {
+      cantidadTotal: null,
+      metasGrupo: { 'LG-65': 30 },
+      estadoOperativo: null,
+      televisiones: [
+        tv({ marca: 'LG', pulgadas: 65, modelo: 'SNTV007271', cantidadSurtida: 30 }),
+      ],
+    }
+    const { pendiente } = calcularTotales(pedidoCompleto)
+    // Esta era la forma buggeada — se deja aquí como advertencia, nunca
+    // debe volver a usarse en el código real.
+    const actualBuggeado = normalizeOrderStatus({ ...pedidoCompleto, pendiente })
+    expect(actualBuggeado).toBe('PENDIENTE') // incorrecto — el pedido está TERMINADO
   })
 })
