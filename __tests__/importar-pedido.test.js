@@ -47,6 +47,40 @@ describe('parsearTexto — formato SKU/QTY/Marca/Condición', () => {
   })
 })
 
+describe('parsearTexto — rescate por contenido cuando el encabezado de QTY/Condición viene con ruido (típico del OCR de una foto)', () => {
+  it('si el encabezado de QTY y CONDICIÓN es irreconocible, los infiere del valor de cada celda', () => {
+    const tabla = [
+      'SKU\t###\tTIPO DE TV (MARCA)\t@@@',
+      'SNTV001763\t3\tONN\tGRB',
+      'SNTV001764\t44\tONN\tGRA',
+      'SNTV001862\t2\tONN\tGRC',
+    ].join('\n')
+    expect(parsearTexto(tabla)).toEqual([
+      { brand: 'ONN', model: 'SNTV001763', qty: '3', condicion: 'GRB' },
+      { brand: 'ONN', model: 'SNTV001764', qty: '44', condicion: 'GRA' },
+      { brand: 'ONN', model: 'SNTV001862', qty: '2', condicion: 'GRC' },
+    ])
+  })
+
+  it('filasAItems ya no cae en cantidad=1/condición vacía cuando el rescate por contenido aplica', () => {
+    const tabla = 'SKU\t###\tMARCA\t@@@\nSNTV001764\t44\tONN\tGRA'
+    const items = filasAItems(parsearTexto(tabla))
+    expect(items[0]).toMatchObject({ cantidad: 44, condicion: 'GRA' })
+  })
+})
+
+describe('detectarEncabezado (vía parsearTexto) — coincidencia parcial de encabezados con ruido', () => {
+  it('reconoce variantes con acentos/paréntesis/dos puntos y abreviaturas', () => {
+    const tabla = [
+      'Sku:\tCant.\tTipo de TV\tCondición:',
+      'SNTV001763\t3\tONN\tGRB',
+    ].join('\n')
+    expect(parsearTexto(tabla)).toEqual([
+      { brand: 'ONN', model: 'SNTV001763', qty: '3', condicion: 'GRB' },
+    ])
+  })
+})
+
 describe('parsearTexto — sigue soportando el formato clásico Marca/Modelo/Cantidad', () => {
   it('sin encabezado, usa columna0=marca, columna1=modelo, última numérica=cantidad', () => {
     const texto = 'HISENSE\t32H40G\t66\nONN\t100012585\t194'
