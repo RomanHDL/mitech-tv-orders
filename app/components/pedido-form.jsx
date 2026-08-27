@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX, marcaValida } from '@/lib/catalogos'
 import { ordenarPorMarcaYPulgadas } from '@/lib/orden-televisiones'
 import {
+  createGroupKey,
   filtrarMetasHuerfanas,
   groupProductsByBrandAndSize,
   isRequestedQuantityDefined,
@@ -232,8 +233,14 @@ export default function PedidoForm({
     setGroupTargets((prev) => ({ ...prev, [groupKey]: valor }))
 
   // Carga en lote (pegar / Excel / foto). Si lo único que hay es la tarjeta
-  // vacía inicial, la reemplaza; si no, agrega. No asigna cantidad
-  // individual: las metas se capturan por grupo, después de importar.
+  // vacía inicial, la reemplaza; si no, agrega. La meta de cantidad sigue
+  // siendo por grupo (marca+pulgadas), nunca por SKU individual — pero si
+  // el pedido importado ya trae su propio QTY por renglón, se usa para
+  // PRELLENAR la meta de cada grupo NUEVO (suma del QTY de los SKU que
+  // caen en ese grupo), en vez de dejarla en "por definir": el usuario ya
+  // no tiene que volver a capturar a mano un número que la tabla original
+  // ya traía. Nunca pisa la meta de un grupo que ya existía antes de este
+  // import y que el usuario ya había definido a mano.
   const importarTvs = (items) => {
     if (!items?.length) return
     const nuevas = items.map((it) => ({
@@ -247,10 +254,32 @@ export default function PedidoForm({
       unidad: palletPorDefecto ? 'pallet' : (it.unidad || 'pieza'),
       modelosAlternativos: it.modelosAlternativos || [],
     }))
+
+    const gruposPrevios = new Set(
+      tvs.filter((tv) => tv.marca && tv.pulgadas).map((tv) => createGroupKey(tv.marca, tv.pulgadas))
+    )
+
     setTvs((prev) => {
       const soloVacia = prev.length === 1 && !prev[0].marca && !prev[0].modelo
       return soloVacia ? nuevas : [...prev, ...nuevas]
     })
+
+    const sumaQtyPorGrupo = new Map()
+    for (const it of items) {
+      if (!it.marca || !it.pulgadas || !(Number(it.cantidad) > 0)) continue
+      const key = createGroupKey(it.marca, it.pulgadas)
+      sumaQtyPorGrupo.set(key, (sumaQtyPorGrupo.get(key) || 0) + Math.floor(Number(it.cantidad)))
+    }
+    if (sumaQtyPorGrupo.size > 0) {
+      setGroupTargets((prev) => {
+        const next = { ...prev }
+        for (const [key, suma] of sumaQtyPorGrupo) {
+          if (gruposPrevios.has(key) && isRequestedQuantityDefined(prev[key])) continue
+          next[key] = suma
+        }
+        return next
+      })
+    }
   }
 
   const enviar = async (e) => {
