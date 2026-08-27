@@ -16,14 +16,14 @@ describe('parsearTexto — formato SKU/QTY/Marca/Condición', () => {
   it('respeta el orden de columnas del encabezado, no la posición fija', () => {
     const filas = parsearTexto(tabla)
     expect(filas).toEqual([
-      { brand: 'ONN', model: 'SNTV001763', qty: '3', condicion: 'GRB' },
-      { brand: 'ONN', model: 'SNTV001764', qty: '44', condicion: 'GRA' },
-      { brand: 'ONN', model: 'SNTV001862', qty: '2', condicion: 'GRC' },
-      { brand: 'TCL', model: 'SNTV002033', qty: '4', condicion: 'GRB' },
+      { brand: 'ONN', model: 'SNTV001763', qty: '3', pulgadas: '', condicion: 'GRB' },
+      { brand: 'ONN', model: 'SNTV001764', qty: '44', pulgadas: '', condicion: 'GRA' },
+      { brand: 'ONN', model: 'SNTV001862', qty: '2', pulgadas: '', condicion: 'GRC' },
+      { brand: 'TCL', model: 'SNTV002033', qty: '4', pulgadas: '', condicion: 'GRB' },
     ])
   })
 
-  it('filasAItems arma los items con condición y sin pulgadas (no vienen en el SKU)', () => {
+  it('filasAItems arma los items con condición y sin pulgadas (no vienen en el SKU ni en la tabla)', () => {
     const items = filasAItems(parsearTexto(tabla))
     expect(items[0]).toMatchObject({
       marca: 'ONN',
@@ -47,7 +47,35 @@ describe('parsearTexto — formato SKU/QTY/Marca/Condición', () => {
   })
 })
 
-describe('parsearTexto — rescate por contenido cuando el encabezado de QTY/Condición viene con ruido (típico del OCR de una foto)', () => {
+// Formato real completo con la columna PULGADAS incluida (SKU, QTY, TIPO DE
+// TV (MARCA), PULGADAS, CONDICIÓN) — la tabla "limpia" que el cliente termina
+// mandando una vez que ya tiene las pulgadas de cada SKU.
+describe('parsearTexto — formato con PULGADAS incluida', () => {
+  const tabla = [
+    'SKU\tQTY\tTIPO DE TV (MARCA)\tPULGADAS\tCONDICIÓN',
+    'SNTV001763\t3\tONN\t50"\tGRB',
+    'SNTV001764\t44\tONN\t32"\tGRA',
+    'SNTV003414\t2\tONN\t40"\tGRB',
+  ].join('\n')
+
+  it('toma la pulgada de su propia columna (con comillas incluidas) en vez de intentar detectarla del SKU', () => {
+    const items = filasAItems(parsearTexto(tabla))
+    expect(items).toMatchObject([
+      { modelo: 'SNTV001763', cantidad: 3, pulgadas: 50, condicion: 'GRB' },
+      { modelo: 'SNTV001764', cantidad: 44, pulgadas: 32, condicion: 'GRA' },
+      { modelo: 'SNTV003414', cantidad: 2, pulgadas: 40, condicion: 'GRB' },
+    ])
+    expect(items.every((it) => it._flags.pulgadasOk)).toBe(true)
+  })
+
+  it('también funciona sin las comillas de pulgadas', () => {
+    const sinComillas = tabla.replaceAll('"', '')
+    const items = filasAItems(parsearTexto(sinComillas))
+    expect(items.map((it) => it.pulgadas)).toEqual([50, 32, 40])
+  })
+})
+
+describe('parsearTexto — rescate por contenido cuando el encabezado viene con ruido (típico del OCR de una foto)', () => {
   it('si el encabezado de QTY y CONDICIÓN es irreconocible, los infiere del valor de cada celda', () => {
     const tabla = [
       'SKU\t###\tTIPO DE TV (MARCA)\t@@@',
@@ -56,9 +84,9 @@ describe('parsearTexto — rescate por contenido cuando el encabezado de QTY/Con
       'SNTV001862\t2\tONN\tGRC',
     ].join('\n')
     expect(parsearTexto(tabla)).toEqual([
-      { brand: 'ONN', model: 'SNTV001763', qty: '3', condicion: 'GRB' },
-      { brand: 'ONN', model: 'SNTV001764', qty: '44', condicion: 'GRA' },
-      { brand: 'ONN', model: 'SNTV001862', qty: '2', condicion: 'GRC' },
+      { brand: 'ONN', model: 'SNTV001763', qty: '3', pulgadas: '', condicion: 'GRB' },
+      { brand: 'ONN', model: 'SNTV001764', qty: '44', pulgadas: '', condicion: 'GRA' },
+      { brand: 'ONN', model: 'SNTV001862', qty: '2', pulgadas: '', condicion: 'GRC' },
     ])
   })
 
@@ -66,6 +94,19 @@ describe('parsearTexto — rescate por contenido cuando el encabezado de QTY/Con
     const tabla = 'SKU\t###\tMARCA\t@@@\nSNTV001764\t44\tONN\tGRA'
     const items = filasAItems(parsearTexto(tabla))
     expect(items[0]).toMatchObject({ cantidad: 44, condicion: 'GRA' })
+  })
+
+  it('rescata también PULGADAS por contenido cuando su encabezado es irreconocible, sin confundirla con QTY', () => {
+    const tabla = [
+      'SKU\tQTY\tMARCA\t%%%\tCONDICIÓN',
+      'SNTV001763\t3\tONN\t50"\tGRB',
+      'SNTV003414\t2\tONN\t40"\tGRB',
+    ].join('\n')
+    const items = filasAItems(parsearTexto(tabla))
+    expect(items).toMatchObject([
+      { cantidad: 3, pulgadas: 50, condicion: 'GRB' },
+      { cantidad: 2, pulgadas: 40, condicion: 'GRB' },
+    ])
   })
 })
 
@@ -76,7 +117,7 @@ describe('detectarEncabezado (vía parsearTexto) — coincidencia parcial de enc
       'SNTV001763\t3\tONN\tGRB',
     ].join('\n')
     expect(parsearTexto(tabla)).toEqual([
-      { brand: 'ONN', model: 'SNTV001763', qty: '3', condicion: 'GRB' },
+      { brand: 'ONN', model: 'SNTV001763', qty: '3', pulgadas: '', condicion: 'GRB' },
     ])
   })
 })
@@ -94,8 +135,8 @@ describe('parsearTexto — sigue soportando el formato clásico Marca/Modelo/Can
     const texto = 'Marca\tModelo\tCantidad\nHisense\t75A6H\t5\nSamsung\tDU7000\t10'
     const filas = parsearTexto(texto)
     expect(filas).toEqual([
-      { brand: 'Hisense', model: '75A6H', qty: '5', condicion: '' },
-      { brand: 'Samsung', model: 'DU7000', qty: '10', condicion: '' },
+      { brand: 'Hisense', model: '75A6H', qty: '5', pulgadas: '', condicion: '' },
+      { brand: 'Samsung', model: 'DU7000', qty: '10', pulgadas: '', condicion: '' },
     ])
   })
 })

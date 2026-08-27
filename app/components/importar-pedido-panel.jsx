@@ -9,11 +9,11 @@ import { IconAlert, IconClipboard, IconExcel, IconDocument, IconCheck, IconDownl
 function descargarPlantilla() {
   const wb = XLSX.utils.book_new()
   const ws = XLSX.utils.aoa_to_sheet([
-    ['SKU', 'QTY', 'TIPO DE TV (MARCA)', 'CONDICIÓN'],
-    ['SNTV001763', 5, 'Hisense', 'GRB'],
-    ['SNTV001764', 10, 'Samsung', 'GRA'],
+    ['SKU', 'QTY', 'TIPO DE TV (MARCA)', 'PULGADAS', 'CONDICIÓN'],
+    ['SNTV001763', 5, 'Hisense', '75"', 'GRB'],
+    ['SNTV001764', 10, 'Samsung', '65"', 'GRA'],
   ])
-  ws['!cols'] = [{ wch: 16 }, { wch: 8 }, { wch: 18 }, { wch: 12 }]
+  ws['!cols'] = [{ wch: 16 }, { wch: 8 }, { wch: 18 }, { wch: 10 }, { wch: 12 }]
   XLSX.utils.book_append_sheet(wb, ws, 'Pedido')
   XLSX.writeFile(wb, 'plantilla-pedido.xlsx')
 }
