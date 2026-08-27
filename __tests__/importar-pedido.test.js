@@ -29,6 +29,51 @@ describe('extraerNumeroPedido — número de pedido a partir del título del lis
   })
 })
 
+// Caso real reportado: el pedido completo pegado SIN la fila de encabezado
+// (el usuario copió solo los 19 renglones de datos), separado por espacios
+// múltiples — con 5 columnas y el SKU primero, el heurístico clásico
+// (columna0=marca/columna1=modelo) lo desordenaba por completo.
+describe('parsearTexto — 5 columnas SIN encabezado (SKU primero) no debe caer al heurístico clásico', () => {
+  const texto = [
+    'SNTV001763    3    ONN    50"    GRB',
+    'SNTV001764    44    ONN    32"    GRA',
+    'SNTV001862    2    ONN    43"    GRC',
+    'SNTV002033    4    TCL    32"    GRB',
+    'SNTV002236    3    ONN    55"    GRB',
+    'SNTV003147    21    HISENSE    50"    GRA',
+    'SNTV003414    2    ONN    40"    GRB',
+    'SNTV004163    2    TCL    50"    GRB',
+    'SNTV004278    2    PHILIPS    55"    GRB',
+    'SNTV005162    2    PHILIPS    50"    GRB',
+    'SNTV005362    2    HISENSE    40"    GRB',
+    'SNTV006122    3    TCL    43"    GRC',
+    'SNTV007270    2    TCL    50"    GRB',
+    'SNTV007398    2    SAMSUNG    55"    GRB',
+    'SNTV007563    5    SAMSUNG    32"    GRB',
+    'SNTV007822    3    TCL    43"    GRB',
+    'SNTV007838    3    TCL    32"    GRB',
+    'SNTV008016    4    TCL    55"    GRB',
+    'SNTV008284    3    HISENSE    43"    GRB',
+  ].join('\n')
+
+  it('parsea las 19 filas completas, con SKU/marca/qty/pulgadas/condición correctos por renglón', () => {
+    const items = filasAItems(parsearTexto(texto))
+    expect(items).toHaveLength(19)
+    expect(items[0]).toMatchObject({ modelo: 'SNTV001763', marca: 'ONN', cantidad: 3, pulgadas: 50, condicion: 'GRB' })
+    expect(items[1]).toMatchObject({ modelo: 'SNTV001764', marca: 'ONN', cantidad: 44, pulgadas: 32, condicion: 'GRA' })
+    expect(items[5]).toMatchObject({ modelo: 'SNTV003147', marca: 'Hisense', cantidad: 21, pulgadas: 50, condicion: 'GRA' })
+    expect(items[18]).toMatchObject({ modelo: 'SNTV008284', marca: 'Hisense', cantidad: 3, pulgadas: 43, condicion: 'GRB' })
+    expect(items.every((it) => it._flags.marcaOk && it._flags.skuOk && it._flags.pulgadasOk && it._flags.condicionOk)).toBe(true)
+  })
+
+  it('la suma total de piezas coincide con sumar el QTY de las 19 filas (112)', () => {
+    const items = filasAItems(parsearTexto(texto))
+    const total = items.reduce((s, it) => s + it.cantidad, 0)
+    expect(total).toBe(3 + 44 + 2 + 4 + 3 + 21 + 2 + 2 + 2 + 2 + 2 + 3 + 2 + 2 + 5 + 3 + 3 + 4 + 3)
+    expect(total).toBe(112)
+  })
+})
+
 // Formato de pedido "SKU · QTY · Marca · Condición" — la tabla que envían los
 // clientes (SKU, QTY, TIPO DE TV (MARCA), CONDICIÓN), con el SKU primero y la
 // marca en tercera columna (orden distinto al clásico Marca/Modelo/Cantidad).
