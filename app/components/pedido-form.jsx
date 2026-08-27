@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
-import { CONDICIONES_FRECUENTES, SKU_REGEX, marcaValida } from '@/lib/catalogos'
+import { CONDICIONES, CONDICIONES_FRECUENTES, SKU_REGEX, marcaValida } from '@/lib/catalogos'
 import { ordenarPorMarcaYPulgadas } from '@/lib/orden-televisiones'
 import {
   filtrarMetasHuerfanas,
@@ -239,7 +239,10 @@ export default function PedidoForm({
     const nuevas = items.map((it) => ({
       marca: it.marca,
       pulgadas: it.pulgadas ? String(it.pulgadas) : '',
-      condiciones: [condicionActiva],
+      // Respeta la condición que trae el propio renglón importado (columna
+      // CONDICIÓN del pedido) cuando es válida; si no vino o no es un código
+      // reconocido, usa la condición activa del toolbar como antes.
+      condiciones: it.condicion && CONDICIONES.includes(it.condicion) ? [it.condicion] : [condicionActiva],
       modelo: it.modelo,
       unidad: palletPorDefecto ? 'pallet' : (it.unidad || 'pieza'),
       modelosAlternativos: it.modelosAlternativos || [],

@@ -9,11 +9,11 @@ import { IconAlert, IconClipboard, IconExcel, IconDocument, IconCheck, IconDownl
 function descargarPlantilla() {
   const wb = XLSX.utils.book_new()
   const ws = XLSX.utils.aoa_to_sheet([
-    ['Marca', 'Modelo', 'Cantidad'],
-    ['Hisense', '75A6H', 5],
-    ['Samsung', 'DU7000', 10],
+    ['SKU', 'QTY', 'TIPO DE TV (MARCA)', 'CONDICIÓN'],
+    ['SNTV001763', 5, 'Hisense', 'GRB'],
+    ['SNTV001764', 10, 'Samsung', 'GRA'],
   ])
-  ws['!cols'] = [{ wch: 16 }, { wch: 16 }, { wch: 10 }]
+  ws['!cols'] = [{ wch: 16 }, { wch: 8 }, { wch: 18 }, { wch: 12 }]
   XLSX.utils.book_append_sheet(wb, ws, 'Pedido')
   XLSX.writeFile(wb, 'plantilla-pedido.xlsx')
 }
@@ -59,7 +59,7 @@ export default function ImportarPedidoPanel({ onImportar, disabled = false }) {
     [items]
   )
   const conRevisar = useMemo(
-    () => items.filter((it) => !it._flags.marcaOk || !it._flags.skuOk || !it._flags.pulgadasOk).length,
+    () => items.filter((it) => !it._flags.marcaOk || !it._flags.skuOk || !it._flags.pulgadasOk || !it._flags.condicionOk).length,
     [items]
   )
 
@@ -247,24 +247,35 @@ export default function ImportarPedidoPanel({ onImportar, disabled = false }) {
             <div className="importar-preview">
               <table>
                 <thead>
-                  <tr><th>{t('common.marca')}</th><th>{t('pedidoDetalle.colSku')}</th><th>{t('importar.colPulg')}</th><th>{t('pedidoForm.placeholderCant')}</th></tr>
+                  <tr>
+                    <th>{t('pedidoDetalle.colSku')}</th>
+                    <th>{t('pedidoForm.placeholderCant')}</th>
+                    <th>{t('common.marca')}</th>
+                    <th>{t('pedidoForm.condicion')}</th>
+                    <th>{t('importar.colPulg')}</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {items.map((it, i) => (
                     <tr key={i}>
-                      <td className={it._flags.marcaOk ? '' : 'celda-revisar'}>
-                        {it.marca || '—'} {it._flags.marcaOk ? <IconCheck width={12} height={12} /> : null}
-                      </td>
                       <td className={it._flags.skuOk ? '' : 'celda-revisar'}>
                         {it.modelo || '—'}
                         {it.modelosAlternativos?.length > 0 && (
                           <span className="importar-alt-hint">{t('importar.altHint', { n: it.modelosAlternativos.length })}</span>
                         )}
                       </td>
+                      <td>{it.cantidad}</td>
+                      <td className={it._flags.marcaOk ? '' : 'celda-revisar'}>
+                        {it.marca || '—'} {it._flags.marcaOk ? <IconCheck width={12} height={12} /> : null}
+                      </td>
+                      <td className={it._flags.condicionOk ? '' : 'celda-revisar'}>
+                        {it.condicion ? (
+                          <span className={`tv-condicion-chip tv-condicion-chip-${it.condicion.toLowerCase()} tv-fila-condicion-chip`}>{it.condicion}</span>
+                        ) : '—'}
+                      </td>
                       <td className={it._flags.pulgadasOk ? '' : 'celda-revisar'}>
                         {it._flags.pulgadasOk ? `${it.pulgadas}"` : '?'}
                       </td>
-                      <td>{it.cantidad}</td>
                     </tr>
                   ))}
                 </tbody>
