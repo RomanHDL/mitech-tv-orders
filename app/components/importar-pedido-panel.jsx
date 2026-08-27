@@ -3,7 +3,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
-import { parsearTexto, filasAItems, aplicarCatalogo, parsearBloqueAlternativas } from '@/lib/importar-pedido'
+import { parsearTexto, filasAItems, aplicarCatalogo, parsearBloqueAlternativas, extraerNumeroPedido } from '@/lib/importar-pedido'
 import { IconAlert, IconClipboard, IconExcel, IconDocument, IconCheck, IconDownload, IconUpload } from './icons'
 
 function descargarPlantilla() {
@@ -28,6 +28,7 @@ export default function ImportarPedidoPanel({ onImportar, disabled = false }) {
   const [tab, setTab] = useState('pegar')
   const [texto, setTexto] = useState('')
   const [items, setItems] = useState([])
+  const [numeroPedidoDetectado, setNumeroPedidoDetectado] = useState('')
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
   const [progreso, setProgreso] = useState(0)
@@ -64,6 +65,10 @@ export default function ImportarPedidoPanel({ onImportar, disabled = false }) {
   )
 
   const cargarFilas = (filas, crudo) => {
+    // El número de pedido (ej. "PEDIDO #19029407" en el título del listado)
+    // no es parte de la tabla — se busca aparte en todo el texto crudo, no
+    // solo en los renglones que sí se lograron parsear como productos.
+    setNumeroPedidoDetectado(extraerNumeroPedido(crudo))
     if (!filas.length) {
       const bloque = parsearBloqueAlternativas(crudo || '')
       if (bloque) {
@@ -151,10 +156,11 @@ export default function ImportarPedidoPanel({ onImportar, disabled = false }) {
 
   const confirmar = () => {
     if (!items.length) return
-    onImportar(items)
+    onImportar(items, { numeroPedidoDetectado, totalPiezas })
     setTexto('')
     setItems([])
     setError('')
+    setNumeroPedidoDetectado('')
   }
 
   return (

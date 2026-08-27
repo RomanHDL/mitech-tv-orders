@@ -1,5 +1,33 @@
 import { describe, expect, it } from 'vitest'
-import { parsearTexto, filasAItems } from '@/lib/importar-pedido'
+import { parsearTexto, filasAItems, extraerNumeroPedido } from '@/lib/importar-pedido'
+
+describe('extraerNumeroPedido — número de pedido a partir del título del listado', () => {
+  it('lo encuentra en "PEDIDO #19029407 — LISTADO LIMPIO DE TVs"', () => {
+    expect(extraerNumeroPedido('PEDIDO #19029407 — LISTADO LIMPIO DE TVs')).toBe('19029407')
+  })
+
+  it('funciona en minúsculas y sin "#"', () => {
+    expect(extraerNumeroPedido('pedido 12345, revisar antes de mandar')).toBe('12345')
+  })
+
+  it('funciona con "Pedido No." y con "Order #"', () => {
+    expect(extraerNumeroPedido('Pedido No. 987654')).toBe('987654')
+    expect(extraerNumeroPedido('Order #55501')).toBe('55501')
+  })
+
+  it('no confunde un SKU o una cantidad con el número de pedido', () => {
+    expect(extraerNumeroPedido('SKU\tQTY\tMARCA\nSNTV001763\t3\tONN')).toBe('')
+  })
+
+  it('ignora números demasiado cortos (menos de 4 dígitos) para evitar falsos positivos', () => {
+    expect(extraerNumeroPedido('Pedido #12')).toBe('')
+  })
+
+  it('regresa vacío si no hay nada reconocible', () => {
+    expect(extraerNumeroPedido('')).toBe('')
+    expect(extraerNumeroPedido('HISENSE\t32H40G\t66')).toBe('')
+  })
+})
 
 // Formato de pedido "SKU · QTY · Marca · Condición" — la tabla que envían los
 // clientes (SKU, QTY, TIPO DE TV (MARCA), CONDICIÓN), con el SKU primero y la

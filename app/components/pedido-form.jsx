@@ -241,8 +241,19 @@ export default function PedidoForm({
   // no tiene que volver a capturar a mano un número que la tabla original
   // ya traía. Nunca pisa la meta de un grupo que ya existía antes de este
   // import y que el usuario ya había definido a mano.
-  const importarTvs = (items) => {
+  const importarTvs = (items, meta = {}) => {
     if (!items?.length) return
+
+    // Número de pedido y cantidad total: si el propio listado ya los trae
+    // (ej. título "PEDIDO #19029407" y la suma de QTY de todos los
+    // renglones), se prellenan solos — nunca pisan lo que el usuario ya
+    // haya escrito a mano.
+    if (meta.numeroPedidoDetectado && !numeroPedido.trim()) {
+      setNumeroPedido(meta.numeroPedidoDetectado)
+    }
+    if (meta.totalPiezas > 0 && !cantidadTotal.trim()) {
+      setCantidadTotal(String(meta.totalPiezas))
+    }
     const nuevas = items.map((it) => ({
       marca: it.marca,
       pulgadas: it.pulgadas ? String(it.pulgadas) : '',
