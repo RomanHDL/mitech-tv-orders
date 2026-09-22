@@ -282,6 +282,7 @@ h2 {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
   padding: 0.5rem 0.65rem 0.75rem;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
