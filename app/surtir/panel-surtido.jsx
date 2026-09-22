@@ -371,16 +371,19 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
     if (!confirm(t('surtir.confirmarFinalizar'))) return
 
     // El picking ya queda "TERMINADO" automáticamente al llegar a 100% (se
-    // deriva solo, nunca hace falta marcarlo a mano) — lo único que faltaba
-    // para que el pedido siguiera su curso era la etapa logística
-    // siguiente (Cargando), exclusiva de admin, igual que el botón
-    // "Iniciar carga" del stepper de arriba (misma regla, también
-    // re-validada en el servidor). Antes este botón solo refrescaba la
-    // vista sin mover nada, así que para un admin con el pedido al 100%
-    // parecía no hacer nada al confirmar. Si ya se avanzó de etapa (o
-    // quien confirma no es admin), cae al comportamiento de siempre.
-    if (esAdmin && siguienteEtapa?.destino === 'CARGANDO') {
-      await avanzarEtapa('CARGANDO')
+    // deriva solo, nunca hace falta marcarlo a mano) — lo que faltaba era
+    // que este botón también empujara la etapa logística siguiente
+    // (Cargando → Listo para salida → Despachado) en vez de solo refrescar
+    // sin mover nada. Reutiliza la misma etapa/permiso que ya calculan
+    // "Iniciar carga" / "Marcar listo para salida" / "Confirmar despacho"
+    // del stepper de arriba (Cargando exclusivo de admin, el resto también
+    // surtidor — mismas reglas re-validadas en el servidor), así que
+    // "Finalizar surtido" ahora libera el pedido etapa por etapa hasta
+    // Despachado. Si ya no queda etapa siguiente, o quien confirma no
+    // tiene permiso para moverla, cae al comportamiento de siempre
+    // (confirmar y refrescar sin tocar el estado).
+    if (puedeIniciarSiguienteEtapa) {
+      await avanzarEtapa(siguienteEtapa.destino)
       return
     }
 
