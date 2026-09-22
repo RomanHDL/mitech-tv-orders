@@ -712,13 +712,19 @@ h2 {
 /* ─── Nuevo Pedido — página, encabezado y grid 72/28 ──── */
 /* Paleta/tipografía/radio exactos del mockup, escopados a esta página vía
    variables CSS (no se tocan los tokens globales — el resto de módulos no
-   se ve afectado). */
-
-.pedido-nuevo-page {
+   se ve afectado). Esta paleta es fija de por sí (se escribió antes del
+   modo oscuro) — solo se aplica en modo claro; en modo oscuro se deja que
+   .pedido-nuevo-page herede --bg/--black/--text-muted/--border del bloque
+   :root[data-theme='dark'] de arriba (antes los pisaba con estos valores
+   claros fijos sin importar el tema, dejando texto casi negro sobre fondo
+   casi negro — títulos y labels ilegibles en oscuro). */
+:root:not([data-theme='dark']) .pedido-nuevo-page {
   --bg: #F8FAFC;
   --black: #111827;
   --text-muted: #6B7280;
   --border: #E5E7EB;
+}
+.pedido-nuevo-page {
   --radius-lg: 20px;
   width: 100%;
   max-width: none;
