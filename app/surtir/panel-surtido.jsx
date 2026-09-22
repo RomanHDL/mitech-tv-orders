@@ -369,12 +369,23 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
       return
     }
     if (!confirm(t('surtir.confirmarFinalizar'))) return
+
+    // El picking ya queda "TERMINADO" automáticamente al llegar a 100% (se
+    // deriva solo, nunca hace falta marcarlo a mano) — lo único que faltaba
+    // para que el pedido siguiera su curso era la etapa logística
+    // siguiente (Cargando), exclusiva de admin, igual que el botón
+    // "Iniciar carga" del stepper de arriba (misma regla, también
+    // re-validada en el servidor). Antes este botón solo refrescaba la
+    // vista sin mover nada, así que para un admin con el pedido al 100%
+    // parecía no hacer nada al confirmar. Si ya se avanzó de etapa (o
+    // quien confirma no es admin), cae al comportamiento de siempre.
+    if (esAdmin && siguienteEtapa?.destino === 'CARGANDO') {
+      await avanzarEtapa('CARGANDO')
+      return
+    }
+
     setFinalizando(true)
     try {
-      // El estado ya es "TERMINADO" automáticamente al llegar a 100% (se
-      // deriva y se registra en la bitácora desde el mismo PATCH de
-      // surtido) — esta acción solo confirma y refresca la vista, nunca
-      // marca el pedido como Cargando/Despachado.
       onCambiado?.()
     } finally {
       setFinalizando(false)
@@ -610,7 +621,7 @@ export default function PanelSurtido({ pedido, rol, onCambiado, standalone = fal
             type="button"
             className="btn btn-primary"
             onClick={finalizarSurtido}
-            disabled={!puedeFinalizar || finalizando}
+            disabled={!puedeFinalizar || finalizando || cambiandoEstado}
             title={puedeFinalizar ? t('surtir.finalizarSurtido') : motivoBloqueoFinalizar}
           >
             <IconCheck /> {t('surtir.finalizarSurtido')}
