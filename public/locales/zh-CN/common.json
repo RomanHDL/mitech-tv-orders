@@ -13,7 +13,11 @@
     "editarManual": "编辑手册",
     "changelog": "更新日志",
     "novedades": "新功能",
-    "salir": "退出登录"
+    "salir": "退出登录",
+    "temaClaro": "切换到浅色模式",
+    "temaOscuro": "切换到深色模式",
+    "fijarBarra": "固定侧边栏",
+    "autoOcultarBarra": "自动隐藏侧边栏"
   },
   "common": {
     "guardar": "保存",

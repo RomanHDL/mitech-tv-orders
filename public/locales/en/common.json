@@ -13,7 +13,11 @@
     "editarManual": "Edit Manual",
     "changelog": "Changelog",
     "novedades": "What's new",
-    "salir": "Sign out"
+    "salir": "Sign out",
+    "temaClaro": "Switch to light mode",
+    "temaOscuro": "Switch to dark mode",
+    "fijarBarra": "Pin sidebar",
+    "autoOcultarBarra": "Auto-hide sidebar"
   },
   "common": {
     "guardar": "Save",

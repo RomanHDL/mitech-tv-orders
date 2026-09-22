@@ -13,7 +13,11 @@
     "editarManual": "Editar Manual",
     "changelog": "Changelog",
     "novedades": "Novedades",
-    "salir": "Salir"
+    "salir": "Salir",
+    "temaClaro": "Cambiar a modo claro",
+    "temaOscuro": "Cambiar a modo oscuro",
+    "fijarBarra": "Fijar barra lateral",
+    "autoOcultarBarra": "Auto-ocultar barra lateral"
   },
   "common": {
     "guardar": "Guardar",

@@ -16,14 +16,22 @@ import {
   IconDocument,
   IconForklift,
   IconMenu,
+  IconMoon,
   IconPencil,
+  IconPin,
+  IconPinOff,
   IconPlus,
   IconRefresh,
+  IconSun,
   IconUser,
 } from './icons'
 
+const TEMA_KEY = 'mitech-theme'
+const PIN_KEY = 'mitech-sidebar-pinned'
+const CIERRE_AUTO_MS = 250
+
 // Un ícono por módulo — mismo id estable de lib/modulos.js, para que el
-// menú luzca "arriba ícono, abajo etiqueta" sin repetir imports por rol.
+// menú luzca "ícono + etiqueta" sin repetir imports por rol.
 const ICONO_MODULO = {
   'new-order': IconPlus,
   orders: IconClipboardList,
@@ -65,22 +73,49 @@ const LINKS_POR_ROL = {
   ],
 }
 
-export default function Nav({ rol, email, nombre, allowedModules }) {
+function Logo({ href, t }) {
+  return (
+    <Link href={href || '/login'} className="sidebar-logo" aria-label="MiTechnologies">
+      <span className="sidebar-logo-badge">
+        <img src={LOGO_MITECH} alt="MiTechnologies" width="120" height="38" />
+      </span>
+    </Link>
+  )
+}
+
+export default function AppShell({ rol, email, nombre, allowedModules, children }) {
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useTranslation()
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false)
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false)
+  const [pinned, setPinned] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [oscuro, setOscuro] = useState(false)
   const usuarioMenuRef = useRef(null)
+  const cierreTimer = useRef(null)
 
-  // Cierra ambos menús al navegar a otra ruta.
+  // Lee las preferencias guardadas (tema y fijado de la barra) una vez
+  // montado — un pequeño flash inicial en los valores por defecto (claro,
+  // fijada) es aceptable, no se usa script bloqueante para esto.
+  useEffect(() => {
+    try {
+      const pinGuardado = localStorage.getItem(PIN_KEY)
+      if (pinGuardado !== null) setPinned(pinGuardado === 'true')
+    } catch {}
+    try {
+      setOscuro(document.documentElement.getAttribute('data-theme') === 'dark')
+    } catch {}
+  }, [])
+
+  // Cierra menús/drawer al navegar a otra ruta.
   useEffect(() => {
     setMenuMovilAbierto(false)
     setMenuUsuarioAbierto(false)
+    setOpen(false)
   }, [pathname])
 
-  // Cierra el menú de usuario al hacer clic fuera, y ambos con Escape —
-  // mismo patrón que ya usa el modal de changelog.
+  // Cierra el menú de usuario al hacer clic fuera, y todo con Escape.
   useEffect(() => {
     function onClickFuera(e) {
       if (usuarioMenuRef.current && !usuarioMenuRef.current.contains(e.target)) {
@@ -91,6 +126,7 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
       if (e.key === 'Escape') {
         setMenuUsuarioAbierto(false)
         setMenuMovilAbierto(false)
+        setOpen(false)
       }
     }
     document.addEventListener('mousedown', onClickFuera)
@@ -101,9 +137,13 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
     }
   }, [])
 
-  if (pathname.includes('/imprimir')) return null
-  if (pathname === '/login') return null
-  if (!rol) return null
+  useEffect(() => () => {
+    if (cierreTimer.current) clearTimeout(cierreTimer.current)
+  }, [])
+
+  const ocultar = !rol || pathname.includes('/imprimir') || pathname === '/login'
+
+  if (ocultar) return <>{children}</>
 
   // Menú dinámico: solo los módulos que el usuario tiene realmente
   // permitidos (allowedModules), conservando el orden de siempre por rol.
@@ -130,29 +170,88 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  return (
-    <nav className="nav">
-      <div className="nav-inner">
-        <Link href={links[0]?.href || '/login'} className="nav-logo" aria-label="MiTechnologies">
-          <span className="nav-logo-icon">
-            <img src={LOGO_MITECH} alt="MiTechnologies" width="120" height="38" />
-          </span>
-        </Link>
+  function abrirAuto() {
+    if (cierreTimer.current) {
+      clearTimeout(cierreTimer.current)
+      cierreTimer.current = null
+    }
+    setOpen(true)
+  }
 
-        <div className="nav-links nav-links-escritorio">
-          {links.map((l) => {
-            const Icono = ICONO_MODULO[l.moduleId]
-            return (
-              <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
-                {Icono && <Icono className="nav-link-icono" />}
-                <span className="nav-link-texto">{t(l.labelKey)}</span>
-              </Link>
-            )
-          })}
+  function programarCierreAuto() {
+    if (cierreTimer.current) clearTimeout(cierreTimer.current)
+    cierreTimer.current = setTimeout(() => setOpen(false), CIERRE_AUTO_MS)
+  }
+
+  function alternarFijado() {
+    setPinned((v) => {
+      const siguiente = !v
+      try {
+        localStorage.setItem(PIN_KEY, String(siguiente))
+      } catch {}
+      return siguiente
+    })
+    setOpen(false)
+  }
+
+  function alternarTema() {
+    setOscuro((v) => {
+      const siguiente = !v
+      try {
+        document.documentElement.setAttribute('data-theme', siguiente ? 'dark' : 'light')
+        localStorage.setItem(TEMA_KEY, siguiente ? 'dark' : 'light')
+      } catch {}
+      return siguiente
+    })
+  }
+
+  const linksNav = (
+    <>
+      {links.map((l) => {
+        const Icono = ICONO_MODULO[l.moduleId]
+        return (
+          <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
+            {Icono && <Icono className="sidebar-link-icono" />}
+            <span>{t(l.labelKey)}</span>
+          </Link>
+        )
+      })}
+    </>
+  )
+
+  return (
+    <div className="app-shell" data-pinned={pinned} data-open={open} data-mobile-open={menuMovilAbierto}>
+      <div className="sidebar-trigger" onMouseEnter={abrirAuto} aria-hidden="true" />
+
+      <aside className="sidebar" onMouseEnter={abrirAuto} onMouseLeave={programarCierreAuto}>
+        <div className="sidebar-header">
+          <Logo href={links[0]?.href} t={t} />
+          <button
+            type="button"
+            className="sidebar-pin-btn"
+            onClick={alternarFijado}
+            aria-pressed={pinned}
+            title={pinned ? t('nav.autoOcultarBarra') : t('nav.fijarBarra')}
+          >
+            {pinned ? <IconPin /> : <IconPinOff />}
+          </button>
         </div>
 
-        <div className="nav-right">
-          <LanguageSwitcher />
+        <nav className="sidebar-links">{linksNav}</nav>
+
+        <div className="sidebar-footer">
+          <div className="sidebar-footer-row">
+            <LanguageSwitcher className="sidebar-lang" />
+            <button
+              type="button"
+              className="sidebar-theme-btn"
+              onClick={alternarTema}
+              aria-label={oscuro ? t('nav.temaClaro') : t('nav.temaOscuro')}
+              title={oscuro ? t('nav.temaClaro') : t('nav.temaOscuro')}
+            >
+              {oscuro ? <IconSun /> : <IconMoon />}
+            </button>
+          </div>
 
           <div className="nav-usuario" ref={usuarioMenuRef}>
             <button
@@ -164,6 +263,7 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
               aria-label={t('usuarios.menuUsuario')}
             >
               <span className="nav-avatar">{inicial}</span>
+              <span className="nav-usuario-nombre-corto">{displayName || rol}</span>
               <IconChevronDown width={14} height={14} />
             </button>
 
@@ -179,32 +279,31 @@ export default function Nav({ rol, email, nombre, allowedModules }) {
               </div>
             )}
           </div>
-
-          <button
-            type="button"
-            className="nav-hamburguesa"
-            onClick={() => setMenuMovilAbierto((v) => !v)}
-            aria-label={t('usuarios.menu')}
-            aria-expanded={menuMovilAbierto}
-          >
-            {menuMovilAbierto ? <IconClose /> : <IconMenu />}
-          </button>
         </div>
+      </aside>
+
+      <div className="mobile-topbar">
+        <button
+          type="button"
+          className="sidebar-hamburguesa"
+          onClick={() => setMenuMovilAbierto((v) => !v)}
+          aria-label={t('usuarios.menu')}
+          aria-expanded={menuMovilAbierto}
+        >
+          {menuMovilAbierto ? <IconClose /> : <IconMenu />}
+        </button>
+        <Logo href={links[0]?.href} t={t} />
       </div>
 
-      {menuMovilAbierto && (
-        <div className="nav-links-movil">
-          {links.map((l) => {
-            const Icono = ICONO_MODULO[l.moduleId]
-            return (
-              <Link key={l.href} href={l.href} className={esActiva(l.href) ? 'activo' : ''}>
-                {Icono && <Icono className="nav-link-icono" />}
-                <span className="nav-link-texto">{t(l.labelKey)}</span>
-              </Link>
-            )
-          })}
-        </div>
-      )}
-    </nav>
+      <div
+        className="sidebar-backdrop"
+        onClick={() => {
+          setOpen(false)
+          setMenuMovilAbierto(false)
+        }}
+      />
+
+      <main className="app-main">{children}</main>
+    </div>
   )
 }
