@@ -125,10 +125,12 @@ export default function AppShell({ rol, email, nombre, allowedModules, children 
   const { t } = useTranslation()
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false)
   const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false)
-  const [colapsada, setColapsada] = useState(false)
+  const [colapsada, setColapsada] = useState(true)
+  const [peek, setPeek] = useState(false)
   const [oscuro, setOscuro] = useState(false)
   const [changelogNuevo, setChangelogNuevo] = useState(false)
   const usuarioMenuRef = useRef(null)
+  const peekTimer = useRef(null)
 
   // Lee las preferencias guardadas (tema y colapso de la barra) una vez
   // montado — un pequeño flash inicial en los valores por defecto (claro,
@@ -188,6 +190,10 @@ export default function AppShell({ rol, email, nombre, allowedModules, children 
     }
   }, [])
 
+  useEffect(() => () => {
+    if (peekTimer.current) clearTimeout(peekTimer.current)
+  }, [])
+
   const ocultar = !rol || pathname.includes('/imprimir') || pathname === '/login'
 
   if (ocultar) return <>{children}</>
@@ -230,6 +236,27 @@ export default function AppShell({ rol, email, nombre, allowedModules, children 
     setMenuUsuarioAbierto(false)
   }
 
+  // Peek: al pasar el mouse sobre la barra ya contraída (solo iconos), se
+  // ve temporalmente expandida (overlay) sin mover el contenido — el
+  // colapso "real" que gobierna el margin-left de .app-main no cambia.
+  // Solo aplica si el usuario la dejó contraída; si ya la fijó expandida
+  // manualmente, el hover no hace nada.
+  function abrirPeek() {
+    if (!colapsada) return
+    if (peekTimer.current) {
+      clearTimeout(peekTimer.current)
+      peekTimer.current = null
+    }
+    setPeek(true)
+  }
+
+  function programarCierrePeek() {
+    if (peekTimer.current) clearTimeout(peekTimer.current)
+    peekTimer.current = setTimeout(() => setPeek(false), 200)
+  }
+
+  const mostrarCompacta = colapsada && !peek
+
   function alternarTema() {
     setOscuro((v) => {
       const siguiente = !v
@@ -243,9 +270,15 @@ export default function AppShell({ rol, email, nombre, allowedModules, children 
 
   return (
     <div className="app-shell" data-collapsed={colapsada} data-mobile-open={menuMovilAbierto}>
-      <aside className="sidebar" data-collapsed={colapsada}>
+      <aside
+        className="sidebar"
+        data-collapsed={colapsada}
+        data-visual-collapsed={mostrarCompacta}
+        onMouseEnter={abrirPeek}
+        onMouseLeave={programarCierrePeek}
+      >
         <div className="sidebar-header">
-          <Logo href={links[0]?.href} colapsada={colapsada} />
+          <Logo href={links[0]?.href} colapsada={mostrarCompacta} />
           <button
             type="button"
             className="sidebar-collapse-btn"
@@ -269,7 +302,7 @@ export default function AppShell({ rol, email, nombre, allowedModules, children 
                     key={l.href}
                     href={l.href}
                     className={esActiva(l.href) ? 'activo' : ''}
-                    title={t(l.labelKey)}
+                    title={mostrarCompacta ? t(l.labelKey) : undefined}
                   >
                     <span className="sidebar-link-icon-wrap">
                       {Icono && <Icono className="sidebar-link-icono" />}

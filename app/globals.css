@@ -186,10 +186,13 @@ h2 {
 /* ─── Barra lateral (Sidebar) ─────────────────────────── */
 /* Dashboard empresarial: dos estados en escritorio/laptop, expandida
    (--sidebar-w) y colapsada a solo-iconos (--sidebar-w-collapsed),
-   alternados con el botón de la cabecera (ver data-collapsed en
-   app-shell.jsx) — la barra siempre está presente, nunca se oculta del
-   todo, y siempre empuja el contenido (.app-main). En móvil (<=860px) se
-   comporta como antes: un drawer/overlay abierto por .mobile-topbar. */
+   alternados con el botón de la cabecera (data-collapsed en
+   app-shell.jsx, gobierna el margin-left de .app-main — el contenido solo
+   se mueve con el colapso manual). Además, al pasar el mouse sobre la
+   barra ya contraída, se expande sola como overlay (peek) sin mover el
+   contenido — ver data-visual-collapsed en app-shell.jsx. La barra siempre
+   está presente, nunca se oculta del todo. En móvil (<=860px) se comporta
+   como antes: un drawer/overlay abierto por .mobile-topbar. */
 
 .app-shell {
   display: flex;
@@ -579,46 +582,52 @@ h2 {
   transition: margin-left 220ms ease;
 }
 
-/* Todo lo que depende de data-collapsed vive solo a partir de este
-   breakpoint — en móvil el atributo puede seguir en 'true' (persistido de
-   una sesión de escritorio) pero no debe tener ningún efecto ahí: la
-   barra móvil siempre es el drawer completo de siempre. */
+/* El margin-left de .app-main depende SOLO del colapso persistido/manual
+   (data-collapsed en .app-shell) — nunca del peek por hover, para que el
+   contenido principal jamás se mueva. La apariencia del propio <aside>
+   (ancho, solo-iconos vs. texto completo) depende de data-visual-collapsed
+   (colapsada && !peek en app-shell.jsx): al hacer hover sobre la barra ya
+   contraída, ese atributo pasa a 'false' y la barra recupera su ancho/
+   apariencia expandida como overlay (ya es position: fixed) sin tocar el
+   margin-left del contenido. En móvil ninguno de los dos atributos tiene
+   efecto: la barra sigue siendo el drawer completo de siempre. */
 @media (min-width: 861px) {
   .app-shell[data-collapsed='true'] .app-main { margin-left: var(--sidebar-w-collapsed); }
-  .sidebar[data-collapsed='true'] { width: var(--sidebar-w-collapsed); }
-  .sidebar[data-collapsed='true'] .sidebar-header {
+  .sidebar[data-visual-collapsed='true'] { width: var(--sidebar-w-collapsed); }
+  .sidebar[data-collapsed='true'][data-visual-collapsed='false'] { box-shadow: var(--shadow-lg); }
+  .sidebar[data-visual-collapsed='true'] .sidebar-header {
     flex-direction: column;
     gap: 0.6rem;
     padding: 0.9rem 0.5rem 0.7rem;
   }
-  .sidebar[data-collapsed='true'] .sidebar-logo-badge img { height: 26px; }
-  .sidebar[data-collapsed='true'] .sidebar-collapse-icon { transform: rotate(180deg); }
-  .sidebar[data-collapsed='true'] .sidebar-group:not(:first-child) { margin-top: 0.5rem; }
-  .sidebar[data-collapsed='true'] .sidebar-group-title { display: none; }
+  .sidebar[data-visual-collapsed='true'] .sidebar-logo-badge img { height: 26px; }
+  .sidebar[data-visual-collapsed='true'] .sidebar-collapse-icon { transform: rotate(180deg); }
+  .sidebar[data-visual-collapsed='true'] .sidebar-group:not(:first-child) { margin-top: 0.5rem; }
+  .sidebar[data-visual-collapsed='true'] .sidebar-group-title { display: none; }
 
   /* Solo iconos centrados + tooltip propio al hover (no depende del
      title nativo del navegador). */
-  .sidebar[data-collapsed='true'] .sidebar-links a {
+  .sidebar[data-visual-collapsed='true'] .sidebar-links a {
     justify-content: center;
     padding: 0;
     gap: 0;
   }
-  .sidebar[data-collapsed='true'] .sidebar-links a:hover { transform: none; }
-  .sidebar[data-collapsed='true'] .sidebar-links a:hover .sidebar-link-icon-wrap { transform: scale(1.05); }
-  .sidebar[data-collapsed='true'] .sidebar-link-texto,
-  .sidebar[data-collapsed='true'] .sidebar-live-dot,
-  .sidebar[data-collapsed='true'] .sidebar-badge-nuevo {
+  .sidebar[data-visual-collapsed='true'] .sidebar-links a:hover { transform: none; }
+  .sidebar[data-visual-collapsed='true'] .sidebar-links a:hover .sidebar-link-icon-wrap { transform: scale(1.05); }
+  .sidebar[data-visual-collapsed='true'] .sidebar-link-texto,
+  .sidebar[data-visual-collapsed='true'] .sidebar-live-dot,
+  .sidebar[data-visual-collapsed='true'] .sidebar-badge-nuevo {
     display: none;
   }
 
-  .sidebar[data-collapsed='true'] .sidebar-footer-row { justify-content: center; }
-  .sidebar[data-collapsed='true'] .sidebar-lang-pill { display: none; }
-  .sidebar[data-collapsed='true'] .nav-usuario-btn { justify-content: center; padding: 0.4rem; }
-  .sidebar[data-collapsed='true'] .nav-usuario-info,
-  .sidebar[data-collapsed='true'] .nav-usuario-chevron {
+  .sidebar[data-visual-collapsed='true'] .sidebar-footer-row { justify-content: center; }
+  .sidebar[data-visual-collapsed='true'] .sidebar-lang-pill { display: none; }
+  .sidebar[data-visual-collapsed='true'] .nav-usuario-btn { justify-content: center; padding: 0.4rem; }
+  .sidebar[data-visual-collapsed='true'] .nav-usuario-info,
+  .sidebar[data-visual-collapsed='true'] .nav-usuario-chevron {
     display: none;
   }
-  .sidebar[data-collapsed='true'] .nav-usuario-menu {
+  .sidebar[data-visual-collapsed='true'] .nav-usuario-menu {
     left: calc(100% + 0.6rem);
     right: auto;
     bottom: 0;
