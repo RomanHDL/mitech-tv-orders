@@ -64,7 +64,13 @@
   --scroll-edge: rgba(20, 20, 20, 0.12);
 
   /* Barra lateral */
-  --sidebar-w: 232px;
+  --sidebar-w: 278px;
+  --sidebar-w-collapsed: 76px;
+  /* Superficie de hover neutra para filas/botones de la barra — a
+     diferencia de --bg, se redefine para quedar SIEMPRE un tono más clara
+     que --card en ambos temas (--bg es más oscuro que --card en modo
+     oscuro, así que reutilizarlo ahí invertiría la dirección del hover). */
+  --surface-hover: #eef2f7;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -103,6 +109,7 @@
 
   --dot: rgba(255, 255, 255, 0.035);
   --scroll-edge: rgba(0, 0, 0, 0.55);
+  --surface-hover: #262b35;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -177,36 +184,17 @@ h2 {
 }
 
 /* ─── Barra lateral (Sidebar) ─────────────────────────── */
+/* Dashboard empresarial: dos estados en escritorio/laptop, expandida
+   (--sidebar-w) y colapsada a solo-iconos (--sidebar-w-collapsed),
+   alternados con el botón de la cabecera (ver data-collapsed en
+   app-shell.jsx) — la barra siempre está presente, nunca se oculta del
+   todo, y siempre empuja el contenido (.app-main). En móvil (<=860px) se
+   comporta como antes: un drawer/overlay abierto por .mobile-topbar. */
 
 .app-shell {
   display: flex;
   min-height: 100vh;
 }
-
-/* Franja sensible al hover pegada al borde izquierdo — solo existe en
-   escritorio; al pasar el mouse por ahí reaparece la barra en modo
-   auto-ocultar. En móvil no hay hover, así que no se muestra. */
-.sidebar-trigger {
-  display: none;
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: 14px;
-  z-index: 39;
-}
-.sidebar-trigger::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 4px;
-  height: 52px;
-  transform: translateY(-50%);
-  background: var(--text-subtle);
-  opacity: 0.3;
-  border-radius: 0 4px 4px 0;
-  transition: opacity var(--tx-slow);
-}
-.sidebar-trigger:hover::after { opacity: 0.6; }
 
 .sidebar-backdrop {
   position: fixed;
@@ -230,8 +218,7 @@ h2 {
   border-right: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
   z-index: 55;
-  transform: translateX(-100%);
-  transition: transform var(--tx-slow), background-color var(--tx-slow), border-color var(--tx-slow);
+  transition: width 220ms ease, transform var(--tx-slow), background-color var(--tx-slow), border-color var(--tx-slow);
 }
 
 .sidebar-header {
@@ -239,7 +226,7 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 1.1rem 1rem 0.9rem;
+  padding: 1rem 1rem 0.85rem;
   flex-shrink: 0;
 }
 .sidebar-logo {
@@ -248,86 +235,144 @@ h2 {
   text-decoration: none;
   min-width: 0;
 }
-.sidebar-logo:hover { text-decoration: none; opacity: 0.9; }
-/* El badge del logo se mantiene blanco fijo en ambos temas a propósito —
-   el arte del logo asume un fondo claro (igual que antes en .nav-logo-icon
-   y en .login-hero-logo); en modo oscuro perdería legibilidad si siguiera
-   a var(--card). */
+.sidebar-logo:hover { text-decoration: none; opacity: 0.85; }
+/* Sin "card" alrededor del logo (sin borde ni sombra) — solo en modo
+   oscuro se le da una placa clara mínima detrás, porque el arte del
+   wordmark asume fondo claro y perdería legibilidad sobre --card oscuro. */
 .sidebar-logo-badge {
-  height: 38px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  box-shadow: var(--shadow-xs);
-  transition: box-shadow var(--tx-slow), transform var(--tx-slow);
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: transparent;
+  transition: background-color var(--tx-slow);
 }
+:root[data-theme='dark'] .sidebar-logo-badge { background: #fff; }
 .sidebar-logo-badge img {
-  height: 26px;
-  width: clamp(96px, 11vw, 120px);
+  height: 24px;
+  width: auto;
+  max-width: 140px;
   object-fit: contain;
   display: block;
 }
-.sidebar-logo:hover .sidebar-logo-badge {
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
-}
-.sidebar-pin-btn {
+
+.sidebar-collapse-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex-shrink: 0;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-subtle);
   cursor: pointer;
-  transition: all var(--tx);
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 150ms ease;
 }
-.sidebar-pin-btn:hover { background: var(--bg); color: var(--text-muted); }
-.sidebar-pin-btn[aria-pressed='true'] {
-  color: var(--primary);
-  border-color: var(--primary-light);
-  background: var(--primary-soft);
-}
+.sidebar-collapse-btn:hover { background: var(--surface-hover); color: var(--primary); border-color: var(--primary-light); }
+.sidebar-collapse-btn:active { transform: scale(0.97); }
+.sidebar-collapse-icon { transition: transform 220ms ease; }
 
 .sidebar-links {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.4rem 0.7rem;
+  overflow-x: hidden;
+  padding: 0.5rem 0.65rem 0.75rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
+.sidebar-links::-webkit-scrollbar { width: 6px; }
+.sidebar-links::-webkit-scrollbar-track { background: transparent; }
+.sidebar-links::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+
+.sidebar-group:not(:first-child) { margin-top: 1.15rem; }
+.sidebar-group-title {
+  margin: 0 0 0.35rem;
+  padding: 0 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
 .sidebar-links a {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.6rem 0.7rem;
-  border-radius: 10px;
+  gap: 0.75rem;
+  height: 48px;
+  padding: 0 0.75rem 0 calc(0.75rem + 7px);
+  margin-bottom: 0.1rem;
+  border-radius: var(--radius);
   color: var(--text-muted);
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: none;
   letter-spacing: -0.005em;
-  transition: background-color var(--tx-slow), color var(--tx-slow);
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
   white-space: nowrap;
 }
-.sidebar-link-icono { width: 18px; height: 18px; flex-shrink: 0; }
+.sidebar-links a::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  width: 3px;
+  height: 62%;
+  border-radius: 999px;
+  background: var(--primary);
+  transform: translateY(-50%) scaleY(0);
+  transition: transform 150ms ease;
+}
+.sidebar-links a.activo::before { transform: translateY(-50%) scaleY(1); }
+.sidebar-link-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+.sidebar-link-icono { width: 20px; height: 20px; flex-shrink: 0; }
+.sidebar-link-texto { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-links a:hover {
   color: var(--black);
-  background: var(--bg);
+  background: var(--surface-hover);
   text-decoration: none;
+  transform: translateX(2px);
 }
+.sidebar-links a:active { transform: translateX(2px) scale(0.98); }
+.sidebar-links a:hover .sidebar-link-icon-wrap { background: var(--primary-soft); color: var(--primary); }
 .sidebar-links a.activo {
   color: var(--primary);
   background: var(--primary-light);
+  font-weight: 600;
+}
+.sidebar-links a.activo .sidebar-link-icon-wrap { background: var(--primary-light); color: var(--primary); }
+
+.sidebar-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+.sidebar-badge-nuevo {
+  flex-shrink: 0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.62rem;
   font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .sidebar-footer {
@@ -335,26 +380,50 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.75rem 0.9rem 1rem;
+  padding: 0.75rem 0.65rem 0.9rem;
   border-top: 1px solid var(--border);
 }
 .sidebar-footer-row { display: flex; align-items: center; gap: 0.4rem; }
-.sidebar-lang { flex: 1; min-width: 0; }
+
+.sidebar-lang-pill {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.sidebar-lang-pill-icon {
+  position: absolute;
+  left: 0.65rem;
+  width: 14px;
+  height: 14px;
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+.sidebar-lang-pill .language-switcher.sidebar-lang {
+  width: 100%;
+  height: 2.5rem;
+  margin-left: 0;
+  padding: 0 1.6rem 0 2.15rem;
+  border-radius: 12px;
+}
+
 .sidebar-theme-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex-shrink: 0;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--card);
   color: var(--text-muted);
   cursor: pointer;
-  transition: all var(--tx);
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 150ms ease;
 }
-.sidebar-theme-btn:hover { background: var(--bg); color: var(--black); }
+.sidebar-theme-btn:hover { background: var(--surface-hover); color: var(--primary); border-color: var(--primary-light); }
+.sidebar-theme-btn:active { transform: scale(0.97); }
 
 /* Menú de usuario (avatar + desplegable) — mismo comportamiento de antes
    (cierra con click fuera o Escape, ver app-shell.jsx); ahora vive al
@@ -363,37 +432,55 @@ h2 {
 .nav-usuario-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   width: 100%;
-  padding: 0.35rem 0.6rem 0.35rem 0.35rem;
+  padding: 0.4rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--card);
   cursor: pointer;
   color: var(--text-muted);
-  transition: all var(--tx);
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
 }
-.nav-usuario-btn:hover { background: var(--bg); border-color: var(--text-subtle); }
+.nav-usuario-btn:hover { background: var(--surface-hover); border-color: var(--text-subtle); }
+.nav-usuario-btn:active { transform: scale(0.98); }
 .nav-avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 2.625rem;
+  height: 2.625rem;
   border-radius: 50%;
   background: var(--primary-light);
   color: var(--primary);
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   flex-shrink: 0;
 }
-.nav-usuario-nombre-corto {
+.nav-usuario-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.nav-usuario-nombre-corto {
+  width: 100%;
   text-align: left;
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-usuario-rol-corto {
+  width: 100%;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-subtle);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -488,29 +575,66 @@ h2 {
 .app-main {
   flex: 1;
   min-width: 0;
-  margin-left: 0;
-  transition: margin-left var(--tx-slow);
+  margin-left: var(--sidebar-w);
+  transition: margin-left 220ms ease;
 }
 
+/* Todo lo que depende de data-collapsed vive solo a partir de este
+   breakpoint — en móvil el atributo puede seguir en 'true' (persistido de
+   una sesión de escritorio) pero no debe tener ningún efecto ahí: la
+   barra móvil siempre es el drawer completo de siempre. */
 @media (min-width: 861px) {
-  .sidebar-trigger { display: block; }
-
-  .app-shell[data-pinned='true'] .sidebar { transform: translateX(0); }
-  .app-shell[data-pinned='false'][data-open='true'] .sidebar {
-    transform: translateX(0);
-    box-shadow: var(--shadow-lg);
+  .app-shell[data-collapsed='true'] .app-main { margin-left: var(--sidebar-w-collapsed); }
+  .sidebar[data-collapsed='true'] { width: var(--sidebar-w-collapsed); }
+  .sidebar[data-collapsed='true'] .sidebar-header {
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.9rem 0.5rem 0.7rem;
   }
-  .app-shell[data-pinned='true'] .app-main { margin-left: var(--sidebar-w); }
-  .app-shell[data-pinned='false'][data-open='true'] .sidebar-backdrop {
-    opacity: 1;
-    pointer-events: auto;
+  .sidebar[data-collapsed='true'] .sidebar-logo-badge img { height: 26px; }
+  .sidebar[data-collapsed='true'] .sidebar-collapse-icon { transform: rotate(180deg); }
+  .sidebar[data-collapsed='true'] .sidebar-group:not(:first-child) { margin-top: 0.5rem; }
+  .sidebar[data-collapsed='true'] .sidebar-group-title { display: none; }
+
+  /* Solo iconos centrados + tooltip propio al hover (no depende del
+     title nativo del navegador). */
+  .sidebar[data-collapsed='true'] .sidebar-links a {
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+  }
+  .sidebar[data-collapsed='true'] .sidebar-links a:hover { transform: none; }
+  .sidebar[data-collapsed='true'] .sidebar-links a:hover .sidebar-link-icon-wrap { transform: scale(1.05); }
+  .sidebar[data-collapsed='true'] .sidebar-link-texto,
+  .sidebar[data-collapsed='true'] .sidebar-live-dot,
+  .sidebar[data-collapsed='true'] .sidebar-badge-nuevo {
+    display: none;
+  }
+
+  .sidebar[data-collapsed='true'] .sidebar-footer-row { justify-content: center; }
+  .sidebar[data-collapsed='true'] .sidebar-lang-pill { display: none; }
+  .sidebar[data-collapsed='true'] .nav-usuario-btn { justify-content: center; padding: 0.4rem; }
+  .sidebar[data-collapsed='true'] .nav-usuario-info,
+  .sidebar[data-collapsed='true'] .nav-usuario-chevron {
+    display: none;
+  }
+  .sidebar[data-collapsed='true'] .nav-usuario-menu {
+    left: calc(100% + 0.6rem);
+    right: auto;
+    bottom: 0;
+    width: 220px;
   }
 }
 
 @media (max-width: 860px) {
-  .sidebar-pin-btn { display: none; }
+  .sidebar-collapse-btn { display: none; }
   .mobile-topbar { display: flex; }
-  .app-main { padding-top: 56px; }
+  .app-main { padding-top: 56px; margin-left: 0; }
+
+  .sidebar {
+    width: var(--sidebar-w);
+    transform: translateX(-100%);
+  }
   .app-shell[data-mobile-open='true'] .sidebar {
     transform: translateX(0);
     box-shadow: var(--shadow-lg);
@@ -532,7 +656,6 @@ h2 {
   color: var(--text);
   cursor: pointer;
 }
-.sidebar-lang.language-switcher { margin-left: 0; }
 .login-card .language-switcher {
   position: absolute;
   top: 1rem;

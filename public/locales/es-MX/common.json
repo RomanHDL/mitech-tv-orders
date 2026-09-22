@@ -16,8 +16,13 @@
     "salir": "Salir",
     "temaClaro": "Cambiar a modo claro",
     "temaOscuro": "Cambiar a modo oscuro",
-    "fijarBarra": "Fijar barra lateral",
-    "autoOcultarBarra": "Auto-ocultar barra lateral"
+    "colapsarBarra": "Colapsar barra lateral",
+    "expandirBarra": "Expandir barra lateral",
+    "grupoOperacion": "Operación",
+    "grupoControl": "Control",
+    "grupoAdministracion": "Administración",
+    "grupoSoporte": "Soporte",
+    "changelogNuevo": "Nuevo"
   },
   "common": {
     "guardar": "Guardar",

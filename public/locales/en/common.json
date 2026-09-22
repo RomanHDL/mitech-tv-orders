@@ -16,8 +16,13 @@
     "salir": "Sign out",
     "temaClaro": "Switch to light mode",
     "temaOscuro": "Switch to dark mode",
-    "fijarBarra": "Pin sidebar",
-    "autoOcultarBarra": "Auto-hide sidebar"
+    "colapsarBarra": "Collapse sidebar",
+    "expandirBarra": "Expand sidebar",
+    "grupoOperacion": "Operations",
+    "grupoControl": "Control",
+    "grupoAdministracion": "Administration",
+    "grupoSoporte": "Support",
+    "changelogNuevo": "New"
   },
   "common": {
     "guardar": "Save",
